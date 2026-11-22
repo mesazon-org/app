@@ -1,0 +1,155 @@
+{
+  "individualCandidates": [
+    {
+      "fullName": "Γιώργος Παπαδόπουλος",
+      "emails": [
+        {
+          "email": "giorgos.pap@gmail.com",
+          "isDefault": true
+        }
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "99124567",
+            "phoneCountryCode": "+357"
+          },
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Λεωφ. Αθηνάς 14",
+            "city": "Αθήνα",
+            "postalCode": "10551",
+            "country": "Ελλάδα"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/phoneNumbers/0/phoneNumber/phoneCountryCode"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Country code +357 guessed, but address is in Greece"
+      ]
+    },
+    {
+      "fullName": "Μαρία Κωνσταντίνου",
+      "emails": [
+        {
+          "email": "maria.kon@gmail.com",
+          "isDefault": true
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "fullName": "Νίκος Ανδρέου",
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "96334221",
+            "phoneCountryCode": "+357"
+          },
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "city": "Θεσσαλονίκη"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/phoneNumbers/0/phoneNumber/phoneCountryCode"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Country code +357 guessed, but city is in Greece",
+        "Street is missing",
+        "Postal code is missing",
+        "Country is missing"
+      ]
+    }
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "Αφοί Νικολάου ΟΕ",
+      "emails": [
+        {
+          "email": "info@nikolaoutools.gr",
+          "isDefault": true
+        }
+      ],
+      "taxID": "094582761",
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "2106654321",
+            "phoneCountryCode": "+30"
+          },
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Βιομηχανική Περιοχή, Οδός 3",
+            "addressLine2": "Μονάδα Β",
+            "city": "Πάτρα",
+            "postalCode": "26332",
+            "country": "Ελλάδα"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Ελένη Νικολάου"
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/phoneNumbers/0/phoneNumber/phoneCountryCode"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Phone country code taken from the address"
+      ]
+    },
+    {
+      "businessName": "Κυπριακή Ψύξη Ltd",
+      "addresses": [
+        {
+          "address": {
+            "city": "Λευκωσία",
+            "country": "Κύπρος"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Phone number could not be fully read",
+        "Street is missing",
+        "Postal code is missing"
+      ]
+    }
+  ],
+  "infoNotes": [
+    "Processed 5 of 5 entries"
+  ],
+  "extractionNotes": [
+    "Left out title \"Πελάτες\", with date \"12/3/2025\" beside it"
+  ]
+}

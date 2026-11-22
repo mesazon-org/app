@@ -1,0 +1,25 @@
+{
+  "priority": 2,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "contains": "You are removing repeated general notes written while reading a customer file in several batches"
+      },
+      {
+        "contains": "Column Balance was ignored"
+      },
+      {
+        "contains": "json_schema"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"resp_customer_book_file_note_compaction_acceptance\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_customer_book_file_note_compaction_acceptance\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"notes\\\":[\\\"Column Balance was ignored across the file\\\"]}\",\"annotations\":[]}]}]}"
+  }
+}

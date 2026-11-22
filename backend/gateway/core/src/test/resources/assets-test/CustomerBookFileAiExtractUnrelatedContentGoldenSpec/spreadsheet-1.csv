@@ -1,0 +1,17 @@
+Date,Location,Meter ID,Reading (m3),Change (m3)
+2025-03-03,Basement,WM-01,1523.6,3.2
+2025-03-03,Roof tank,WM-02,849.5,7.4
+2025-03-03,Garden tap,WM-03,316.9,6.2
+2025-03-03,Kitchen,WM-04,1210.9,5.0
+2025-03-10,Basement,WM-01,1527.4,3.8
+2025-03-10,Roof tank,WM-02,857.5,8.0
+2025-03-10,Garden tap,WM-03,323.7,6.8
+2025-03-10,Kitchen,WM-04,1216.5,5.6
+2025-03-17,Basement,WM-01,1531.8,4.4
+2025-03-17,Roof tank,WM-02,860.7,3.2
+2025-03-17,Garden tap,WM-03,331.1,7.4
+2025-03-17,Kitchen,WM-04,1222.7,6.2
+2025-03-24,Basement,WM-01,1536.8,5.0
+2025-03-24,Roof tank,WM-02,864.5,3.8
+2025-03-24,Garden tap,WM-03,339.1,8.0
+2025-03-24,Kitchen,WM-04,1229.5,6.8

@@ -1,0 +1,28 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPath": "/v1/responses",
+    "bodyPatterns": [
+      {
+        "contains": "Return exactly one CatalogueFileAIExtract JSON object"
+      },
+      {
+        "contains": "one or more pages, typed or scanned"
+      },
+      {
+        "contains": "input_file"
+      },
+      {
+        "contains": "json_schema"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"id\":\"resp_catalogue_file_pdf_acceptance\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_catalogue_file_pdf_acceptance\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"entriesIdentified\\\":1,\\\"entriesProcessed\\\":1,\\\"candidates\\\":[{\\\"name\\\":\\\"Hinge\\\",\\\"description\\\":null,\\\"variants\\\":[{\\\"sku\\\":\\\"HINGE-2\\\",\\\"label\\\":null,\\\"description\\\":null,\\\"attributes\\\":[{\\\"name\\\":\\\"Finish\\\",\\\"value\\\":\\\"Brass\\\"}],\\\"price\\\":null,\\\"sellingUnit\\\":{\\\"quantity\\\":{\\\"value\\\":2,\\\"unit\\\":\\\"Piece\\\"},\\\"perUnit\\\":null,\\\"unitSize\\\":null},\\\"sellingUnitInferred\\\":false,\\\"extractionNotes\\\":[]}],\\\"extractionNotes\\\":[]}],\\\"emptyEntryRows\\\":[],\\\"unidentifiedEntryRows\\\":[],\\\"extractionNotes\\\":[\\\"Left out the page footer\\\"]}\",\"annotations\":[]}]}]}"
+  }
+}

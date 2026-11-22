@@ -1,0 +1,7 @@
+{
+  "notes": [
+    "Column Balance was ignored",
+    "The first row looked like data and was skipped",
+    "One country code was used for the whole file"
+  ]
+}

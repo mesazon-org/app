@@ -1,0 +1,3553 @@
+{
+  "candidates": [
+    {
+      "name": "SIZE 30/40",
+      "variants": [
+        {
+          "sku": "38102",
+          "price": {
+            "amount": 8.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "JUMBO",
+      "variants": [
+        {
+          "sku": "45501",
+          "price": {
+            "amount": 7.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "CRANBERRIES 24x340g",
+      "variants": [
+        {
+          "sku": "34203",
+          "price": {
+            "amount": 4.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 340,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "BLUEBERRIES 12x125g",
+      "variants": [
+        {
+          "sku": "34202",
+          "price": {
+            "amount": 2.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 125,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "BLACKBERRIES 12x125g",
+      "variants": [
+        {
+          "sku": "34201",
+          "price": {
+            "amount": 4.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 125,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "RASPBERRIES 12x125g",
+      "variants": [
+        {
+          "sku": "34204",
+          "price": {
+            "amount": 3.50,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 125,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "REDCURRANT 12x125g",
+      "variants": [
+        {
+          "sku": "34205",
+          "price": {
+            "amount": 3.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 125,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "WONDERFULL TOP",
+      "variants": [
+        {
+          "sku": "74105",
+          "price": {
+            "amount": 2.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 7,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Name may be misspelled in the source"
+      ]
+    },
+    {
+      "name": "ACCO SUPER",
+      "variants": [
+        {
+          "sku": "74103",
+          "price": {
+            "amount": 2.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "YELLOW T.SUN",
+      "variants": [
+        {
+          "sku": "73223",
+          "price": {
+            "amount": 2.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 6,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ANGELINO AAA LOOSE",
+      "variants": [
+        {
+          "sku": "73204",
+          "price": {
+            "amount": 2.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 6,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "BONITA",
+      "variants": [
+        {
+          "sku": "33401",
+          "price": {
+            "amount": 1.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 19,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "SIZE 18/20",
+      "variants": [
+        {
+          "sku": "56217",
+          "price": {
+            "amount": 3.30,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 6,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "SIZE 16/18",
+      "variants": [
+        {
+          "sku": "56202",
+          "price": {
+            "amount": 2.50,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "TANGO TOP",
+      "variants": [
+        {
+          "sku": "41210",
+          "price": {
+            "amount": 4.10,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "TOP",
+      "variants": [
+        {
+          "sku": "68302",
+          "price": {
+            "amount": 2.70,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 18,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "SUPER",
+      "variants": [
+        {
+          "sku": "68301",
+          "price": {
+            "amount": 2.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 17,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΧΥΜΟΥ",
+      "variants": [
+        {
+          "sku": "68313",
+          "price": {
+            "amount": 1.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 16,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΚΟΚΚΙΝΑ",
+      "variants": [
+        {
+          "sku": "49402",
+          "price": {
+            "amount": 2.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 9,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "ΚΟΚΚΙΝΟ 2L",
+      "variants": [
+        {
+          "sku": "49202",
+          "price": {
+            "amount": 1.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 15,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΚΙΤΡΙΝΑ",
+      "variants": [
+        {
+          "sku": "60113",
+          "price": {
+            "amount": 1.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΠΡΑΣΙΝΑ",
+      "variants": [
+        {
+          "sku": "60106",
+          "price": {
+            "amount": 1.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "MEDJOUL JUMBO",
+      "variants": [
+        {
+          "sku": "45102",
+          "price": {
+            "amount": 10.50,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΓΛΥΚΕΣ (111/120)",
+      "variants": [
+        {
+          "sku": "66111",
+          "price": {
+            "amount": 4.95,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "BLACK S. M.(101/110)",
+      "variants": [
+        {
+          "sku": "66103",
+          "price": {
+            "amount": 8.25,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΚΑΛΑΜΩΝ (121/140)",
+      "variants": [
+        {
+          "sku": "66101",
+          "price": {
+            "amount": 8.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΚΑΛΑΜΩΝ (161/180)",
+      "variants": [
+        {
+          "sku": "66102",
+          "price": {
+            "amount": 7.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "THASOU (261/290)",
+      "variants": [
+        {
+          "sku": "66104",
+          "price": {
+            "amount": 8.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΒΑΖΑΚΙ (12X400g)",
+      "variants": [
+        {
+          "sku": "57101",
+          "price": {
+            "amount": 8.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 400,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΛΩΤΟΙ ΙΣΠΑΝΙΑΣ",
+      "variants": [
+        {
+          "sku": "46140",
+          "price": {
+            "amount": 3.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 4,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΛΩΤΟΙ ΕΛΛΑΔΑΣ",
+      "variants": [
+        {
+          "sku": "46150",
+          "price": {
+            "amount": 2.50,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 6,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΠΑΠΟΥΤΣΟΣΥΚΑ ΙΤΑΛΙΑ",
+      "variants": [
+        {
+          "sku": "46151",
+          "price": {
+            "amount": 5.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 2,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "TURMERIC THAILAND",
+      "variants": [
+        {
+          "sku": "78430",
+          "price": {
+            "amount": 20.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 2,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "TAMARINDE 500g",
+      "variants": [
+        {
+          "sku": "46128",
+          "price": {
+            "amount": 4.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 500,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "MANGO K.E.I.T ΑΙΓΥΠΤΟΥ",
+      "variants": [
+        {
+          "sku": "46515",
+          "price": {
+            "amount": 2.30,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 4,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "PINEAPPLE ΣΥΝ ΚΟΣΤΑ RIKA",
+      "variants": [
+        {
+          "sku": "46131",
+          "price": {
+            "amount": 2.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "LIMES ΒΡΑΖΙΛΙΑΣ",
+      "variants": [
+        {
+          "sku": "46167",
+          "price": {
+            "amount": 6.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 4.5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΑΒΟΚΑΝΤΟ FUERTE ΚΥΠΡ",
+      "variants": [
+        {
+          "sku": "32104",
+          "price": {
+            "amount": 3.50,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "PASSION FRUIT COLOMBI",
+      "variants": [
+        {
+          "sku": "46132",
+          "price": {
+            "amount": 9.50,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 2,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "STARFRUIT ΜΑΛΑΙΣΙΑΣ",
+      "variants": [
+        {
+          "sku": "46126",
+          "price": {
+            "amount": 23.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 2.5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "PHYSALIS (12x100g)",
+      "variants": [
+        {
+          "sku": "46133",
+          "price": {
+            "amount": 2.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 100,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "PAPAYA ECUADOR",
+      "variants": [
+        {
+          "sku": "46134",
+          "price": {
+            "amount": 10.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 3.5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "PITAHAYA ΚΥΠΡΙΑΚΑ",
+      "variants": [
+        {
+          "sku": "46120",
+          "price": {
+            "amount": 5.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 4,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "COCONUTS (12)",
+      "variants": [
+        {
+          "sku": "46143",
+          "price": {
+            "amount": 1.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "WHITE DRINK COCONUT (9)",
+      "variants": [
+        {
+          "sku": "46129",
+          "price": {
+            "amount": 3.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "KENT",
+      "variants": [
+        {
+          "sku": "46513",
+          "price": {
+            "amount": 11.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 6,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "EXTRA 1L",
+      "variants": [
+        {
+          "sku": "30111",
+          "price": {
+            "amount": 2.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "NASHI 1L",
+      "variants": [
+        {
+          "sku": "71401",
+          "price": {
+            "amount": 3.30,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 4,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "KRISTALLIA 70/75 1L",
+      "variants": [
+        {
+          "sku": "71432",
+          "price": {
+            "amount": 4.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 4,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "KRISTALLIA 58/60 2L",
+      "variants": [
+        {
+          "sku": "71444",
+          "price": {
+            "amount": 1.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 7,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "SANTA MARIA 70/75 1L",
+      "variants": [
+        {
+          "sku": "71415",
+          "price": {
+            "amount": 2.70,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "SANTA MARIA 65/70 2L",
+      "variants": [
+        {
+          "sku": "71414",
+          "price": {
+            "amount": 2.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "CONFERENCE S.65/75 1L",
+      "variants": [
+        {
+          "sku": "71439",
+          "price": {
+            "amount": 2.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 7,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "CONFERENCE S.65/75",
+      "variants": [
+        {
+          "sku": "71406",
+          "price": {
+            "amount": 2.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 12,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "SIZE 75/80 2L",
+      "variants": [
+        {
+          "sku": "20103",
+          "price": {
+            "amount": 4.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 12.5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "GRANNY",
+      "variants": [
+        {
+          "sku": "13103",
+          "price": {
+            "amount": 2.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 8,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "RED CHIEF",
+      "variants": [
+        {
+          "sku": "13105",
+          "price": {
+            "amount": 2.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 8,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "R.GALA",
+      "variants": [
+        {
+          "sku": "13104",
+          "price": {
+            "amount": 2.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 8,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "GOLDEN",
+      "variants": [
+        {
+          "sku": "132102",
+          "price": {
+            "amount": 2.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 8,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "GRANNY",
+      "variants": [
+        {
+          "sku": "18103",
+          "price": {
+            "amount": 2.30,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 14,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "RED CHIEF",
+      "variants": [
+        {
+          "sku": "18105",
+          "price": {
+            "amount": 2.30,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 14,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "R.GALA",
+      "variants": [
+        {
+          "sku": "18104",
+          "price": {
+            "amount": 2.30,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 14,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "GOLDEN",
+      "variants": [
+        {
+          "sku": "18102",
+          "price": {
+            "amount": 2.30,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 14,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "EXTRA 2L",
+      "variants": [
+        {
+          "sku": "17126",
+          "price": {
+            "amount": 3.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 7,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "SIZE 75/80 LOOSE",
+      "variants": [
+        {
+          "sku": "20114",
+          "price": {
+            "amount": 2.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 13,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "SIZE 65/75 LOOSE",
+      "variants": [
+        {
+          "sku": "20113",
+          "price": {
+            "amount": 1.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 13,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "GOLDEN 65/75 LOOSE",
+      "variants": [
+        {
+          "sku": "17120",
+          "price": {
+            "amount": 1.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 13,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "SIZE 75/80 LOOSE",
+      "variants": [
+        {
+          "sku": "17108",
+          "price": {
+            "amount": 1.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 14,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "SIZE 65/70 LOOSE",
+      "variants": [
+        {
+          "sku": "17106",
+          "price": {
+            "amount": 1.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 15,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "SIZE 75/80 LOOSE",
+      "variants": [
+        {
+          "sku": "17118",
+          "price": {
+            "amount": 1.90,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 14,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "SIZE 65/70 LOOSE",
+      "variants": [
+        {
+          "sku": "17119",
+          "price": {
+            "amount": 1.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 15,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "SIZE 75/80 1L",
+      "variants": [
+        {
+          "sku": "17103",
+          "price": {
+            "amount": 1.90,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 4,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "SIZE 75/80 LOOSE",
+      "variants": [
+        {
+          "sku": "17112",
+          "price": {
+            "amount": 1.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 13,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "SIZE 65/75 LOOSE",
+      "variants": [
+        {
+          "sku": "17116",
+          "price": {
+            "amount": 1.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 9,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "PRISTINA (THOMPSON)",
+      "variants": [
+        {
+          "sku": "53126",
+          "price": {
+            "amount": 4.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 9,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "THOMPSON PREMIUM",
+      "variants": [
+        {
+          "sku": "53121",
+          "price": {
+            "amount": 4.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 9,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "AUTUMN CRISP",
+      "variants": [
+        {
+          "sku": "53125",
+          "price": {
+            "amount": 3.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 9,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "CRIMSON RED JUMBO",
+      "variants": [
+        {
+          "sku": "53127",
+          "price": {
+            "amount": 4.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 9,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "RED GLOBE",
+      "variants": [
+        {
+          "sku": "53105",
+          "price": {
+            "amount": 2.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 9,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΒΑΣΙΛΙΚΟΣ",
+      "variants": [
+        {
+          "sku": "55202",
+          "price": {
+            "amount": 15.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "THYME",
+      "variants": [
+        {
+          "sku": "55215",
+          "price": {
+            "amount": 9.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ROSEMARY",
+      "variants": [
+        {
+          "sku": "55211",
+          "price": {
+            "amount": 9.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "SAGE",
+      "variants": [
+        {
+          "sku": "55213",
+          "price": {
+            "amount": 9.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "EXTRA 2L",
+      "variants": [
+        {
+          "sku": "37502",
+          "price": {
+            "amount": 2.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 7,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "18X2τεμ (PACK)",
+      "variants": [
+        {
+          "sku": "31404",
+          "price": {
+            "amount": 2.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΜΕ ΦΥΛΛΑ (24 τεμάχια)",
+      "variants": [
+        {
+          "sku": "31401",
+          "price": {
+            "amount": 0.90,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΑΓΡΕΛΙΑ ΠΡΑΣΙΝΑ(11X450gr) ΟΛΛ",
+      "variants": [
+        {
+          "sku": "78301",
+          "price": {
+            "amount": 11.50,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 450,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "BROCCOLI ICE ΕΛΛΑΔΑΣ",
+      "variants": [
+        {
+          "sku": "78307",
+          "price": {
+            "amount": 3.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "LEMON GRASS ΚΥΠΡΙΑΚΟ",
+      "variants": [
+        {
+          "sku": "31301",
+          "price": {
+            "amount": 10.50,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 3,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "BRUSSEL SPROUTS (10X500gr) ΟΛΛ",
+      "variants": [
+        {
+          "sku": "78331",
+          "price": {
+            "amount": 2.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 500,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Name may be misspelled in the source"
+      ]
+    },
+    {
+      "name": "ΜΟΥΣ ΙΤΑΛΙΑΣ",
+      "variants": [
+        {
+          "sku": "78200",
+          "price": {
+            "amount": 2.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 15,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "HORSE RADISH",
+      "variants": [
+        {
+          "sku": "78410",
+          "price": {
+            "amount": 12.50,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "CHIVES ΟΛΛΑΝΔΙΑΣ (15gr)",
+      "variants": [
+        {
+          "sku": "78316",
+          "price": {
+            "amount": 3.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 15,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "BABY JAMS (12x125g)",
+      "variants": [
+        {
+          "sku": "78304",
+          "price": {
+            "amount": 2.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 125,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Name may be misspelled in the source"
+      ]
+    },
+    {
+      "name": "SNOWPEAS (12x250g)",
+      "variants": [
+        {
+          "sku": "78326",
+          "price": {
+            "amount": 3.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 250,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "BROCCOLI STICKS (10x200g)",
+      "variants": [
+        {
+          "sku": "78452",
+          "price": {
+            "amount": 3.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 200,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "CHICCORY ΟΛΛΑΝΔΙΑΣ",
+      "variants": [
+        {
+          "sku": "78314",
+          "price": {
+            "amount": 4.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Name may be misspelled in the source"
+      ]
+    },
+    {
+      "name": "RADICCHIO ROS. ΙΤΑΛΙΑΣ",
+      "variants": [
+        {
+          "sku": "78322",
+          "price": {
+            "amount": 5.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 4,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "BABY CARROTS (6x200g)",
+      "variants": [
+        {
+          "sku": "78302",
+          "price": {
+            "amount": 5.80,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 200,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "FENNEL ΟΛΛΑΝΔΙΑΣ",
+      "variants": [
+        {
+          "sku": "78318",
+          "price": {
+            "amount": 4.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 6,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "LEEKS ΟΛΛΑΝΔΙΑΣ",
+      "variants": [
+        {
+          "sku": "78320",
+          "price": {
+            "amount": 3.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "CHINESE ΟΛΛΑΝΔΙΑΣ (8)",
+      "variants": [
+        {
+          "sku": "40202",
+          "price": {
+            "amount": 3.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΚΡΑΜΠΙ ΚΟΚΚΙΝΟ ΕΛΛΑΔΑΣ",
+      "variants": [
+        {
+          "sku": "78421",
+          "price": {
+            "amount": 2.50,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 11,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ICEBERG ΟΛΛΑΝΔΙΑΣ (10)",
+      "variants": [
+        {
+          "sku": "61201",
+          "price": {
+            "amount": 2.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ICEBERG ΕΛΛΑΔΑΣ (10)",
+      "variants": [
+        {
+          "sku": "61202",
+          "price": {
+            "amount": 2.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΚΟΚΚΙΝΑ",
+      "variants": [
+        {
+          "sku": "39307",
+          "price": {
+            "amount": 4.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "ΚΙΤΡΙΝΟ",
+      "variants": [
+        {
+          "sku": "39309",
+          "price": {
+            "amount": 4.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΠΟΡΤΟΚΑΛΙ",
+      "variants": [
+        {
+          "sku": "39305",
+          "price": {
+            "amount": 4.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΠΡΑΣΙΝΟ",
+      "variants": [
+        {
+          "sku": "39302",
+          "price": {
+            "amount": 3.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΑΨΑ ΚΟΚΚΙΝΑ ΟΛΛΑΝΔΙΑΣ",
+      "variants": [
+        {
+          "sku": "39102",
+          "price": {
+            "amount": 15.50,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 3,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΦΛΩΡΙΝΗΣ",
+      "variants": [
+        {
+          "sku": "39112",
+          "price": {
+            "amount": 4.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΕΛΛΑΔΑΣ",
+      "variants": [
+        {
+          "sku": "35205",
+          "price": {
+            "amount": 1.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "BABY PUMPKIN ΕΛΛΑΔΑΣ",
+      "variants": [
+        {
+          "sku": "76101",
+          "price": {
+            "amount": 1.60,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΠΑΝΤΖΑΡΙΑ 12x500g ΛΙΘΟΥΑΝΙΑ",
+      "variants": [
+        {
+          "sku": "78203",
+          "price": {
+            "amount": 1.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            },
+            "unitSize": {
+              "value": 500,
+              "unit": "Gram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "PARSNIP ΟΛΛΑΝΔΙΑΣ",
+      "variants": [
+        {
+          "sku": "78209",
+          "price": {
+            "amount": 4.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "SWEDES ΟΛΛΑΝΔΙΑΣ",
+      "variants": [
+        {
+          "sku": "78210",
+          "price": {
+            "amount": 2.70,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "CELERIAC ΟΛΛΑΝΔΙΑΣ",
+      "variants": [
+        {
+          "sku": "78206",
+          "price": {
+            "amount": 1.70,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "GINGER ΚΙΝΑΣ",
+      "variants": [
+        {
+          "sku": "51102",
+          "price": {
+            "amount": 4.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "GINGER ΚΙΝΑΣ",
+      "variants": [
+        {
+          "sku": "51101",
+          "price": {
+            "amount": 4.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 13,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "duplicateFields": [
+        {
+          "path": "/name"
+        }
+      ],
+      "needsAttention": true
+    },
+    {
+      "name": "ΓΛΥΚΟΠΑΤΑΤΕΣ ΑΙΓΥΠΤΟΥ",
+      "variants": [
+        {
+          "sku": "75302",
+          "price": {
+            "amount": 1.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 6,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΚΟΚΚΙΝΑ SIZE 60/80",
+      "variants": [
+        {
+          "sku": "67206",
+          "price": {
+            "amount": 1.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "SHALLOTS",
+      "variants": [
+        {
+          "sku": "67208",
+          "price": {
+            "amount": 3.40,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 5,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΚΟΝΑΡΙ",
+      "variants": [
+        {
+          "sku": "67204",
+          "price": {
+            "amount": 3.30,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΣΥΣΚΕΥΑΣΜΕΝΑ (40X250g)",
+      "variants": [
+        {
+          "sku": "50102",
+          "price": {
+            "amount": 5.20,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "name": "ΧΥΜΑ (60+)",
+      "variants": [
+        {
+          "sku": "50103",
+          "price": {
+            "amount": 5.00,
+            "currency": "EUR"
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 10,
+              "unit": "Kilogram"
+            }
+          }
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/variants/0/sellingUnit"
+        },
+        {
+          "path": "/variants/0/price/currency"
+        }
+      ],
+      "needsAttention": false
+    }
+  ],
+  "infoNotes": [
+    "Processed 125 of 125 entries"
+  ],
+  "extractionNotes": [
+    "Currency comes from the € column headings",
+    "Kilogram units come from the KG headings",
+    "Left out \"AMALTHIA TRADING (LIMASSOL) LTD\", supplier heading",
+    "Left out \"Ασωματος Tel.25-952011-Fax25-952321 / 25-952177\", supplier contact",
+    "Left out \"ΛΙΣΤΑ ΓΙΑ ΠΑΡΑΓΓΕΛΙΑ\", nothing beside it",
+    "Left out tax notice \"ΣΤΙΣ ΤΙΜΕΣ\", nothing beside it",
+    "Left out \"Amalthia\", logo beside it",
+    "Left out \"by Papanikolis\", nothing beside it",
+    "Left out \"ΤΕΤΑΡΤΗ\", nothing beside it",
+    "Left out \"04.11.2026\", nothing beside it",
+    "Left out \"ΚΑΣΤΑΝΑ ΕΛΛΑΔΑΣ\", column labels beside it",
+    "Left out \"ΚΑΡΥΔΙΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
+    "Left out \"BERRIES U.S.A / ΟΛΛΑΝΔΙΑΣ\", nothing beside it",
+    "Left out \"ΡΟΔΙΑ ΚΟΚΚΙΝΑ ΚΥΠΡΙΑΚΑ\", nothing beside it",
+    "Left out \"ΦΟΡΜΟΖΕΣ ΕΛΛΑΔΑΣ\", nothing beside it",
+    "Left out \"ΜΠΑΝΑΝΕΣ ECUADOR\", nothing beside it",
+    "Left out \"KIWI HAYWARD ΕΛΛΑΔΑΣ\", nothing beside it",
+    "Left out second \"KIWI\" heading, nothing beside it",
+    "Left out \"S.AFRICA\" mandarin heading, nothing beside it",
+    "Left out \"ΠΟΡΤΟΚΑΛΙΑ MERLIN S.AFRICA/ΕΛΛΑΔΑΣ\", nothing beside it",
+    "Left out \"ΠΟΜΕΛΑ ΚΥΠΡΙΑΚΑ\", nothing beside it",
+    "Left out \"ΚΡΕΙΠΦΡΟΥΤ ΚΥΠΡΙΑΚΑ\", nothing beside it",
+    "Left out \"ΛΕΜΟΝΙΑ ΚΥΠΡΙΑΚΑ\", nothing beside it",
+    "Left out \"ΦΟΙΝΙΚΙΑ ΙΣΡΑΗΛ\", nothing beside it",
+    "Left out \"ΕΛΙΕΣ ΕΛΛΗΝΙΚΕΣ\", nothing beside it",
+    "Left out \"ΚΑΛΑΜΠΟΚΙΑ ΣΕ ΑΛΜΗ\", nothing beside it",
+    "Left out \"ΕΞΩΤΙΚΑ ΦΡΟΥΤΑ\", column labels beside it",
+    "Left out \"MANGO ΠΕΡΟΥ\" heading, nothing beside it",
+    "Left out \"ΚΥΔΩΝΙΑ ΕΛΛΑΔΑΣ\", nothing beside it",
+    "Left out \"ΑΧΛΑΔΟΜΗΛΑ ΕΛΛΑΔΑΣ\", nothing beside it",
+    "Left out \"ΑΧΛΑΔΙΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
+    "Left out \"ΑΧΛΑΔΙΑ ΟΛΛΑΝΔΙΑΣ (BY TRACK)\", nothing beside it",
+    "Left out \"PINK LADY ΧΙΛΗΣ\", nothing beside it",
+    "Left out \"ΜΗΛΑ MARLENE 75/80 2L\", nothing beside it",
+    "Left out \"ΜΗΛΑ MARLENE 75/80 MAX\", nothing beside it",
+    "Left out \"ΜΗΛΑ ΦΙΡΙΚΙΑ ΕΛΛΑΔΑΣ\", nothing beside it",
+    "Left out \"ΜΗΛΑ FOR\" heading, nothing beside it",
+    "Left out \"ΜΗΛΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
+    "Left out \"ΜΗΛΑ RED CHIEF\" heading, nothing beside it",
+    "Left out \"ΜΗΛΑ R.GALA\" heading, nothing beside it",
+    "Left out \"ΜΗΛΑ GRANNY\" heading, nothing beside it",
+    "Left out \"ΣΤΑΦΥΛΙΑ ΛΕΥΚΑ ΕΛΛΑΔΑΣ\", column labels beside it",
+    "Left out \"ΣΤΑΦΥΛΙΑ ΚΟΚΚΙΝΑ ΕΛΛΑΔΑΣ\", nothing beside it",
+    "Left out \"ΑΡΩΜΑΤΙΚΑ ΚΥΠΡΙΑΚΑ\", nothing beside it",
+    "Left out \"ΝΤΟΜΑΤΕΣ ΕΛΛΑΔΑΣ\", nothing beside it",
+    "Left out \"ΣΙΤΑΡΟΠΟΥΛΑ ΚΥΠΡΙΑΚΗ\", nothing beside it",
+    "Left out \"VEGETABLES\", nothing beside it",
+    "Left out \"ΠΙΠΕΡΙΑ ΙΣΡΑΗΛ / ΟΛΛΑΝΔΙΑΣ\", nothing beside it",
+    "Left out \"ΠΙΠΕΡΙΑ ΕΛΛΑΔΑΣ\", nothing beside it",
+    "Left out \"ΚΑΡΟΤΑ ΕΙΣΑΓΟΜΕΝΑ\", nothing beside it",
+    "Left out \"ΚΡΕΜΜΥΔΙΑ ΟΛΛΑΝΔΙΑΣ/ΕΛΛΑΔΑΣ\", nothing beside it",
+    "Left out \"ΣΚΟΡΔΑ ΚΙΝΑΣ\", nothing beside it"
+  ]
+}

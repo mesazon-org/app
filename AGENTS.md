@@ -66,6 +66,7 @@ Read the affected epic for feature/behavior changes and [Epic standards](pages/e
 | [Functional testing](agent-docs/project/functional-testing.md) | Adding/reviewing `fun/<Feature>ServiceSpec` mocked-dependency service tests, `inSequence`/expectation conventions, or deciding whether a case belongs here versus repository/integration or acceptance |
 | [Acceptance testing](agent-docs/project/acceptance-testing.md) | Adding/reviewing real-gateway HTTP acceptance specs, `GatewayClient` test methods/codecs, shared acceptance harness wiring, organization middleware matrices, or rejected-side-effect assertions |
 | [Acceptance test gaps](agent-docs/acceptance-test-gaps.md) | Picking up known-missing acceptance coverage, or touching a feature listed there; delete an entry in the PR that closes it |
+| [AI response performance](agent-docs/project/ai-response-performance.md) | Changing a manual AI golden check, its golden files, or the shared golden performance scorer (pairing, comparison, score, report) |
 | [Terraform](agent-docs/project/terraform.md) | Changing `terraform/`, or finishing a feature that added an external dependency, credential, or required env var |
 
 ### Diagnostics
@@ -85,7 +86,7 @@ Read every standard whose trigger matches the task:
 | [Chimney](agent-docs/standards/chimney.md) | Adding/changing model transformations, including domain/Smithy enums, collections, Iron refined products, or custom `Transformer`s |
 | [Smithy](agent-docs/standards/smithy.md) | Adding/changing Smithy endpoints, operations, transport models, traits, errors, or generated contracts |
 | [Tapir](agent-docs/standards/tapir.md) | Adding/changing Tapir endpoints, streaming inputs, security, errors, or OpenAPI docs |
-| [AI extraction](agent-docs/standards/ai-extraction.md) | Adding/changing extraction from uploaded images, CSV, or Excel, including candidate models, flags, notes, prompts, schemas, or batching |
+| [AI extraction](agent-docs/standards/ai-extraction.md) | Adding/changing extraction from uploaded images, PDF, CSV, or Excel, including candidate models, flags, notes, prompts, schemas, or batching |
 | [Iron](agent-docs/standards/iron.md) | Adding/changing refined newtypes, domain constraints, validation boundaries, or refined conversions/codecs |
 | [PostgreSQL](agent-docs/standards/postgres.md) | Adding/changing migrations, tables, columns, types, constraints, indexes, or stored-data lifecycle |
 | [Doobie](agent-docs/standards/doobie.md) | Adding/changing SQL queries, fragments, row codecs, repository DB effects, transactions, or pool wiring |
@@ -134,6 +135,7 @@ New epic → follow [Epic standards](pages/epics/EPIC-STANDARDS.md) and copy its
 - [Organization Onboarding](pages/epics/04-organization-onboarding.md) — create the organization and its owner membership, then upload a logo
 - [Customer Book](pages/epics/05-customer-book.md) — add, browse, open, update, and archive customers; manage a business's contacts
 - [Catalogue](pages/epics/06-catalogue.md) — add, browse, open, update, and archive items; upload an item's image
+- [AI Response Performance](pages/epics/07-ai-response-performance.md) — measure AI extraction answers against hand-checked golden answers (built for every Catalogue and Customer Book check)
 
 ## Features
 

@@ -1,0 +1,259 @@
+{
+  "individualCandidates": [
+    {
+      "fullName": "Daniel Mercer",
+      "emails": [
+        {
+          "email": "dan.mercer@gmail.com",
+          "isDefault": true
+        }
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "7700900341",
+            "phoneCountryCode": "+44"
+          },
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "18 Pine Rd",
+            "city": "Bristol",
+            "postalCode": "BS1 4DJ",
+            "country": "UK"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "fullName": "Sofia Lang",
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "7718334921",
+            "phoneCountryCode": "+44"
+          },
+          "isDefault": true
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "fullName": "Γιώργος Παπαδόπουλος",
+      "emails": [
+        {
+          "email": "giorgos.pap@gmail.com",
+          "isDefault": true
+        }
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "99124567",
+            "phoneCountryCode": "+357"
+          },
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Λεωφ. Αθηνάς 14",
+            "city": "Αθήνα",
+            "postalCode": "10551",
+            "country": "Ελλάδα"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/phoneNumbers/0/phoneNumber/phoneCountryCode"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Country code +357 guessed, but Αθήνα is in Greece"
+      ]
+    },
+    {
+      "fullName": "Μαρία Κωνσταντίνου",
+      "emails": [
+        {
+          "email": "maria.kon@gmail.com",
+          "isDefault": true
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "fullName": "Νίκος Ανδρέου",
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "96334221",
+            "phoneCountryCode": "+357"
+          },
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "city": "Θεσσαλονίκη"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/phoneNumbers/0/phoneNumber/phoneCountryCode"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Country code +357 guessed, but Θεσσαλονίκη is in Greece",
+        "Only the city was shown"
+      ]
+    }
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "Evia Flowers Ltd",
+      "emails": [
+        {
+          "email": "orders@eviaflowers.co.uk",
+          "isDefault": true
+        }
+      ],
+      "taxID": "GB381552122",
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "2079462013",
+            "phoneCountryCode": "+44"
+          },
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "7 Market Lane",
+            "addressLine2": "Unit 2",
+            "city": "London",
+            "postalCode": "E8 3RT",
+            "country": "UK"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Maria Cole",
+          "role": "buyer"
+        }
+      ],
+      "needsAttention": false
+    },
+    {
+      "businessName": "Aegean Repairs",
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "22 Dock Street",
+            "city": "Southampton",
+            "postalCode": "SO14 3JQ",
+            "country": "UK"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "A. Reed"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Phone number could not be fully read"
+      ]
+    },
+    {
+      "businessName": "Αφοί Νικολάου ΟΕ",
+      "emails": [
+        {
+          "email": "info@nikolaoutools.gr",
+          "isDefault": true
+        }
+      ],
+      "taxID": "094582761",
+      "phoneNumbers": [
+        {
+          "phoneNumber": {
+            "phoneNationalNumber": "2106654321",
+            "phoneCountryCode": "+30"
+          },
+          "isDefault": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Βιομηχανική Περιοχή, Οδός 3",
+            "addressLine2": "Μονάδα Β",
+            "city": "Πάτρα",
+            "postalCode": "26332",
+            "country": "Ελλάδα"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Ελένη Νικολάου"
+        }
+      ],
+      "inferredFields": [
+        {
+          "path": "/phoneNumbers/0/phoneNumber/phoneCountryCode"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Phone country code taken from the Greek address"
+      ]
+    },
+    {
+      "businessName": "Κυπριακή Ψύξη Ltd",
+      "addresses": [
+        {
+          "address": {
+            "city": "Λευκωσία",
+            "country": "Κύπρος"
+          },
+          "addressType": "ShippingAndBilling"
+        }
+      ],
+      "needsAttention": false,
+      "extractionNotes": [
+        "Phone number could not be fully read",
+        "Only the city and country were shown"
+      ]
+    }
+  ],
+  "infoNotes": [
+    "Processed 9 of 10 entries",
+    "Unidentified rows (1) at [5]"
+  ],
+  "extractionNotes": [
+    "Left out heading \"Customers\", with date \"12/03/25\" beside it",
+    "Left out heading \"Πελάτες\", with date \"12/3/2025\" beside it",
+    "Comments were not used"
+  ]
+}

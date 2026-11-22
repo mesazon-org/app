@@ -1,0 +1,564 @@
+{
+  "mappings": [
+    {
+      "priority": 2,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_PDF_SUCCESS"
+          },
+          {
+            "contains": "input_file"
+          },
+          {
+            "contains": "json_schema"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_pdf\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"reasoning\",\"id\":\"rs_ai_client_spec_pdf\",\"summary\":[]},{\"type\":\"message\",\"id\":\"msg_ai_client_spec_pdf\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"entriesIdentified\\\":1,\\\"entriesProcessed\\\":1,\\\"candidates\\\":[{\\\"name\\\":\\\"Bolt\\\",\\\"description\\\":null,\\\"variants\\\":[{\\\"sku\\\":\\\"BOLT-1\\\",\\\"label\\\":null,\\\"description\\\":null,\\\"attributes\\\":[{\\\"name\\\":\\\"Color\\\",\\\"value\\\":\\\"Silver\\\"}],\\\"price\\\":null,\\\"sellingUnit\\\":{\\\"quantity\\\":{\\\"value\\\":1,\\\"unit\\\":\\\"Piece\\\"},\\\"perUnit\\\":null,\\\"unitSize\\\":null},\\\"sellingUnitInferred\\\":false,\\\"extractionNotes\\\":[]}],\\\"extractionNotes\\\":[]}],\\\"emptyEntryRows\\\":[],\\\"unidentifiedEntryRows\\\":[],\\\"extractionNotes\\\":[\\\"The document was read in page order\\\"]}\",\"annotations\":[]}]}]}"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_PDF_BAD_REQUEST"
+          }
+        ]
+      },
+      "response": {
+        "status": 400,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":{\"message\":\"Invalid request\",\"type\":\"invalid_request_error\"}}"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_PDF_ERROR"
+          }
+        ]
+      },
+      "response": {
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":\"Internal Server Error\"}"
+      }
+    },
+    {
+      "priority": 1,
+      "scenarioName": "AI client PDF retry success",
+      "requiredScenarioState": "Started",
+      "newScenarioState": "Second attempt",
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_PDF_RETRY_SUCCESS"
+          }
+        ]
+      },
+      "response": {
+        "status": 503,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":{\"message\":\"Server unavailable\",\"type\":\"server_error\"}}"
+      }
+    },
+    {
+      "priority": 1,
+      "scenarioName": "AI client PDF retry success",
+      "requiredScenarioState": "Second attempt",
+      "newScenarioState": "Third attempt",
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_PDF_RETRY_SUCCESS"
+          }
+        ]
+      },
+      "response": {
+        "status": 503,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":{\"message\":\"Server unavailable\",\"type\":\"server_error\"}}"
+      }
+    },
+    {
+      "priority": 1,
+      "scenarioName": "AI client PDF retry success",
+      "requiredScenarioState": "Third attempt",
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_PDF_RETRY_SUCCESS"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_pdf\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_ai_client_spec_pdf\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"value\\\":\\\"retried-value\\\"}\",\"annotations\":[]}]}]}"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_PDF_TIMEOUT"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_pdf\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_ai_client_spec_pdf\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"value\\\":\\\"extracted-value\\\"}\",\"annotations\":[]}]}]}",
+        "fixedDelayMilliseconds": 250
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_PDF_MALFORMED"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_pdf\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_ai_client_spec_pdf\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"not valid json\",\"annotations\":[]}]}]}"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_PDF_REFUSAL"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_pdf\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_ai_client_spec_pdf\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"refusal\",\"refusal\":\"I can't help with that document\"}]}]}"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_PDF_INCOMPLETE"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_pdf\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"incomplete\",\"output\":[{\"type\":\"message\",\"id\":\"msg_ai_client_spec_pdf\",\"role\":\"assistant\",\"status\":\"incomplete\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"value\\\":\\\"extracted-value\\\"}\",\"annotations\":[]}]}],\"incomplete_details\":{\"reason\":\"max_output_tokens\"}}"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_PDF_NO_MESSAGE"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_pdf\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"reasoning\",\"id\":\"rs_ai_client_spec_pdf\",\"summary\":[]}]}"
+      }
+    },
+    {
+      "priority": 2,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_SUCCESS"
+          },
+          {
+            "contains": "input_image"
+          },
+          {
+            "contains": "json_schema"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"gpt-5\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_ai_client_spec\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"value\\\":\\\"extracted-value\\\"}\",\"annotations\":[]}]}]}"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_BAD_REQUEST"
+          }
+        ]
+      },
+      "response": {
+        "status": 400,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":{\"message\":\"Invalid request\",\"type\":\"invalid_request_error\"}}"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_ERROR"
+          }
+        ]
+      },
+      "response": {
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\": \"Internal Server Error\"}"
+      }
+    },
+    {
+      "priority": 1,
+      "scenarioName": "AI client retry success",
+      "requiredScenarioState": "Started",
+      "newScenarioState": "Second attempt",
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_RETRY_SUCCESS"
+          }
+        ]
+      },
+      "response": {
+        "status": 429,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":{\"message\":\"Try again\",\"type\":\"rate_limit_error\"}}"
+      }
+    },
+    {
+      "priority": 1,
+      "scenarioName": "AI client retry success",
+      "requiredScenarioState": "Second attempt",
+      "newScenarioState": "Third attempt",
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_RETRY_SUCCESS"
+          }
+        ]
+      },
+      "response": {
+        "status": 429,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":{\"message\":\"Try again\",\"type\":\"rate_limit_error\"}}"
+      }
+    },
+    {
+      "priority": 1,
+      "scenarioName": "AI client retry success",
+      "requiredScenarioState": "Third attempt",
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_RETRY_SUCCESS"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_retry_success\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_ai_client_spec_retry_success\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"value\\\":\\\"retried-value\\\"}\",\"annotations\":[]}]}]}"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_CONNECTION_RESET"
+          }
+        ]
+      },
+      "response": {
+        "fault": "CONNECTION_RESET_BY_PEER"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_TIMEOUT"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_timeout\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_ai_client_spec_timeout\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"value\\\":\\\"extracted-value\\\"}\",\"annotations\":[]}]}]}",
+        "fixedDelayMilliseconds": 250
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_MALFORMED"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_malformed\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_ai_client_spec_malformed\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"not valid json\",\"annotations\":[]}]}]}"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_UNEXPECTED_SHAPE"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_unexpected_shape\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_ai_client_spec_unexpected_shape\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"wrongField\\\":\\\"unexpected\\\"}\",\"annotations\":[]}]}]}"
+      }
+    },
+    {
+      "priority": 2,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_CSV_GENERIC_SUCCESS"
+          },
+          {
+            "contains": "json_schema"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_csv_generic\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_ai_client_spec_csv_generic\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"value\\\":\\\"batch-result\\\"}\",\"annotations\":[]}]}]}"
+      }
+    },
+    {
+      "priority": 2,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "AI_CLIENT_SPEC_CSV_ROW_NUMBER_SUCCESS"
+          },
+          {
+            "contains": "json_schema"
+          },
+          {
+            "contains": "Row Number,Full Name,Email"
+          },
+          {
+            "contains": "2,Alice,alice@example.com"
+          },
+          {
+            "contains": "3,,"
+          },
+          {
+            "contains": "4,Bob,bob@example.com"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_csv_row_number\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_ai_client_spec_csv_row_number\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"value\\\":\\\"row-number-result\\\"}\",\"annotations\":[]}]}]}"
+      }
+    },
+    {
+      "priority": 2,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "NOTE_COMPACTION_SPEC_SUCCESS"
+          },
+          {
+            "contains": "json_schema"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_note_compaction_success\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_ai_client_spec_note_compaction_success\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"notes\\\":[\\\"Two rows were blank\\\",\\\"One row had no readable name\\\"]}\",\"annotations\":[]}]}]}"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "NOTE_COMPACTION_SPEC_BAD_REQUEST"
+          }
+        ]
+      },
+      "response": {
+        "status": 400,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":{\"message\":\"Invalid request\",\"type\":\"invalid_request_error\"}}"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "NOTE_COMPACTION_SPEC_ERROR"
+          }
+        ]
+      },
+      "response": {
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\": \"Internal Server Error\"}"
+      }
+    },
+    {
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "urlPath": "/v1/responses",
+        "bodyPatterns": [
+          {
+            "contains": "NOTE_COMPACTION_SPEC_MALFORMED"
+          }
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"id\":\"resp_ai_client_spec_note_compaction_malformed\",\"object\":\"response\",\"created_at\":1700000000,\"model\":\"test-model\",\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"id\":\"msg_ai_client_spec_note_compaction_malformed\",\"role\":\"assistant\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"text\":\"not valid json\",\"annotations\":[]}]}]}"
+      }
+    }
+  ]
+}
