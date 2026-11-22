@@ -3,6 +3,7 @@ package io.mesazon.gateway.golden
 import com.github.plokhotnyuk.jsoniter_scala.core.readFromString
 import difflicious.Differ
 import difflicious.implicits.*
+import difflicious.scalatest.ScalatestDiff
 import difflicious.utils.TypeName
 import io.github.iltotore.iron.RefinedType
 import io.mesazon.domain.gateway.*
@@ -12,13 +13,11 @@ import io.mesazon.gateway.json.ai.given
 import io.mesazon.gateway.service.AIInstructions
 import io.mesazon.gateway.utils.*
 import io.mesazon.testkit.base.{SttpTestBackend, ZWordSpecBase}
-import org.scalatest.Assertion
 import zio.*
 
 import java.nio.file.*
-import scala.annotation.unused
 
-class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
+class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
 
   private inline val CsvBatchMaxDataRowsDefault    = 100
   private inline val CsvBatchMaxDataRowsCompaction = 15
@@ -58,7 +57,6 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
   private val goldenDirectory =
     Paths.get("src/test/resources/assets-golden/CatalogueFileAiExtractGoldenSpec")
 
-  @unused
   private val catalogueFileAIExtractDiffer: Differ[CatalogueFileAIExtract] =
     Differ
       .derivedDeep[CatalogueFileAIExtract]
@@ -148,7 +146,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
   private def compareWithGolden(
       catalogueFileAIExtract: CatalogueFileAIExtract,
       catalogueFileAIExtractGolden: CatalogueFileAIExtract,
-  ): Assertion = ???
+  ): Unit =
+    catalogueFileAIExtractDiffer.assertNoDiff(catalogueFileAIExtract, catalogueFileAIExtractGolden)
 
   "AIClientDataExtraction" when {
     "extractFromImage" should {

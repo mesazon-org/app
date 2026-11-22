@@ -311,7 +311,7 @@ Mappings: the default catalogue WireMock acceptance mapping returns one usable i
 - **Before:** four extraction specs plus `golden/CatalogueFileNotesCompactionGoldenSpec` called `CatalogueFileService.aiExtract`, or `noteCompaction` directly. They scored the public preview with the `golden/performance/` scorer and never failed on the score.
 - **After:** one spec, `golden/CatalogueFileAiExtractGoldenSpec`. It calls `AIClientDataExtraction` directly with the production `AIInstructions` prompts. For spreadsheets it also calls the shared `CatalogueFileService.mergeAndCompactCatalogueFileAIExtracts` (step 3 above).
   - It compares the raw `CatalogueFileAIExtract`, every field and every note, with a hand-corrected golden through difflicious.
-  - It fails on any difference, printing only the differences.
+  - It fails on any difference with difflicious's standard `assertNoDiff` output (for the time being, user decision): a `Test id` line, then the whole answer with differences in colour ([details](../project/ai-response-performance.md#difference-output)).
   - It never writes a golden. It fails before the AI call, naming the path, when a golden is missing, and it cancels without `AI_CLIENT_DATA_EXTRACTION_API_KEY`.
   - Cases: two price-list JPEGs (the first with today's 1 kg → 12 kg-per-box message), one PDF declared `Catalogue-Price-List.PDF`, three spreadsheets, one notes compaction case (`spreadsheet-1.csv` read in two groups of 15 data rows), and an unrelated picture, PDF and CSV.
   - All goldens are bootstrapped again in the raw AI shape.

@@ -67,7 +67,7 @@ For each case:
 1. `assume(apiKey.nonEmpty, …)`. The key comes from `AI_CLIENT_DATA_EXTRACTION_API_KEY`, and the in-code fallback is `""`. No key cancels the case.
 2. The golden is resolved and decoded **before** the AI call. A missing file fails naming its full path. A decoding error fails with the decoder message.
 3. The AI call runs live (see [What is called](#what-is-called-no-service)). An AI error or timeout fails through `.zioValue`.
-4. The answer (obtained) is compared with the golden (expected) using the [comparison](#comparison) differ. If the result is not OK, the case fails with only the [difference output](#difference-output). When it is OK, nothing is printed.
+4. The answer (obtained) is compared with the golden (expected) using the [comparison](#comparison) differ. The case fails through `assertNoDiff` when anything differs ([difference output](#difference-output)). When it is OK, nothing is printed.
 
 ## Model selection and config
 
@@ -107,18 +107,21 @@ Not compared, because they are not part of the AI answer: the service's info-lin
 
 ## Difference output
 
-User decision Q1. difflicious's own printer renders the whole structure and marks differences only by colour, and its `assertNoDiff` adds a `Test id` header, so neither is used. A test-only walker, `golden/GoldenDiff.scala` (generic over difflicious `DiffResult`, about 50 lines, no unit spec per [Scala](../standards/scala.md) "no tests for test-only code"), turns a non-OK result into one plain-text line per difference, and the case calls `fail` with those lines joined by newlines:
+User decision, slice 2, **for the time being**. This reverses the earlier choice of a differences-only walker; the walker `golden/GoldenDiff.scala` was written and then dropped before commit. `compareWithGolden` calls difflicious-scalatest's standard assertion, `catalogueFileAIExtractDiffer.assertNoDiff(catalogueFileAIExtract, catalogueFileAIExtractGolden)`: the AI answer is "obtained" and the golden is "expected". The spec mixes in `difflicious.scalatest.ScalatestDiff`.
 
-- **Location:** field names joined by `.`. A list element is labelled by its pairing identity: `[sku "GH-30"]`, `[name "Garden hose"]`, `[label "500 g"]`, or `[(no code, no name)]`. For example, `candidates[sku "GH-20", "GH-30"].variants[sku "GH-30"].price.amount`.
-- **Changed value:** `<location>: answer <x>, golden <y>`.
-- **Present on one side only** (an `Option` that is `Some` on one side, or an unpaired element): `<location>: missing from the answer`, or `<location>: extra in the answer`, followed by that part rendered in plain text (no colour codes), indented two spaces.
-- Only non-OK nodes are printed. There is no header, source or model name, count or percentage. Missing and extra are stated in words, so the output reads the same without colour.
+- When nothing differs, nothing is printed and the case passes.
+- On any difference the case fails with a `ScalatestDifferenceFoundException`. Its message is a `Test id: <ULID>` line followed by `DiffResultPrinter.consoleOutput` of the **whole** answer: every record, list and field, not only the differing parts.
+- **Changed value:** `answer value -> golden value`, the answer side in red and the golden side in green.
+- **Present on one side only** (an unpaired item, variant or note, or `Some` against `None`): the whole part, in red when only the answer has it and in green when only the golden has it. Missing and extra are told apart **only by colour**. Read the output in a colour terminal (`.sbtopts` sets `-Dsbt.color=always`). When sbt output goes to a file, or is pasted without colour, the codes are lost (observed in slice 2). A missing item or a reworded note then looks exactly like a matching part, and only changed values (`->`) stay visible.
+- Optional values print as `Some(value: …)` / `None()`, and a one-sided item takes roughly 40 lines.
+- No difflicious JSONL report file is written, because its ScalaTest reporter is not registered.
 
 ## Open gaps
 
 - **Customer Book source assets kept without a spec (user decision Q5, deviation).** `assets-test/CustomerBookFileAiExtract{FromImage,FromPdf,FromSpreadsheet,UnrelatedContent}GoldenSpec/` stay in place for the later rebuild, although no spec reads them. This is an accepted exception to [Asset files](acceptance-testing.md#asset-files) ("one folder per spec"). The rebuilt specs must reuse these exact folder names, or move the files.
-- **Comparison rules have no AI-free proof.** The pairing keys, the walker and epic scenarios 1–10 are exercised only by live runs. The user removed the scorer's unit specs with nothing replacing them, in line with "no tests for test-only code".
+- **Comparison rules have no AI-free proof.** The pairing keys and epic scenarios 1–10 are exercised only by live runs. The user removed the scorer's unit specs with nothing replacing them, in line with "no tests for test-only code".
 - **Note wording fails the check** (epic known gap 3, accepted).
+- **Whole-answer, colour-only output** (epic known gap 4, for the time being). A differences-only output (a walker over `DiffResult`, built and dropped in slice 2) is the open alternative.
 - **Dependency compatibility: resolved in slice 1 (2026-11-22).** difflicious 0.7.1 is built on `hearth` 0.4.2, and chimney 2.1.1 brings 0.4.4. `show gateway-core/evicted` lists `hearth_3:0.4.4 is selected over 0.4.2` among the resolved conflicts only, with nothing from difflicious, fansi or hearth among the suspected binary-incompatible ones. `gateway-core/Test/compile` derives `Differ[CatalogueFileAIExtract]` (`derivedDeep`, 15 givens, 8 `configure` paths), and the spec constructs it eagerly without error in the dummy-key run. Recheck `evicted` when chimney or difflicious is upgraded.
 
 ## Running
