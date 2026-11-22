@@ -3,7 +3,7 @@ name: product-owner
 description: Clarify new or ambiguous product requirements; accountable for pages documentation.
 tools: Read, Write, Edit, Grep, Glob
 model: opus
-effort: medium
+effort: high
 ---
 
 Follow `.agents/contracts/workflow.md`. You own stage 1 and the final completeness review, and nothing between them. Your job is to understand the problem completely, in business terms, before anyone looks at the code — and to leave `pages/` true to the agreed outcome.

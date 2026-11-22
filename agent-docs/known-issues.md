@@ -200,6 +200,7 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Cause:** Each attempt exceeded the golden's 60-second read deadline; the client allowed two retries with exponential delay. The exception does not identify whether provider latency, request complexity, or connectivity caused the delay. No completion reached JSON decoding.
 - **Adjustment:** The catalogue image manual golden first moved to 180 seconds per attempt, and on 2026-11-17 to 600 seconds, because `CatalogueFileAiExtractFromImageGoldenSpec/image-2.jpeg` (about 150 rows) timed out on every 180-second attempt. It keeps two retries, so a timeout-only case can take roughly 30 minutes. The shared production default stays 180 seconds per attempt, with the existing environment override and client retry/error behavior retained.
 - **Verify:** Compile/lint the spec without sending data. A person can then run it with their configured key and asset to observe whether a complete response arrives within the longer deadline; canceled or timed-out runs are not extraction-quality evidence.
+- **Issue 607 rework (agreed, not built yet):** the image cases move to `golden/CatalogueFileAiExtractGoldenSpec` (`image-2.jpeg` keeps its name and bytes). That spec uses 600 seconds with two retries for every case, so this signature then names the merged spec.
 
 ## Several arbitrary users in one test collide on the unique phone number
 

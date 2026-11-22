@@ -66,7 +66,7 @@ Read the affected epic for feature/behavior changes and [Epic standards](pages/e
 | [Functional testing](agent-docs/project/functional-testing.md) | Adding/reviewing `fun/<Feature>ServiceSpec` mocked-dependency service tests, `inSequence`/expectation conventions, or deciding whether a case belongs here versus repository/integration or acceptance |
 | [Acceptance testing](agent-docs/project/acceptance-testing.md) | Adding/reviewing real-gateway HTTP acceptance specs, `GatewayClient` test methods/codecs, shared acceptance harness wiring, organization middleware matrices, or rejected-side-effect assertions |
 | [Acceptance test gaps](agent-docs/acceptance-test-gaps.md) | Picking up known-missing acceptance coverage, or touching a feature listed there; delete an entry in the PR that closes it |
-| [AI response performance](agent-docs/project/ai-response-performance.md) | Changing a manual AI golden check, its golden files, or the shared golden performance scorer (pairing, comparison, score, report) |
+| [AI response performance](agent-docs/project/ai-response-performance.md) | Changing the manual AI golden check, its golden files, its difflicious comparison (pairing keys) or its difference output |
 | [Terraform](agent-docs/project/terraform.md) | Changing `terraform/`, or finishing a feature that added an external dependency, credential, or required env var |
 
 ### Diagnostics
@@ -135,7 +135,7 @@ New epic → follow [Epic standards](pages/epics/EPIC-STANDARDS.md) and copy its
 - [Organization Onboarding](pages/epics/04-organization-onboarding.md) — create the organization and its owner membership, then upload a logo
 - [Customer Book](pages/epics/05-customer-book.md) — add, browse, open, update, and archive customers; manage a business's contacts
 - [Catalogue](pages/epics/06-catalogue.md) — add, browse, open, update, and archive items; upload an item's image
-- [AI Response Performance](pages/epics/07-ai-response-performance.md) — measure AI extraction answers against hand-checked golden answers (built for every Catalogue and Customer Book check)
+- [AI Response Performance](pages/epics/07-ai-response-performance.md) — compare the raw AI extraction answer with hand-checked golden answers and fail on any difference (issue 607 rework, in progress: Catalogue only; Customer Book to be rebuilt)
 
 ## Features
 

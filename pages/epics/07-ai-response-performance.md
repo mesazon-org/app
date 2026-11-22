@@ -20,7 +20,7 @@ This is a check that developers run by hand. Customers never see it, and it chan
 
 - **Related** — [Catalogue]({{ site.baseurl }}{% link epics/06-catalogue.md %}) and [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}). Their extraction from pictures, PDFs and spreadsheets is the AI answer being checked.
 - **Out of scope** — Changes to the AI instructions themselves, and to what the product returns.
-- **Not built yet** — Customer Book golden checks. Today they exist. This rework removes them, and they will be rebuilt in a later round. Until then Customer Book has no golden check.
+- **Not built yet** — Customer Book golden checks. Today they exist. This rework removes the checks and their golden answers, but keeps Customer Book's source files for the rebuild in a later round. Until then Customer Book has no golden check.
 - **Not built yet** — A score or percentage, a history of past results, and running several models in one go. None was asked for.
 
 ### Requirements across the epic
@@ -30,16 +30,23 @@ This is a check that developers run by hand. Customers never see it, and it chan
 1. A **golden answer** is the correct AI answer, written down in advance, in the shape the AI returns it, not the shape of the final product response. It starts from one careful AI reading and is then corrected by hand against the source and the extraction rules, including the AI's notes. Running the check never changes a golden answer. *Today the golden notes were never hand-checked, because notes were not compared. After this, they are hand-checked.*
 2. All golden answers are made again for the new check. *Today the existing golden answers are used. After this, they are removed and replaced.* Each new golden answer comes from one live AI run, which happens only when the developer gives the go-ahead and supplies the key.
 3. The Catalogue check holds exactly these cases:
-   - two price-list pictures, the first sent with the instruction "items in 1 kg become 12 kg per box, keep fruits as they are";
+   - two price-list pictures, the first sent with today's exact processing message, kept word for word: "ignore cost, the items that are represented with 1 kg make them 12 kg per box, keep fruits keep them as it is, rest keep them as it is";
    - one PDF price list;
    - three spreadsheets;
-   - one unrelated picture, one unrelated spreadsheet and one unrelated PDF, which must give nothing;
+   - one unrelated picture, one unrelated spreadsheet and one unrelated PDF, which must give no items;
    - one note-shortening case.
 
    *Today these are four separate checks, one each for pictures, PDF, spreadsheets and unrelated files. After this, they are one check.*
 4. The note-shortening case reuses an existing Catalogue CSV spreadsheet. For that case only, the group size is lowered. The check then does what the product does: it reads the spreadsheet in two or more groups and shortens the repeated notes. The answer is compared with its golden answer like any other case. *Today a separate note-shortening check sends five fixed note lists straight to the AI. After this, that check and its golden answers are gone, for Catalogue and Customer Book alike.*
-5. Every field of the AI's answer is compared, the AI's notes included: the general notes and each item's notes. Details the product adds afterwards, such as duplicate marks and whether an item needs attention, are not part of the AI's answer, so they are not compared here. *Today notes are only counted and are not compared. After this, a note worded differently from the golden answer is a difference.*
-6. The order of items does not matter. An item in the answer is matched with the expected item that shares a product code (SKU), or has exactly the same name when it has no code. Inside a matched item, variants are matched by product code, then by label. *Today names also match when they are at least 70% alike. After this, names must be identical.* An expected item with no partner is missing; an answer item with no partner is extra.
+5. Every field of the AI's answer is compared. That covers:
+   - the items and their variants;
+   - the AI's entry counts: entries identified and entries processed;
+   - the row numbers of empty and unreadable rows;
+   - whether the AI assumed a selling unit or a currency;
+   - the AI's notes, both the general notes and each item's notes.
+
+   The product adds some details afterwards, so they are not compared here: the "Processed N of M entries" summary lines, the duplicate marks, and whether an item needs attention. *Today notes are only counted and are not compared. After this, a note worded differently from the golden answer is a difference.*
+6. Order does not matter, for items and for plain lists such as notes and row numbers. An item with product codes (SKUs) is matched only with an expected item that has exactly the same set of codes. An item without codes is matched by exactly the same name. Inside a matched item, variants are matched by product code, then by label. *Today names also match when they are at least 70% alike. After this, names must be identical.* An expected item with no partner is missing; an answer item with no partner is extra.
 7. Any difference fails the check. *Today a check passes whatever its score.*
 
 #### Non-functional
@@ -76,11 +83,11 @@ Each case has a golden answer made and corrected by hand as described above. In 
 | 4. The model returns an item the golden answer does not have | - That item shows as extra, and the case fails |
 | 5. The model adds a description the golden answer does not have | - The difference is shown, and the case fails |
 | 6. The model drops an accent, for example "Κραμπι" for "Κραμπί" | - The difference shows both texts, and the case fails. *Today the report also showed "1 character off, 83% alike". After this, no closeness is shown.* |
-| 7. Only the AI's notes are worded differently | - The difference is shown, and the case fails. *Today notes did not affect the result.* |
+| 7. Only one of the AI's notes is worded differently | - The golden note shows as missing and the reworded note as extra, and the case fails. *Today notes did not affect the result.* |
 | 8. The model returns the same items in a different order | - No difference is shown for the order |
 | 9. The model writes a name 90% alike to the golden name, with no product code | - The expected item shows as missing and the model's item as extra. *Today they were paired as one item.* |
-| 10. The model writes 8.40 where the golden answer has 8.4 | - *Today this counts as matched. After this, there is no special rule. The comparison decides it as it stands, so it may show as a difference.* |
-| 11. An unrelated picture, spreadsheet or PDF is sent | - The answer must match its golden answer, which holds nothing, or the case fails |
+| 10. The model writes 8.40 where the golden answer has 8.4 | - It counts as the same, so no difference is shown, as today |
+| 11. An unrelated picture, spreadsheet or PDF is sent | - The answer must match its golden answer, which holds no items but still has its counts, row lists and notes, or the case fails |
 | 12. The note-shortening case runs | - The spreadsheet is read in groups and its repeated notes are shortened, as the product does, and the result must match its golden answer, or the case fails |
 | 13. A golden answer is missing | - The case stops before the AI is called, with a message naming the missing answer, and writes nothing |
 | 14. The AI cannot be reached or runs out of time | - The case fails, as today |
@@ -88,7 +95,7 @@ Each case has a golden answer made and corrected by hand as described above. In 
 
 #### Requirements
 
-1. The output is only the list of differences between the golden answer and the model's answer, covering every field. *Today the report has a summary naming the source and the model, a "% right" table, a note-count line and a grouped problem list. After this, none of these is printed, the source and model names included.*
+1. When a case fails, the output shows only the parts that differ, each with where it sits in the answer. The full answer is never printed. *Today the report has a summary naming the source and the model, a "% right" table, a note-count line and a grouped problem list. After this, none of these is printed, the source and model names included.*
 2. A missing golden answer is never created from the model's answer. A new golden answer is only ever written deliberately and corrected by hand.
 
 #### Request / Response / Outcome
@@ -120,7 +127,7 @@ In a first look, the second picture's main table seemed to have about 124 priced
 
 #### 2. Customer Book has no golden check until it is rebuilt
 
-This rework removes Customer Book's golden checks: ten contact-list pictures (one of them a second time with an instruction to leave out phone numbers), two PDFs, four spreadsheets, unrelated files, and five note-shortening cases. Until they are rebuilt, a change to the Customer Book AI instructions cannot be checked against golden answers.
+This rework removes Customer Book's golden checks and their golden answers: ten contact-list pictures (one of them a second time with an instruction to leave out phone numbers), two PDFs, four spreadsheets, unrelated files, and five note-shortening cases. The source files stay, ready for the rebuild. Until they are rebuilt, a change to the Customer Book AI instructions cannot be checked against golden answers.
 
 **To decide:** when to rebuild Customer Book's golden checks the same way as Catalogue's.
 
