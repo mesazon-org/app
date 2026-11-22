@@ -35,7 +35,7 @@ An **epic** covers one area of the product end to end: the steps a person goes t
 | [Organization Onboarding]({{ site.baseurl }}{% link epics/04-organization-onboarding.md %}) | Setting up the business itself: its name, contact details and short web name, then its logo. |
 | [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}) | The organization's address book of the people and companies it trades with: adding, browsing, updating, and archiving them. |
 | [Catalogue]({{ site.baseurl }}{% link epics/06-catalogue.md %}) | What the organization sells: adding items, giving them prices and pictures, browsing, updating, and archiving them. |
-| [AI Response Performance]({{ site.baseurl }}{% link epics/07-ai-response-performance.md %}) | How developers measure how close the AI's reading of a price list or contact list comes to a hand-checked correct answer. Built for every Catalogue and Customer Book extraction check. |
+| [AI Response Performance]({{ site.baseurl }}{% link epics/07-ai-response-performance.md %}) | How developers check the AI's reading of a price list against a hand-checked correct answer, and see every difference. Covers Catalogue extraction; Customer Book's checks are to be rebuilt. |
 
 Each epic also closes with **Known gaps and open questions** — the decisions that have not been made yet, kept separate from what the product does today so the two are never confused.
 
