@@ -306,7 +306,7 @@ Mappings: the default catalogue WireMock acceptance mapping returns one usable i
 
 ### Manual AI golden checks
 
-**Issue 607 rework (agreed 2026-11-22, in progress).** Built: the spec, its comparison, its own spreadsheet join and note shortening for the compaction case, and the removal of the old specs listed under "Before", with their goldens and the four old asset folders. Goldens: batch 5a (`image-1`, `image-2`, `pdf-1`) hand-corrected; the other seven not yet. Full rules: [AI response performance](../project/ai-response-performance.md). Product: [AI Response Performance](../../pages/epics/07-ai-response-performance.md).
+**Issue 607 rework (agreed 2026-11-22, in progress).** Built: the spec, its comparison, its own spreadsheet join and note shortening for the compaction case, and the removal of the old specs listed under "Before", with their goldens and the four old asset folders. Goldens: batches 5a (`image-1`, `image-2`, `pdf-1`) and 5b (`spreadsheet-1`, `-2`, `-3`) hand-corrected; the other four not yet. Full rules: [AI response performance](../project/ai-response-performance.md). Product: [AI Response Performance](../../pages/epics/07-ai-response-performance.md).
 
 - **Before (deleted in the rework):** four extraction specs plus `golden/CatalogueFileNotesCompactionGoldenSpec` called `CatalogueFileService.aiExtract`, or `noteCompaction` directly. They scored the public preview with the `golden/performance/` scorer and never failed on the score.
 - **After:** one spec, `golden/CatalogueFileAiExtractGoldenSpec`. It calls `AIClientDataExtraction` directly with the production `AIInstructions` prompts. Single-group spreadsheet cases use the one group's answer as is. Only the notes compaction case joins the groups, with a verbatim copy of step 3's merge, and always shortens the notes: no skip rule, no acceptance rule and no fallback, so a failed shortening call fails the case. `CatalogueFileService` is not called.
@@ -341,7 +341,7 @@ Mappings: the default catalogue WireMock acceptance mapping returns one usable i
   - an unreadable price (`TBD`), and a blank price whose notes cell says `Price on request`;
   - amounts over the add-item limits (`0,125` and 13 integer digits).
 
-Expected raw answer (live, not asserted):
+Answer in the hand-corrected goldens `spreadsheet-1/-2/-3.json` (issue 607, batch 5b; it matched this design expectation in all three files):
 
 - empty rows 2, 3, 15, 16, 30, 31;
 - unidentified row 28;

@@ -1,6 +1,6 @@
 # AI response performance
 
-> **Status (issue 607, rework agreed 2026-11-22, in progress).** Product truth: [AI Response Performance](../../pages/epics/07-ai-response-performance.md). Everything below describes the agreed design. **Built:** the spec with its ten cases and moved assets (slice 1), the difflicious comparison and `assertNoDiff` output (slice 2), and the spec's own spreadsheet join and note shortening for the notes compaction case, with `CatalogueFileService` unchanged (slice 3), and the [removal](#scope) of the old scored checks, their goldens and the four old Catalogue asset folders (slice 4). **Goldens:** batch 5a (`image-1.json`, `image-2.json`, `pdf-1.json`) is hand-corrected; the other seven are not committed yet, so those cases fail with "Golden file is missing" when a key is set. Open gaps: see [Open gaps](#open-gaps).
+> **Status (issue 607, rework agreed 2026-11-22, in progress).** Product truth: [AI Response Performance](../../pages/epics/07-ai-response-performance.md). Everything below describes the agreed design. **Built:** the spec with its ten cases and moved assets (slice 1), the difflicious comparison and `assertNoDiff` output (slice 2), and the spec's own spreadsheet join and note shortening for the notes compaction case, with `CatalogueFileService` unchanged (slice 3), and the [removal](#scope) of the old scored checks, their goldens and the four old Catalogue asset folders (slice 4). **Goldens:** batches 5a (`image-1.json`, `image-2.json`, `pdf-1.json`) and 5b (`spreadsheet-1.json`, `-2.json`, `-3.json`) are hand-corrected; the other four are not committed yet, so those cases fail with "Golden file is missing" when a key is set. Open gaps: see [Open gaps](#open-gaps).
 
 How the hand-run AI golden check compares a live model's raw answer with a hand-corrected golden answer. Any difference fails the case.
 
@@ -62,6 +62,9 @@ The check calls the AI integration point directly, with the production prompts. 
   - A missing Greek accent (`Ακτινιδιο`) or a transliterated spelling (`COSTA RIKA`) does not "look misspelled": no "Name may be misspelled in the source" note. The note is kept for clear spelling mistakes such as `Πάρκαπα`.
   - For characters that look identical (Greek and Latin `X`/`Χ`, `I`/`Ι`, `L`/`Λ`, straight and curly apostrophes), the golden follows the source where there is evidence, such as the PDF text layer, and otherwise keeps the AI's choice.
   - A value cut by a cell border keeps its visible characters and gets "Name partly unclear, please check", including a last letter only partly visible (`PINEAPPLE 8τεμ COSTA RIKA`).
+  - (5b) A column mapped to a catalogue field is never also an attribute, even when its value cannot be read: the `Cost €` column is the price, so `TBD` gives `price: null` with one variant note and no `Cost €` attribute.
+  - (5b) A sale basis in packaging form keeps its packaging role: `sold per bundle of 10` is `1 Pack` with `perUnit` `10 Piece`, not `10 Piece`.
+  - (5b) Goldens of the same rows in different file kinds (`spreadsheet-1/-2/-3`) are aligned only where one breaks a rule; differently worded notes stay as each run wrote them.
 - `image-2.json`: the row count was settled against the picture in 5a. It has 125 priced rows (29 + 45 + 51) and no repeated cropped strip: the top of the image is blank padding. Epic known gap 1, which described about 124 rows and a cropped strip, was based on a first look and is corrected by PO.
 
 ## Run order and failures
