@@ -1,6 +1,6 @@
 # AI response performance
 
-> **Status (issue 607, rework agreed 2026-11-22, not built yet).** Product truth: [AI Response Performance](../../pages/epics/07-ai-response-performance.md). Everything below describes the agreed design. Until the rework slices land, the repository still holds the old scored checks: the `golden/performance/` scorer, its `unit/golden/performance/` specs, four Catalogue extraction specs, two notes compaction specs and four Customer Book specs. Open gaps: see [Open gaps](#open-gaps).
+> **Status (issue 607, rework agreed 2026-11-22, in progress).** Product truth: [AI Response Performance](../../pages/epics/07-ai-response-performance.md). Everything below describes the agreed design. **Built:** the spec with its ten cases and moved assets (slice 1), the difflicious comparison and `assertNoDiff` output (slice 2), and the spec's own spreadsheet join and note shortening for the notes compaction case, with `CatalogueFileService` unchanged (slice 3). **Not built yet:** no golden is committed, so every case fails with "Golden file is missing" when a key is set. The old scored checks are still in the repository until their removal slice lands: the `golden/performance/` scorer, its `unit/golden/performance/` specs, four Catalogue extraction specs, two notes compaction specs and four Customer Book specs. Open gaps: see [Open gaps](#open-gaps).
 
 How the hand-run AI golden check compares a live model's raw answer with a hand-corrected golden answer. Any difference fails the case.
 
@@ -36,16 +36,15 @@ The check calls the AI integration point directly, with the production prompts. 
 |---|---|
 | Image | `AIClientDataExtraction.extractFromImage[CatalogueFileAIExtract](FileScannedPath(<asset path>), SupportedMediaType.JPEG, AIInstructions.extractCatalogueItemsFromImageInstructions, <message>)` |
 | PDF | `extractFromPdf[CatalogueFileAIExtract](FileScannedPath(<asset path>), <declared name>, AIInstructions.extractCatalogueItemsFromPdfInstructions, None)` |
-| Spreadsheet | `SpreadsheetTool.convertToCsv` (CSV) or `convertExcelToCsv` (XLS/XLSX), then `extractFromCsv[CatalogueFileAIExtract](…, AIInstructions.extractCatalogueItemsFromFileInstructions, None)`, then the shared `CatalogueFileService.mergeAndCompactCatalogueFileAIExtracts` |
+| Spreadsheet | `SpreadsheetTool.convertToCsv` (CSV) or `convertExcelToCsv` (XLS/XLSX), then `extractFromCsv[CatalogueFileAIExtract](…, AIInstructions.extractCatalogueItemsFromFileInstructions, None)`, then the group's answer as is, or for the notes compaction case the spec's own [join and note shortening](#what-is-called-no-service) |
 
-- The asset path is the source-tree path `src/test/resources/assets-test/CatalogueFileAiExtractGoldenSpec/<asset>`, relative to the forked test working directory, which is the module base directory. No `FileScanner` is used: the media type is given explicitly.
-- **Shared merge and compaction (user decision, Q2):** the spreadsheet step after `extractFromCsv` moves out of `CatalogueFileServiceImpl` into the companion as `private[gateway] def mergeAndCompactCatalogueFileAIExtracts(aiClientDataExtraction, catalogueFileAIExtracts): UIO[CatalogueFileAIExtract]`. The service and the check both call it, and its behaviour is unchanged:
-  - the pure merge;
-  - compaction only with at least two groups and non-empty merged notes;
-  - compacted notes accepted only when they are non-empty and no more than were sent;
-  - otherwise, or on any error or defect, a warning and the raw notes.
+- The asset path is the source-tree path `src/test/resources/assets-test/CatalogueFileAiExtractGoldenSpec/<asset>`, relative to the forked test working directory, which is the module base directory. No `FileScanner` is used: the media type is given explicitly, and `FileScannedPath(...)` only wraps the asset path in the type the tools take. Each spreadsheet case writes its steps inline (user decision, slice 3): it calls `convertToCsv` (CSV) or `convertExcelToCsv` (XLS/XLSX) directly by its own file type, with no media-type check, then `ZIO.scoped(extractFromCsv(…)).zioValue`.
+- **Spec-private join and note shortening (user decision, slice 3, option B; replaces the earlier Q2 choice of sharing the service's step).** `CatalogueFileService` is not changed or called, and the service's skip rule is not copied: each case knows from its own setup whether its spreadsheet is read in groups (user decision, slice 3).
+  - `extractFromCsv` returns the groups' answers, `NonEmptyChunk[CatalogueFileAIExtract]`. There is no shared spreadsheet helper.
+  - **Single-group cases** (`spreadsheet-1.csv`, `-2.xls`, `-3.xlsx` and the unrelated `spreadsheet-4.csv`, all at `csvBatchMaxDataRows = 100`) take the one group's answer with `.head`: no join and no shortening. If a group were ever dropped this way (an asset grown past 100 data rows), its items and rows would be missing from the answer and the case would fail as differences against the hand-corrected golden.
+  - **The notes compaction case** always joins the groups with a spec-private `mergeCatalogueFileAIExtracts`, copied verbatim from `CatalogueFileServiceImpl` (it sums both counts and concatenates candidates, both row lists and top-level notes in group order). It then always calls `noteCompaction(<joined notes>, AIInstructions.compactCatalogueFileNotesInstructions)` and puts the shortening answer in place of the top-level notes **as is**. The service's acceptance rule (non-empty and no more notes than were sent) and its keep-the-raw-notes fallback are **not** copied.
 
-  So a failed compaction does not fail the case as an AI error; it shows up as notes differences. With the default batch size each of the three spreadsheets is one group, so the merge is a no-op and no compaction runs.
+  So a failed or timed-out shortening call fails the case through `.zioValue`, like any AI error. An empty or longer shortening answer is compared as is and shows up as notes differences. The copy does not follow later service changes (see [Open gaps](#open-gaps)).
 - **Notes compaction case:** `spreadsheet-1.csv` has a header and 30 data rows (file rows 2–31). With `csvBatchMaxDataRows = 15` it is read in exactly two groups, rows 2–16 and rows 17–31. The split falls on the repeated `Product` header (row 17), so no item straddles groups. Each group produces general notes, so compaction runs.
 
 ## Golden files
@@ -66,7 +65,7 @@ For each case:
 
 1. `assume(apiKey.nonEmpty, …)`. The key comes from `AI_CLIENT_DATA_EXTRACTION_API_KEY`, and the in-code fallback is `""`. No key cancels the case.
 2. The golden is resolved and decoded **before** the AI call. A missing file fails naming its full path. A decoding error fails with the decoder message.
-3. The AI call runs live (see [What is called](#what-is-called-no-service)). An AI error or timeout fails through `.zioValue`.
+3. The AI call runs live (see [What is called](#what-is-called-no-service)), followed, in the notes compaction case only, by the join and the note-shortening call. An AI error or timeout in any of them fails through `.zioValue`.
 4. The answer (obtained) is compared with the golden (expected) using the [comparison](#comparison) differ. The case fails through `assertNoDiff` when anything differs ([difference output](#difference-output)). When it is OK, nothing is printed.
 
 ## Model selection and config
@@ -119,6 +118,7 @@ User decision, slice 2, **for the time being**. This reverses the earlier choice
 ## Open gaps
 
 - **Customer Book source assets kept without a spec (user decision Q5, deviation).** `assets-test/CustomerBookFileAiExtract{FromImage,FromPdf,FromSpreadsheet,UnrelatedContent}GoldenSpec/` stay in place for the later rebuild, although no spec reads them. This is an accepted exception to [Asset files](acceptance-testing.md#asset-files) ("one folder per spec"). The rebuilt specs must reuse these exact folder names, or move the files.
+- **The check's spreadsheet join and shortening are a copy (user decision, slice 3, option B; epic known gap 5, accepted for now).** The check copies only the merge; it has no skip rule, acceptance rule or fallback. A later change to the service's merge or compaction ([Catalogue step 3](../features/catalogue.md#cataloguefileserviceaiextract)) is not followed by the check; update the spec's copy by hand in the same PR. The service's acceptance rule and fallback are proved only by `fun/CatalogueFileServiceSpec`, never by the live check.
 - **Comparison rules have no AI-free proof.** The pairing keys and epic scenarios 1–10 are exercised only by live runs. The user removed the scorer's unit specs with nothing replacing them, in line with "no tests for test-only code".
 - **Note wording fails the check** (epic known gap 3, accepted).
 - **Whole-answer, colour-only output** (epic known gap 4, for the time being). A differences-only output (a walker over `DiffResult`, built and dropped in slice 2) is the open alternative.

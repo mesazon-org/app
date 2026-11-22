@@ -119,28 +119,19 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
       .provide(SpreadsheetTool.live)
       .zioValue
 
-  private def extractCatalogueFileAIExtractFromSpreadsheet(
-      assetFileName: String,
-      supportedMediaType: SupportedMediaType,
-      csvBatchMaxDataRows: Int,
+  private def mergeCatalogueFileAIExtracts(
+      catalogueFileAIExtracts: NonEmptyChunk[CatalogueFileAIExtract]
   ): CatalogueFileAIExtract = {
-    val aiClientDataExtraction = buildAIClientDataExtraction(csvBatchMaxDataRows)
-    val spreadsheetTool        = buildSpreadsheetTool
-    val csvFileScannedPath     = FileScannedPath(assetDirectory.resolve(assetFileName))
-    val csvRecordStream        =
-      if (SupportedMediaType.excel.contains(supportedMediaType)) spreadsheetTool.convertExcelToCsv(csvFileScannedPath)
-      else spreadsheetTool.convertToCsv(csvFileScannedPath)
+    val catalogueFileAIExtractsList = catalogueFileAIExtracts.toList
 
-    ZIO
-      .scoped(
-        aiClientDataExtraction.extractFromCsv[CatalogueFileAIExtract](
-          csvRecordStream,
-          AIInstructions.extractCatalogueItemsFromFileInstructions,
-          None,
-        )
-      )
-      .flatMap(_ => ???)
-      .zioValue
+    CatalogueFileAIExtract(
+      entriesIdentified = catalogueFileAIExtracts.map(_.entriesIdentified).sum,
+      entriesProcessed = catalogueFileAIExtracts.map(_.entriesProcessed).sum,
+      candidates = catalogueFileAIExtractsList.flatMap(_.candidates),
+      emptyEntryRows = catalogueFileAIExtractsList.flatMap(_.emptyEntryRows),
+      unidentifiedEntryRows = catalogueFileAIExtractsList.flatMap(_.unidentifiedEntryRows),
+      extractionNotes = catalogueFileAIExtractsList.flatMap(_.extractionNotes),
+    )
   }
 
   private def compareWithGolden(
@@ -266,11 +257,17 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
 
         val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-1.json")
 
-        val catalogueFileAIExtract = extractCatalogueFileAIExtractFromSpreadsheet(
-          "spreadsheet-1.csv",
-          SupportedMediaType.CSV,
-          CsvBatchMaxDataRowsDefault,
-        )
+        val catalogueFileAIExtract = ZIO
+          .scoped(
+            buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
+              .extractFromCsv[CatalogueFileAIExtract](
+                buildSpreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-1.csv"))),
+                AIInstructions.extractCatalogueItemsFromFileInstructions,
+                None,
+              )
+          )
+          .zioValue
+          .head
 
         compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }
@@ -283,11 +280,17 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
 
         val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-2.json")
 
-        val catalogueFileAIExtract = extractCatalogueFileAIExtractFromSpreadsheet(
-          "spreadsheet-2.xls",
-          SupportedMediaType.XLS,
-          CsvBatchMaxDataRowsDefault,
-        )
+        val catalogueFileAIExtract = ZIO
+          .scoped(
+            buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
+              .extractFromCsv[CatalogueFileAIExtract](
+                buildSpreadsheetTool.convertExcelToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-2.xls"))),
+                AIInstructions.extractCatalogueItemsFromFileInstructions,
+                None,
+              )
+          )
+          .zioValue
+          .head
 
         compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }
@@ -300,11 +303,17 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
 
         val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-3.json")
 
-        val catalogueFileAIExtract = extractCatalogueFileAIExtractFromSpreadsheet(
-          "spreadsheet-3.xlsx",
-          SupportedMediaType.XLSX,
-          CsvBatchMaxDataRowsDefault,
-        )
+        val catalogueFileAIExtract = ZIO
+          .scoped(
+            buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
+              .extractFromCsv[CatalogueFileAIExtract](
+                buildSpreadsheetTool.convertExcelToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-3.xlsx"))),
+                AIInstructions.extractCatalogueItemsFromFileInstructions,
+                None,
+              )
+          )
+          .zioValue
+          .head
 
         compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }
@@ -317,11 +326,28 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
 
         val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-1-notes-compaction.json")
 
-        val catalogueFileAIExtract = extractCatalogueFileAIExtractFromSpreadsheet(
-          "spreadsheet-1.csv",
-          SupportedMediaType.CSV,
-          CsvBatchMaxDataRowsCompaction,
-        )
+        val aiClientDataExtraction = buildAIClientDataExtraction(CsvBatchMaxDataRowsCompaction)
+
+        val catalogueFileAIExtracts = ZIO
+          .scoped(
+            aiClientDataExtraction.extractFromCsv[CatalogueFileAIExtract](
+              buildSpreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-1.csv"))),
+              AIInstructions.extractCatalogueItemsFromFileInstructions,
+              None,
+            )
+          )
+          .zioValue
+
+        val catalogueFileAIExtractMerged = mergeCatalogueFileAIExtracts(catalogueFileAIExtracts)
+
+        val noteCompactionOutput = aiClientDataExtraction
+          .noteCompaction(
+            catalogueFileAIExtractMerged.extractionNotes,
+            AIInstructions.compactCatalogueFileNotesInstructions,
+          )
+          .zioValue
+
+        val catalogueFileAIExtract = catalogueFileAIExtractMerged.copy(extractionNotes = noteCompactionOutput.notes)
 
         compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }
@@ -334,11 +360,17 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
 
         val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-4.json")
 
-        val catalogueFileAIExtract = extractCatalogueFileAIExtractFromSpreadsheet(
-          "spreadsheet-4.csv",
-          SupportedMediaType.CSV,
-          CsvBatchMaxDataRowsDefault,
-        )
+        val catalogueFileAIExtract = ZIO
+          .scoped(
+            buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
+              .extractFromCsv[CatalogueFileAIExtract](
+                buildSpreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-4.csv"))),
+                AIInstructions.extractCatalogueItemsFromFileInstructions,
+                None,
+              )
+          )
+          .zioValue
+          .head
 
         compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }

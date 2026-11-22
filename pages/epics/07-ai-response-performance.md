@@ -4,7 +4,7 @@ title: AI Response Performance
 
 # AI Response Performance
 
-> **Status: rework agreed, not built yet.** Today every Catalogue and Customer Book extraction check, and both note-shortening checks, print a scored report with percentages and never fail on the score. After this rework, only Catalogue has golden checks. They live in one check that fails on any difference. A failing case prints the whole answer with the differences marked in colour. Customer Book's golden checks and both note-shortening checks are removed. Customer Book's checks will be rebuilt in a later round.
+> **Status: rework in progress.** Built: the single Catalogue check with its 10 cases, the new comparison and its whole-answer output, and the check's own copy of the spreadsheet join-and-shorten step. Not built yet: the golden answers, so with a key every case fails today with "Golden file is missing", and the removal of the old scored checks. Those old checks, every Catalogue and Customer Book extraction check and both note-shortening checks, still print a scored report with percentages and never fail on the score. After this rework, only Catalogue has golden checks. They live in one check that fails on any difference. A failing case prints the whole answer with the differences marked in colour. Customer Book's golden checks and both note-shortening checks are removed. Customer Book's checks will be rebuilt in a later round.
 
 ### Overview
 
@@ -37,7 +37,7 @@ This is a check that developers run by hand. Customers never see it, and it chan
    - one note-shortening case.
 
    *Today these are four separate checks, one each for pictures, PDF, spreadsheets and unrelated files. After this, they are one check.*
-4. The note-shortening case reuses an existing Catalogue CSV spreadsheet. For that case only, the group size is lowered. The check then does what the product does: it reads the spreadsheet in two or more groups and shortens the repeated notes. The answer is compared with its golden answer like any other case. *Today a separate note-shortening check sends five fixed note lists straight to the AI. After this, that check and its golden answers are gone, for Catalogue and Customer Book alike.*
+4. The note-shortening case reuses an existing Catalogue CSV spreadsheet. For that case only, the group size is lowered, so the spreadsheet is read in two or more groups. In that case only, the check runs its own copy of the product's join-and-shorten step: it always joins the groups' answers the same way the product does, and always shortens the notes with the product's own shortening instructions. The other spreadsheet cases are read in one group and are not joined or shortened. Unlike the product, the check has no fallback and does not judge the shortened notes: if shortening fails, the case fails, where the product would quietly keep the original notes, and an empty or longer shortened answer is compared as it is. The answer is compared with its golden answer like any other case. *Today a separate note-shortening check sends five fixed note lists straight to the AI. After this, that check and its golden answers are gone, for Catalogue and Customer Book alike.*
 5. Every field of the AI's answer is compared. That covers:
    - the items and their variants;
    - the AI's entry counts: entries identified and entries processed;
@@ -88,7 +88,7 @@ Each case has a golden answer made and corrected by hand as described above. In 
 | 9. The model writes a name 90% alike to the golden name, with no product code | - They are not matched: each is printed in full in its own side's colour. *Today they were paired as one item.* |
 | 10. The model writes 8.40 where the golden answer has 8.4 | - It counts as the same, so no difference is shown, as today |
 | 11. An unrelated picture, spreadsheet or PDF is sent | - The answer must match its golden answer, which holds no items but still has its counts, row lists and notes, or the case fails |
-| 12. The note-shortening case runs | - The spreadsheet is read in groups and its repeated notes are shortened, as the product does, and the result must match its golden answer, or the case fails |
+| 12. The note-shortening case runs | - The spreadsheet is read in groups, joined and its repeated notes shortened by the check's own copy of the product's step, and the result must match its golden answer, or the case fails |
 | 13. A golden answer is missing | - The case stops before the AI is called, with a message naming the missing answer, and writes nothing |
 | 14. The AI cannot be reached or runs out of time | - The case fails, as today |
 | 15. No AI key is supplied | - The case is skipped, as today |
@@ -147,5 +147,11 @@ Notes are now compared, and the check fails on any difference. The AI rarely wor
 For the time being, a failing case prints the whole answer with the differences marked only in colour. That makes a small difference hard to find in a long answer, and without colour, missing and extra cannot be told apart. A list of only the differing parts, each with where it sits, was first agreed and then set aside for now.
 
 **To decide:** whether, and when, to switch to a differences-only output.
+
+#### 5. The check's spreadsheet step is a copy of the product's
+
+The check joins spreadsheet groups and shortens notes with its own copy of the product's step, so the product itself is untouched. A later product change to joining or shortening does not reach the check on its own. The check does not copy the product's rule for when shortening runs. The product keeps the original notes when shortening fails, comes back empty or gives more notes than it was sent; the check does not, so only the product's own automated tests prove that rule.
+
+**Accepted for now:** this was the user's choice. A product change to joining or shortening must be copied into the check by hand.
 
 {% raw %}{% include abbreviations.md %}{% endraw %}
