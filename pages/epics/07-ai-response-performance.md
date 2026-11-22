@@ -12,6 +12,8 @@ When the catalogue reads items out of a price list, an AI (artificial intelligen
 
 After this rework, the check covers Catalogue extraction from pictures, PDFs and spreadsheets, including unrelated files that must give no results. One spreadsheet case also proves that repeated notes are shortened when a spreadsheet is read in groups.
 
+The check measures only the AI's own answer: what the AI returns before the product works on it. The product's own follow-up steps are fixed rules, not AI, and the product's existing automated tests already cover them. One example is finding duplicate names and product codes, then marking items that need attention. *Today the check runs the whole catalogue extraction and compares the final product response. After this, it sends the source and the AI instructions straight to the AI, and compares the AI's answer.*
+
 This is a check that developers run by hand. Customers never see it, and it changes nothing in the product itself.
 
 ### Related / Out of scope
@@ -25,7 +27,7 @@ This is a check that developers run by hand. Customers never see it, and it chan
 
 #### Functional
 
-1. A **golden answer** is the correct answer, written down in advance. It starts from one careful AI reading and is then corrected by hand against the source and the extraction rules, including the AI's notes. Running the check never changes a golden answer. *Today the golden notes were never hand-checked, because notes were not compared. After this, they are hand-checked.*
+1. A **golden answer** is the correct AI answer, written down in advance, in the shape the AI returns it, not the shape of the final product response. It starts from one careful AI reading and is then corrected by hand against the source and the extraction rules, including the AI's notes. Running the check never changes a golden answer. *Today the golden notes were never hand-checked, because notes were not compared. After this, they are hand-checked.*
 2. All golden answers are made again for the new check. *Today the existing golden answers are used. After this, they are removed and replaced.* Each new golden answer comes from one live AI run, which happens only when the developer gives the go-ahead and supplies the key.
 3. The Catalogue check holds exactly these cases:
    - two price-list pictures, the first sent with the instruction "items in 1 kg become 12 kg per box, keep fruits as they are";
@@ -35,8 +37,8 @@ This is a check that developers run by hand. Customers never see it, and it chan
    - one note-shortening case.
 
    *Today these are four separate checks, one each for pictures, PDF, spreadsheets and unrelated files. After this, they are one check.*
-4. The note-shortening case reuses an existing Catalogue CSV spreadsheet. For that case only, the group size is lowered so the spreadsheet is read in two or more groups and its repeated notes are shortened. The answer is compared with its golden answer like any other case. *Today a separate note-shortening check sends five fixed note lists straight to the AI. After this, that check and its golden answers are gone, for Catalogue and Customer Book alike.*
-5. Every field of the answer is compared, the AI's notes included: the general notes and each item's notes. *Today notes are only counted and are not compared. After this, a note worded differently from the golden answer is a difference.*
+4. The note-shortening case reuses an existing Catalogue CSV spreadsheet. For that case only, the group size is lowered. The check then does what the product does: it reads the spreadsheet in two or more groups and shortens the repeated notes. The answer is compared with its golden answer like any other case. *Today a separate note-shortening check sends five fixed note lists straight to the AI. After this, that check and its golden answers are gone, for Catalogue and Customer Book alike.*
+5. Every field of the AI's answer is compared, the AI's notes included: the general notes and each item's notes. Details the product adds afterwards, such as duplicate marks and whether an item needs attention, are not part of the AI's answer, so they are not compared here. *Today notes are only counted and are not compared. After this, a note worded differently from the golden answer is a difference.*
 6. The order of items does not matter. An item in the answer is matched with the expected item that shares a product code (SKU), or has exactly the same name when it has no code. Inside a matched item, variants are matched by product code, then by label. *Today names also match when they are at least 70% alike. After this, names must be identical.* An expected item with no partner is missing; an answer item with no partner is extra.
 7. Any difference fails the check. *Today a check passes whatever its score.*
 
@@ -61,7 +63,7 @@ Each case has a golden answer made and corrected by hand as described above. In 
 **Who can reach this step: developers, running the check by hand with their own AI key.**
 
 - The developer runs the check. They can choose the AI model through the same setting the product already uses. If they choose none, the product's default model is used.
-- Each source is sent to the AI, and the answer is compared with that source's golden answer.
+- Each source is sent straight to the AI with the product's AI instructions and its processing message, if it has one. The AI's answer is compared with that source's golden answer.
 - The developer reads the differences, if there are any.
 
 #### Business Scenarios
@@ -79,7 +81,7 @@ Each case has a golden answer made and corrected by hand as described above. In 
 | 9. The model writes a name 90% alike to the golden name, with no product code | - The expected item shows as missing and the model's item as extra. *Today they were paired as one item.* |
 | 10. The model writes 8.40 where the golden answer has 8.4 | - *Today this counts as matched. After this, there is no special rule. The comparison decides it as it stands, so it may show as a difference.* |
 | 11. An unrelated picture, spreadsheet or PDF is sent | - The answer must match its golden answer, which holds nothing, or the case fails |
-| 12. The note-shortening case runs | - The spreadsheet is read in groups, its repeated notes are shortened, and the result must match its golden answer, or the case fails |
+| 12. The note-shortening case runs | - The spreadsheet is read in groups and its repeated notes are shortened, as the product does, and the result must match its golden answer, or the case fails |
 | 13. A golden answer is missing | - The case stops before the AI is called, with a message naming the missing answer, and writes nothing |
 | 14. The AI cannot be reached or runs out of time | - The case fails, as today |
 | 15. No AI key is supplied | - The case is skipped, as today |
