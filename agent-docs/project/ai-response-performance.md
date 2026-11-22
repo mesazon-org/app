@@ -1,6 +1,6 @@
 # AI response performance
 
-> **Status (issue 607, rework agreed 2026-11-22, in progress).** Product truth: [AI Response Performance](../../pages/epics/07-ai-response-performance.md). Everything below describes the agreed design. **Built:** the spec with its ten cases and moved assets (slice 1), the difflicious comparison and `assertNoDiff` output (slice 2), and the spec's own spreadsheet join and note shortening for the notes compaction case, with `CatalogueFileService` unchanged (slice 3). **Not built yet:** no golden is committed, so every case fails with "Golden file is missing" when a key is set. The old scored checks are still in the repository until their removal slice lands: the `golden/performance/` scorer, its `unit/golden/performance/` specs, four Catalogue extraction specs, two notes compaction specs and four Customer Book specs. Open gaps: see [Open gaps](#open-gaps).
+> **Status (issue 607, rework agreed 2026-11-22, in progress).** Product truth: [AI Response Performance](../../pages/epics/07-ai-response-performance.md). Everything below describes the agreed design. **Built:** the spec with its ten cases and moved assets (slice 1), the difflicious comparison and `assertNoDiff` output (slice 2), and the spec's own spreadsheet join and note shortening for the notes compaction case, with `CatalogueFileService` unchanged (slice 3), and the [removal](#scope) of the old scored checks, their goldens and the four old Catalogue asset folders (slice 4). **Not built yet:** no golden is committed, so every case fails with "Golden file is missing" when a key is set. Open gaps: see [Open gaps](#open-gaps).
 
 How the hand-run AI golden check compares a live model's raw answer with a hand-corrected golden answer. Any difference fails the case.
 
@@ -17,13 +17,13 @@ How the hand-run AI golden check compares a live model's raw answer with a hand-
   | Notes compaction | `spreadsheet-1.csv`, `csvBatchMaxDataRows = 15` | — | none | `csvModel`, then `noteCompactionModel` | `spreadsheet-1-notes-compaction.json` |
   | Unrelated picture, PDF, spreadsheet | `image-3.jpeg`, `pdf-2.pdf`, `spreadsheet-4.csv` | `pdf-2.pdf` | none | the model of its file kind | `image-3.json`, `pdf-2.json`, `spreadsheet-4.json` |
 
-- **Assets** move, byte for byte, from today's four Catalogue golden asset folders into `assets-test/CatalogueFileAiExtractGoldenSpec/`. The unrelated files are renumbered because their names clash with the price-list files: today's unrelated `image-1.jpeg` becomes `image-3.jpeg`, `pdf-1.pdf` becomes `pdf-2.pdf`, and `spreadsheet-1.csv` becomes `spreadsheet-4.csv`.
-- **Removed (user decision):**
+- **Assets** were moved, byte for byte, from the four old Catalogue golden asset folders (`assets-test/CatalogueFileAiExtract{FromImage,FromPdf,FromSpreadsheet,UnrelatedContent}GoldenSpec/`, deleted in slice 4) into `assets-test/CatalogueFileAiExtractGoldenSpec/`. The unrelated files were renumbered because their names clash with the price-list files: the old unrelated `image-1.jpeg` became `image-3.jpeg`, `pdf-1.pdf` became `pdf-2.pdf`, and `spreadsheet-1.csv` became `spreadsheet-4.csv`.
+- **Removed in slice 4 (user decision):**
   - the scorer `golden/performance/` and its unit specs `unit/golden/performance/`, with nothing replacing them;
   - the four old Catalogue extraction specs;
   - both notes compaction specs (`CatalogueFileNotesCompactionGoldenSpec`, `CustomerBookFileNotesCompactionGoldenSpec`);
   - the four Customer Book golden specs;
-  - every golden JSON those specs loaded.
+  - every golden JSON those specs loaded; `assets-golden/` now holds only `ImageProcessingSpec/`.
 
   The Customer Book source assets stay, see [Open gaps](#open-gaps).
 - **Not built:** a score or percentage, run history, saved reports, multi-model runs, and Customer Book golden checks (to be rebuilt later the same way).
