@@ -1,0 +1,1834 @@
+{
+  "entriesIdentified": 57,
+  "entriesProcessed": 57,
+  "candidates": [
+    {
+      "name": "Αγγούρια",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 1.30,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Ντομάτες Extra",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 3.10,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Ντοματα Α’",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 2.60,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Ντοματα Β’",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 2.20,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Πατάτες",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 1.10,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Κρεμμύδια",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 1.10,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Κρεμμύδια κοκ.",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 1.30,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Πάρκαπα",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": null,
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        "Name may be misspelled in the source"
+      ]
+    },
+    {
+      "name": "Κολοκυθάκια μαυ.",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 2.00,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Καρότα",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 1.30,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Κραμπί",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 0.90,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Κραμπί κοκ.",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 1.20,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Κουνουπίδι",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 2.00,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Beetroot Cooked",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 1.30,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Μελιτζάνες",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 1.50,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Παντζάρι φρέσκο",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 1.50,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Πιπέρι πράσινο",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 3.70,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Πιπέρι χρ. (εισ.)",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 4.00,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Πιπέρι χρ. (κυπ)",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 2.50,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "MIXED SALAD",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 5.80,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "BABY ROKA",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 6.20,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "BABY SPINACH",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 6.00,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Garlic (εισ.)",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 5.50,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Μπρόκολο",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": null,
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Αβοκάντο (CY)",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 2.00,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Γλυκοπατάτες",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 1.50,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Μανιτάρια",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 4.25,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Pumpkin",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": null,
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Ντοματίνια",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 4.20,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "ΛΟΥΒΙ (ΠΑΦΟΣ)",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 8.50,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Celery",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 2.00,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Μαρούλι",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 0.45,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Ρόκα",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 0.45,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Μαϊντανός",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 0.45,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Κόλιαντρος",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 0.45,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Σπανάκι",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 0.45,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Ραδίκια",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 0.45,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Άνηθος",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 0.45,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Κρεμμυδάκι Φρ.",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 0.45,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Βασιλικός",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 2.00,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Δυόσμος",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 0.45,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Γλιστρίδα",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 0.70,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Lolo μαρούλι",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 1.00,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Chinese μαρούλι",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 3.40,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Iceberg (κυπ.)",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 1.50,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Iceberg (Εισ.)",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 2.00,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Μπανάνες",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 1.60,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Αχλάδια (gr)",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": null,
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Ακτινιδιο",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 3.80,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Pineapple",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 2.40,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Σταφύλι Μαύρο",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 2.80,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Μήλα Marlene",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 2.80,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Μάνγκο",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 3.50,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Λεμόνια",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 0.70,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Limes",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 5.00,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Πορτοκάλια (χυμ.)",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 1.00,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Grapefruit",
+      "description": null,
+      "variants": [
+        {
+          "sku": null,
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 0.90,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    }
+  ],
+  "emptyEntryRows": [
+    
+  ],
+  "unidentifiedEntryRows": [
+    
+  ],
+  "extractionNotes": [
+    "Left out \"FRUITHAVEN\", supplier logo with no item details",
+    "Left out \"M.CH. FRUITHAVEN TRADERS LTD\", tax number beside it",
+    "Left out \"Tel +35799255087 +35799254569\", email beside it",
+    "Left out \"Agiou Epiktitou 17\", address details beside it",
+    "Left out \"Period:\", dates below it",
+    "Left out \"2/11/2026 – 4/11/2026\", nothing beside it",
+    "Left out \"Product Unit ΕΛΛΕΙΨΗ\", matching labels beside it",
+    "Left out the heading \"VEGETABLES\", nothing beside it",
+    "Left out the heading \"GREENS\", nothing beside it",
+    "Left out the heading \"FRUITS\", nothing beside it",
+    "\"ΕΛΛΕΙΨΗ\" columns appear to show prices",
+    "Currency taken from the supplier's Cyprus address"
+  ]
+}

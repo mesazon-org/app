@@ -1,6 +1,6 @@
 # AI response performance
 
-> **Status (issue 607, rework agreed 2026-11-22, in progress).** Product truth: [AI Response Performance](../../pages/epics/07-ai-response-performance.md). Everything below describes the agreed design. **Built:** the spec with its ten cases and moved assets (slice 1), the difflicious comparison and `assertNoDiff` output (slice 2), and the spec's own spreadsheet join and note shortening for the notes compaction case, with `CatalogueFileService` unchanged (slice 3), and the [removal](#scope) of the old scored checks, their goldens and the four old Catalogue asset folders (slice 4). **Not built yet:** no golden is committed, so every case fails with "Golden file is missing" when a key is set. Open gaps: see [Open gaps](#open-gaps).
+> **Status (issue 607, rework agreed 2026-11-22, in progress).** Product truth: [AI Response Performance](../../pages/epics/07-ai-response-performance.md). Everything below describes the agreed design. **Built:** the spec with its ten cases and moved assets (slice 1), the difflicious comparison and `assertNoDiff` output (slice 2), and the spec's own spreadsheet join and note shortening for the notes compaction case, with `CatalogueFileService` unchanged (slice 3), and the [removal](#scope) of the old scored checks, their goldens and the four old Catalogue asset folders (slice 4). **Goldens:** batch 5a (`image-1.json`, `image-2.json`, `pdf-1.json`) is hand-corrected; the other seven are not committed yet, so those cases fail with "Golden file is missing" when a key is set. Open gaps: see [Open gaps](#open-gaps).
 
 How the hand-run AI golden check compares a live model's raw answer with a hand-corrected golden answer. Any difference fails the case.
 
@@ -50,14 +50,19 @@ The check calls the AI integration point directly, with the production prompts. 
 ## Golden files
 
 - **Location:** `backend/gateway/core/src/test/resources/assets-golden/CatalogueFileAiExtractGoldenSpec/<asset base name>[-<variant>].json`, resolved through `Paths.get("src/test/resources/assets-golden/CatalogueFileAiExtractGoldenSpec")`.
-- **Shape:** the raw `CatalogueFileAIExtract` (the "AI answer", epic requirement 1), with a 2-space indent and no trailing newline. It is decoded with the production `json.ai.catalogueFileAIExtractCodec`. Absent `Option`s and empty lists may be omitted or written as `null`/`[]`; both decode the same.
+- **Shape:** the raw `CatalogueFileAIExtract` (the "AI answer", epic requirement 1), with a 2-space indent and no trailing newline. It is decoded with the production `json.ai.catalogueFileAIExtractCodec`. Absent `Option`s and empty lists may be omitted or written as `null`/`[]`; both decode the same. Committed goldens show every field as `null`/`[]`, except a selling unit's absent `perUnit` and `unitSize`: `CatalogueItemVariantSaleUnit` is written by the shared `json.tapir.catalogueItemVariantSaleUnitCodec` (jsoniter defaults), which leaves absent `Option`s out.
 - **Never written by the check.** Committed code has no recording path.
 - **Bootstrap procedure** (issue 607, user decision):
   1. One live run per source at high reasoning effort, only with the user's go-ahead and key.
-  2. Temporary code, reverted afterwards, writes the answer with every field shown (`null`/`[]`).
+  2. Temporary code, reverted afterwards, writes the answer with every field shown (`null`/`[]`, with the selling-unit exception above) to the gitignored `target/golden-capture/`.
   3. Hand-correct the answer against the asset and the [AI extraction](../standards/ai-extraction.md) rules, notes included, changing only what breaks a rule.
-  4. Decode-check it with the production codec.
-- `image-2.json`: when it is hand-corrected, settle the row count against the picture (epic known gap 1).
+  4. Decode-check it with the production codec, and re-encode it in the capture format to prove the file's shape byte for byte (temporary code, reverted).
+- **Capture done (issue 607, 2026-11-22):** one live session ran all 10 cases at `high` effort for image, PDF, CSV and note compaction (`AI_CLIENT_DATA_EXTRACTION_{IMAGE,PDF,CSV,NOTE_COMPACTION}_REASONING_EFFORT=high`), default models, and `AI_CLIENT_DATA_EXTRACTION_NOTE_COMPACTION_REQUEST_TIMEOUT="600 seconds"` for that run only (user decision; nothing showed it was needed). 10 of 10 answered in about 10 minutes. The raw answers are kept outside the repository and are hand-corrected in batches 5a–5d, three goldens or fewer per batch, each with a correction log (JSON path, before, after, rule broken) for the user's review.
+- **Hand-correction rulings (user decisions, 5a; apply to every batch):**
+  - A missing Greek accent (`Ακτινιδιο`) or a transliterated spelling (`COSTA RIKA`) does not "look misspelled": no "Name may be misspelled in the source" note. The note is kept for clear spelling mistakes such as `Πάρκαπα`.
+  - For characters that look identical (Greek and Latin `X`/`Χ`, `I`/`Ι`, `L`/`Λ`, straight and curly apostrophes), the golden follows the source where there is evidence, such as the PDF text layer, and otherwise keeps the AI's choice.
+  - A value cut by a cell border keeps its visible characters and gets "Name partly unclear, please check", including a last letter only partly visible (`PINEAPPLE 8τεμ COSTA RIKA`).
+- `image-2.json`: the row count was settled against the picture in 5a. It has 125 priced rows (29 + 45 + 51) and no repeated cropped strip: the top of the image is blank padding. Epic known gap 1, which described about 124 rows and a cropped strip, was based on a first look and is corrected by PO.
 
 ## Run order and failures
 
@@ -121,6 +126,7 @@ User decision, slice 2, **for the time being**. This reverses the earlier choice
 - **The check's spreadsheet join and shortening are a copy (user decision, slice 3, option B; epic known gap 5, accepted for now).** The check copies only the merge; it has no skip rule, acceptance rule or fallback. A later change to the service's merge or compaction ([Catalogue step 3](../features/catalogue.md#cataloguefileserviceaiextract)) is not followed by the check; update the spec's copy by hand in the same PR. The service's acceptance rule and fallback are proved only by `fun/CatalogueFileServiceSpec`, never by the live check.
 - **Comparison rules have no AI-free proof.** The pairing keys and epic scenarios 1–10 are exercised only by live runs. The user removed the scorer's unit specs with nothing replacing them, in line with "no tests for test-only code".
 - **Note wording fails the check** (epic known gap 3, accepted).
+- **Look-alike characters fail the check invisibly** (epic known gap 6, accepted). A later run that picks the other of two identical-looking characters fails, and both sides of the difference print the same.
 - **Whole-answer, colour-only output** (epic known gap 4, for the time being). A differences-only output (a walker over `DiffResult`, built and dropped in slice 2) is the open alternative.
 - **Dependency compatibility: resolved in slice 1 (2026-11-22).** difflicious 0.7.1 is built on `hearth` 0.4.2, and chimney 2.1.1 brings 0.4.4. `show gateway-core/evicted` lists `hearth_3:0.4.4 is selected over 0.4.2` among the resolved conflicts only, with nothing from difflicious, fansi or hearth among the suspected binary-incompatible ones. `gateway-core/Test/compile` derives `Differ[CatalogueFileAIExtract]` (`derivedDeep`, 15 givens, 8 `configure` paths), and the spec constructs it eagerly without error in the dummy-key run. Recheck `evicted` when chimney or difflicious is upgraded.
 

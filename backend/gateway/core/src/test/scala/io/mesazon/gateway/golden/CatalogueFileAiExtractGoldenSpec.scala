@@ -1,18 +1,15 @@
 package io.mesazon.gateway.golden
 
-import com.github.plokhotnyuk.jsoniter_scala.core.{readFromString, writeToString, JsonValueCodec, WriterConfig}
-import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
+import com.github.plokhotnyuk.jsoniter_scala.core.readFromString
 import difflicious.Differ
 import difflicious.implicits.*
 import difflicious.scalatest.ScalatestDiff
 import difflicious.utils.TypeName
 import io.github.iltotore.iron.RefinedType
-import io.github.iltotore.iron.jsoniter.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClientDataExtraction
 import io.mesazon.gateway.config.AIClientDataExtractionConfig
 import io.mesazon.gateway.json.ai.given
-import io.mesazon.gateway.json.tapir.{catalogueItemVariantSaleUnitCodec, currencyCodec}
 import io.mesazon.gateway.service.AIInstructions
 import io.mesazon.gateway.utils.*
 import io.mesazon.testkit.base.{SttpTestBackend, ZWordSpecBase}
@@ -47,27 +44,6 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
 
   private given catalogueItemVariantUnitUnitSizeDiffer: Differ[CatalogueItemVariantUnit.UnitSize] =
     Differ.useEquals[CatalogueItemVariantUnit.UnitSize](_.toString)
-
-  private val catalogueFileAIExtractCodecFieldComplete: JsonValueCodec[CatalogueFileAIExtract] =
-    JsonCodecMaker.make[CatalogueFileAIExtract](
-      CodecMakerConfig.withTransientNone(false).withTransientEmpty(false).withTransientDefault(false)
-    )
-
-  private val captureDirectory = Paths.get("target/golden-capture")
-
-  private def captureCatalogueFileAIExtract(
-      goldenFileName: String,
-      catalogueFileAIExtract: CatalogueFileAIExtract,
-  ): Unit = {
-    Files.createDirectories(captureDirectory)
-    Files.writeString(
-      captureDirectory.resolve(goldenFileName),
-      writeToString(catalogueFileAIExtract, WriterConfig.withIndentionStep(2))(using
-        catalogueFileAIExtractCodecFieldComplete
-      ),
-    )
-    ()
-  }
 
   private val apiKey =
     sys.env.getOrElse(
@@ -105,7 +81,6 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
       .configure(_.emptyEntryRows)(_.pairBy(identity))
       .configure(_.unidentifiedEntryRows)(_.pairBy(identity))
 
-  @scala.annotation.nowarn
   private def loadCatalogueFileAIExtractGolden(goldenFileName: String): CatalogueFileAIExtract = {
     val golden = goldenDirectory.resolve(goldenFileName)
 
@@ -159,7 +134,6 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
     )
   }
 
-  @scala.annotation.nowarn
   private def compareWithGolden(
       catalogueFileAIExtract: CatalogueFileAIExtract,
       catalogueFileAIExtractGolden: CatalogueFileAIExtract,
@@ -177,6 +151,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
         val catalogueFileProcessingMessage =
           "ignore cost, the items that are represented with 1 kg make them 12 kg per box, keep fruits keep them as it is, rest keep them as it is"
 
+        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("image-1.json")
+
         val catalogueFileAIExtract = buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
           .extractFromImage[CatalogueFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-1.jpeg")),
@@ -186,7 +162,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           )
           .zioValue
 
-        captureCatalogueFileAIExtract("image-1.json", catalogueFileAIExtract)
+        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }
 
       "match the golden answer for the price-list picture image-2.jpeg" in {
@@ -194,6 +170,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           apiKey.nonEmpty,
           "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
         )
+
+        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("image-2.json")
 
         val catalogueFileAIExtract = buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
           .extractFromImage[CatalogueFileAIExtract](
@@ -204,7 +182,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           )
           .zioValue
 
-        captureCatalogueFileAIExtract("image-2.json", catalogueFileAIExtract)
+        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }
 
       "match the golden answer with no items for the unrelated picture image-3.jpeg" in {
@@ -212,6 +190,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           apiKey.nonEmpty,
           "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
         )
+
+        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("image-3.json")
 
         val catalogueFileAIExtract = buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
           .extractFromImage[CatalogueFileAIExtract](
@@ -222,7 +202,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           )
           .zioValue
 
-        captureCatalogueFileAIExtract("image-3.json", catalogueFileAIExtract)
+        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }
     }
 
@@ -233,6 +213,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
         )
 
+        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("pdf-1.json")
+
         val catalogueFileAIExtract = buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
           .extractFromPdf[CatalogueFileAIExtract](
             FileScannedPath(assetDirectory.resolve("pdf-1.pdf")),
@@ -242,7 +224,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           )
           .zioValue
 
-        captureCatalogueFileAIExtract("pdf-1.json", catalogueFileAIExtract)
+        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }
 
       "match the golden answer with no items for the unrelated PDF pdf-2.pdf" in {
@@ -250,6 +232,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           apiKey.nonEmpty,
           "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
         )
+
+        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("pdf-2.json")
 
         val catalogueFileAIExtract = buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
           .extractFromPdf[CatalogueFileAIExtract](
@@ -260,7 +244,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           )
           .zioValue
 
-        captureCatalogueFileAIExtract("pdf-2.json", catalogueFileAIExtract)
+        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }
     }
 
@@ -270,6 +254,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           apiKey.nonEmpty,
           "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
         )
+
+        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-1.json")
 
         val catalogueFileAIExtract = ZIO
           .scoped(
@@ -283,7 +269,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           .zioValue
           .head
 
-        captureCatalogueFileAIExtract("spreadsheet-1.json", catalogueFileAIExtract)
+        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }
 
       "match the golden answer for the spreadsheet spreadsheet-2.xls" in {
@@ -291,6 +277,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           apiKey.nonEmpty,
           "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
         )
+
+        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-2.json")
 
         val catalogueFileAIExtract = ZIO
           .scoped(
@@ -304,7 +292,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           .zioValue
           .head
 
-        captureCatalogueFileAIExtract("spreadsheet-2.json", catalogueFileAIExtract)
+        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }
 
       "match the golden answer for the spreadsheet spreadsheet-3.xlsx" in {
@@ -312,6 +300,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           apiKey.nonEmpty,
           "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
         )
+
+        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-3.json")
 
         val catalogueFileAIExtract = ZIO
           .scoped(
@@ -325,7 +315,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           .zioValue
           .head
 
-        captureCatalogueFileAIExtract("spreadsheet-3.json", catalogueFileAIExtract)
+        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }
 
       "match the golden answer with shortened notes for spreadsheet-1.csv read in several groups" in {
@@ -333,6 +323,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           apiKey.nonEmpty,
           "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
         )
+
+        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-1-notes-compaction.json")
 
         val aiClientDataExtraction = buildAIClientDataExtraction(CsvBatchMaxDataRowsCompaction)
 
@@ -357,7 +349,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
 
         val catalogueFileAIExtract = catalogueFileAIExtractMerged.copy(extractionNotes = noteCompactionOutput.notes)
 
-        captureCatalogueFileAIExtract("spreadsheet-1-notes-compaction.json", catalogueFileAIExtract)
+        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }
 
       "match the golden answer with no items for the unrelated spreadsheet spreadsheet-4.csv" in {
@@ -365,6 +357,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           apiKey.nonEmpty,
           "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
         )
+
+        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-4.json")
 
         val catalogueFileAIExtract = ZIO
           .scoped(
@@ -378,7 +372,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
           .zioValue
           .head
 
-        captureCatalogueFileAIExtract("spreadsheet-4.json", catalogueFileAIExtract)
+        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
       }
     }
   }

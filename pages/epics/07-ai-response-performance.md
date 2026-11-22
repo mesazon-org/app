@@ -124,11 +124,11 @@ None. The check does not go through the product's web interface.
 
 ### Known gaps and open questions
 
-#### 1. The second picture's golden answer may have the wrong row count
+#### 1. The second picture's row count is settled
 
-In a first look, the second picture's main table seemed to have about 124 priced rows, while the old golden answer, now removed, had 125 product codes. The screenshot also repeats a few rows in a cropped strip at the top, which that golden answer appeared to leave out. Any mistake in a golden answer will show up as a model difference.
+When its new golden answer was corrected by hand, the second picture was counted row by row: it has 125 priced rows (29 + 45 + 51 across its three columns). It has no repeated strip of rows: the top of the image is blank padding.
 
-**To decide:** when the new golden answer for the second picture is corrected by hand, whether to settle its row count against the picture.
+**Settled:** nothing is left to decide.
 
 #### 2. Customer Book has no golden check until it is rebuilt
 
@@ -153,5 +153,11 @@ For the time being, a failing case prints the whole answer with the differences 
 The check joins spreadsheet groups and shortens notes with its own copy of the product's step, so the product itself is untouched. A later product change to joining or shortening does not reach the check on its own. The check does not copy the product's rule for when shortening runs. The product keeps the original notes when shortening fails, comes back empty or gives more notes than it was sent; the check does not, so only the product's own automated tests prove that rule.
 
 **Accepted for now:** this was the user's choice. A product change to joining or shortening must be copied into the check by hand.
+
+#### 6. Characters that look the same can fail a case without a visible difference
+
+Some letters and marks look identical but are different characters. Examples are the Greek and Latin capitals X/Χ, I/Ι and L/Λ, and straight and curly apostrophes. Where the source gives evidence, such as the PDF's own text for an apostrophe, the golden answer follows the source. Otherwise it keeps the AI's choice. If the AI picks the other character in a later run, the case fails, but both sides of the difference look the same.
+
+**Accepted for now:** this was the user's choice.
 
 {% raw %}{% include abbreviations.md %}{% endraw %}
