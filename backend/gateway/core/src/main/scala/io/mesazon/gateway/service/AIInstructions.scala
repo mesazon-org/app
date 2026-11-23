@@ -1339,7 +1339,7 @@ object AIInstructions {
       |  struck-through, scribbled-over, or wiped text was removed on purpose by the writer and is never read as a
       |  value. A smudged or cut-off detail is not usable either, so an entry whose only details are wiped out,
       |  smudged, or cut off is unidentified. An entry with no name and no usable detail is not returned; list it in
-      |  unidentifiedEntryRowIndexes, and you may also describe it in top-level extractionNotes.
+      |  unidentifiedEntryRowIndexes.
       |- A business may list the contact people the source shows for it, best-effort. A person joins a business as a
       |  contact only when this $sourceName shows they belong to it: they are on the business's own card or line, or under a
       |  clear contact label or grouping for it. A shared company name on an otherwise separate entry is not enough;
