@@ -129,7 +129,7 @@ How the spec compares one case (spec-private code in `golden/CatalogueFileAiExtr
   - **missing** (only in the golden, the AI left it out): `{"op" : "remove", "path" : …, "old" : <the whole part>}`;
   - **extra** (only in the AI's answer): `{"op" : "add", "path" : …, "value" : <the whole part>}`.
 - **Paths** are JSON Pointers by position, for example `/candidates/16/variants/0/sellingUnit/quantity/value`; an element added at the end of a list is `/…/-`.
-- A part on one side only is printed in full, spread over lines. The source and model names are not printed. No report file is written.
+- A part on one side only is printed in full, spread over lines. The printed differences name neither the source nor the model; the source file appears only in the case name ScalaTest prints, and the model name is never printed. No report file is written.
 - **Proof (user decision Q2, done 2026-11-23):** one temporary test, run once without a key and then reverted, built answers from the committed goldens and checked the printed patch. It failed against a stub without the failure and passed with the comparison; its diff and logs are kept outside the repository. Observed operations:
   - golden against itself, and `8.40` against `8.4`: no difference;
   - price `8.1` for `8.4`: `replace /candidates/0/variants/0/price/amount`, `"value" : 8.1`, `"old" : 8.4`;
@@ -153,7 +153,7 @@ How the spec compares one case (spec-private code in `golden/CatalogueFileAiExtr
 
 ## First run at defaults (2026-11-23)
 
-One live run of all 10 cases with production models and effort and no overrides (issue 607, slice 6, user go-ahead): 7 min 16 s in total, no AI error or timeout, `image-2.jpeg` well within the 600-second deadline. **All 10 cases failed on differences.** No golden was changed by the run; a golden change needs the user's approval and its own slice.
+One live run of all 10 cases with production models and effort and no overrides (issue 607, slice 6, user go-ahead): 7 min 16 s in total, no AI error or timeout, `image-2.jpeg` well within the 600-second deadline. **All 10 cases failed on differences.** No golden was changed by the run; a golden change needs the user's approval and its own slice. The differences below were reported by the difflicious comparison then in use, which paired items by codes or name and ignored list order; under today's position-based diffson comparison the same answers would print as different operations (for example a misread code as field changes at that position, not as a missing plus an extra item).
 
 | Case | Differences (answer vs golden) |
 |---|---|
@@ -168,7 +168,7 @@ One live run of all 10 cases with production models and effort and no overrides 
 - In every spreadsheet case the answer's own counts do not add up (`entriesIdentified` is not processed + empty + unidentified), a prompt rule the default-effort model broke.
 - Three `image-2` codes have one blurred digit, and both the high-effort capture and this run read them differently from the golden: `46103` (COCONUTS) read `46163`, `71416` (SANTA MARIA 70/75 1L) read `71415`, `78208` (MOOLY) read `78200`.
 - No case showed a clear "answer right, golden wrong".
-- Evidence (outside the repository): the colour log, a plain copy and the parsed differences of the slice-6 run.
+- Evidence: the colour log, a plain copy and the parsed differences of the slice-6 run were kept in local temporary folders only, not in the repository.
 
 ## Running
 

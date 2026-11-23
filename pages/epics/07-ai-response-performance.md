@@ -6,7 +6,7 @@ title: AI Response Performance
 
 > **Status: built.** The single Catalogue check runs its 10 cases against hand-corrected golden answers and fails on any difference. Every list is compared position by position, so order counts. A failing case prints only the comparison tool's indented list of differences, each placed by position, readable without colour and with no test id line. The old scored checks are removed: every Catalogue and Customer Book extraction check, both note-shortening checks, the scoring and all old golden answers. Customer Book's source files are kept. Only its rebuild is not built yet ([gap 2](#2-customer-book-has-no-golden-check-until-it-is-rebuilt)). Notes in italics starting *Before this rework* describe the removed checks.
 >
-> **First live run**, at the product's default settings: it took about 7 minutes, and every case got an answer, with no AI errors or timeouts. All 10 cases failed on differences. That is the agreed behaviour: the check reports differences, and the golden answers were not changed to make them pass (see gaps 3, 6 and 7).
+> **First live run**, at the product's default settings: it took about 7 minutes, and every case got an answer, with no AI errors or timeouts. All 10 cases failed on differences. That is the agreed behaviour: the check reports differences, and the golden answers were not changed to make them pass (see gaps 3, 6 and 7). That run used the earlier comparison, which paired items by product code or name and printed the whole answer; the check has not been run live since it moved to position-by-position comparison.
 
 ### Overview
 
@@ -97,7 +97,7 @@ Each case has a golden answer made and corrected by hand as described above. In 
 
 #### Requirements
 
-1. A failing case prints only the comparison tool's own output: the differences, readable without colour, as indented blocks, one per difference, with longer values spread over several lines. The run already names the failing case, and the source and model names are not printed. Each block is one of:
+1. A failing case prints only the comparison tool's own output: the differences, readable without colour, as indented blocks, one per difference, with longer values spread over several lines. The run already names the failing case, and that name includes its source file. The differences themselves name neither the source nor the model. Each block is one of:
    - `remove`: missing, only in the golden answer, so the AI left it out;
    - `add`: extra, only in the AI's answer;
    - `replace`: changed, with `old` the golden value and `value` the AI's.
