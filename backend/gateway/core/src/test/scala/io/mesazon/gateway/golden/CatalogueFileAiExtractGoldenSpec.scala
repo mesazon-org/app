@@ -14,7 +14,12 @@ import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClientDataExtraction
 import io.mesazon.gateway.config.AIClientDataExtractionConfig
 import io.mesazon.gateway.json.ai.given
-import io.mesazon.gateway.json.tapir.*
+import io.mesazon.gateway.json.tapir.{
+  catalogueItemVariantUnitCodec,
+  catalogueItemVariantUnitPerUnitCodec,
+  catalogueItemVariantUnitUnitSizeCodec,
+  currencyCodec,
+}
 import io.mesazon.gateway.service.AIInstructions
 import io.mesazon.gateway.utils.*
 import io.mesazon.testkit.base.{SttpTestBackend, ZWordSpecBase}
