@@ -9,6 +9,8 @@ title: AI Response Performance
 > **First live run**, at the product's default settings: it took about 7 minutes, and every case got an answer, with no AI errors or timeouts. All 10 cases failed on differences. That is the agreed behaviour: the check reports differences, and the golden answers were not changed to make them pass (see gaps 3, 6 and 7). That run used the earlier comparison, which paired items by product code or name and printed the whole answer; the check has not been run live since it moved to position-by-position comparison.
 >
 > **Agreed, not built yet (user decision):** a Customer Book check built the same way, with 23 cases. Today Customer Book has no golden check. The Customer Book parts of requirements 1 and 3 to 6, and gaps 2 and 6, describe the agreed check.
+>
+> **Agreed, not built yet (user decision):** the product's AI instructions change so that the general notes come in a fixed order and "left out" notes follow one wording ([Catalogue]({{ site.baseurl }}{% link epics/06-catalogue.md %}) requirement 12 and scenario 36, [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}) requirement 22 and scenario 34). The golden answers follow that change, as requirements 1 and 2 describe.
 
 ### Overview
 
@@ -33,11 +35,13 @@ This is a check that developers run by hand. Customers never see it, and it chan
 
 1. A **golden answer** is the correct AI answer, written down in advance, in the shape the AI returns it, not the shape of the final product response. It starts from one careful AI reading and is then corrected by hand against the source and the extraction rules, including the AI's notes. Running the check never changes a golden answer. *Before this rework, the golden notes were never hand-checked, because notes were not compared.*
 
-   Customer Book's golden answers are made and corrected the same way, with the same correction rulings as Catalogue's (user decision):
+   Customer Book's golden answers are made and corrected the same way, from one new careful capture of all 23 cases taken after the notes change, only with the user's go-ahead. *Today a capture made before the change exists. After this, it is not used, and correction waits for the new capture (user decision).* The same correction rulings as Catalogue's apply (user decision):
    - for look-alike characters, the golden answer follows the source where there is evidence, otherwise the AI's choice ([gap 6](#6-characters-that-look-the-same-can-fail-a-case-without-a-visible-difference));
    - a blurred character keeps the human reading;
    - a missing accent, or a Greek-style spelling of a foreign word, does not get the "may be misspelled in the source" note; only a clear spelling mistake does.
 2. All golden answers are made again for the new check. Each new golden answer comes from one live AI run, which happens only when the developer gives the go-ahead and supplies the key. *Before this rework, the old golden answers were used. They are now removed and replaced.*
+
+   When the notes change is made, only the general notes of the 10 committed Catalogue golden answers are edited by hand to the new wording and order, with no new capture; nothing else in them changes. *Today the committed golden answers stay exactly as committed. After this, their general notes are edited once (user decision).*
 3. The Catalogue check holds exactly these cases:
    - two price-list pictures, the first sent with the old check's exact processing message, kept word for word: "ignore cost, the items that are represented with 1 kg make them 12 kg per box, keep fruits keep them as it is, rest keep them as it is";
    - one PDF price list;
@@ -169,7 +173,7 @@ This rework removed Customer Book's golden checks and their golden answers: ten 
 
 #### 3. Differences in note wording fail the check
 
-Notes are now compared, and the check fails on any difference. The AI rarely words notes the same way twice, so a run can fail even when every item is right. The first live run confirmed it: the three unrelated files failed on note wording alone.
+Notes are now compared, and the check fails on any difference. The AI rarely words notes the same way twice, so a run can fail even when every item is right. The first live run confirmed it: the three unrelated files failed on note wording alone. The agreed notes change (a fixed order of general notes and one "left out" wording) is meant to make general-note differences rarer; it does not change how the AI words item, variant or customer notes.
 
 **Accepted for now:** this was the user's choice. Revisit it if note wording makes the check fail too often to be useful.
 
