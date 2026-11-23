@@ -1818,17 +1818,18 @@
     
   ],
   "extractionNotes": [
-    "Left out \"FRUITHAVEN\", supplier logo with no item details",
-    "Left out \"M.CH. FRUITHAVEN TRADERS LTD\", tax number beside it",
-    "Left out \"Tel +35799255087 +35799254569\", email beside it",
-    "Left out \"Agiou Epiktitou 17\", address details beside it",
-    "Left out \"Period:\", dates below it",
-    "Left out \"2/11/2026 – 4/11/2026\", nothing beside it",
-    "Left out \"Product Unit ΕΛΛΕΙΨΗ\", matching labels beside it",
-    "Left out the heading \"VEGETABLES\", nothing beside it",
-    "Left out the heading \"GREENS\", nothing beside it",
-    "Left out the heading \"FRUITS\", nothing beside it",
     "\"ΕΛΛΕΙΨΗ\" columns appear to show prices",
+    "Left out logo \"M.CH FRUITHAVEN\", nothing beside it",
+    "Left out date label \"Period:\", dates below it",
+    "Left out date \"2/11/2026 – 4/11/2026\", nothing beside it",
+    "Left out supplier name \"M.CH. FRUITHAVEN TRADERS LTD T.I.C:60099862T\", nothing beside it",
+    "Left out contact line \"Tel +35799255087 +35799254569 info@mchfruithaven.com\", nothing beside it",
+    "Left out address \"Agiou Epiktitou 17, Agios Athanasios, Limassol, Cyprus\", nothing beside it",
+    "Left out column labels \"Product\", nothing beside it",
+    "Left out column labels \"Product\", nothing beside it",
+    "Left out heading \"VEGETABLES\", nothing beside it",
+    "Left out heading \"GREENS\", nothing beside it",
+    "Left out heading \"FRUITS\", nothing beside it",
     "Currency taken from the supplier's Cyprus address"
   ]
 }

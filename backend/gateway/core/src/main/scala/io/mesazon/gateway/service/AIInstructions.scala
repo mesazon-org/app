@@ -1155,9 +1155,11 @@ object AIInstructions {
       |     "prices beside it". Use your own words after "Left out" only when no kind fits. For column labels, quote
       |     only the first label, for example "Left out column labels "Product", nothing beside it". For every other
       |     kind, quote the whole line exactly as printed, for example
-      |     "Left out heading "FRUITS", nothing beside it". Never write a general note about an entry listed in
-      |     unidentifiedEntryRows. Never put anything about one item or variant here. Use [] when there is no general
-      |     comment.
+      |     "Left out heading "FRUITS", nothing beside it". When tables sit side by side, each table's row is its own
+      |     line and is never joined with the row of the table beside it, the left table comes before the right at the
+      |     same height, and a line with several cells, other than column labels, quotes all of them, joined by ", ".
+      |     Never write a general note about an entry listed in unidentifiedEntryRows. Never put anything about one
+      |     item or variant here. Use [] when there is no general comment.
       |  2. Item extractionNotes: only the item itself: its name, its description, and how its variants were grouped.
       |     The server adds every variant note to its item's list, after the item's own notes, so never repeat a
       |     variant observation on the item.
@@ -1514,9 +1516,11 @@ object AIInstructions {
       |     it, such as "contact details beside it". Use your own words after "Left out" only when no kind fits. For
       |     column labels, quote only the first label, for example "Left out column labels "Name", nothing beside it".
       |     For every other kind, quote the whole line exactly as printed, for example
-      |     "Left out heading "WHOLESALE CLIENTS", nothing beside it". Never write a general note about an entry listed
-      |     in unidentifiedEntryRowIndexes. Never put anything about one candidate, address, or contact here. Use []
-      |     when there is no general comment.
+      |     "Left out heading "WHOLESALE CLIENTS", nothing beside it". When tables sit side by side, each table's row
+      |     is its own line and is never joined with the row of the table beside it, the left table comes before the
+      |     right at the same height, and a line with several cells, other than column labels, quotes all of them,
+      |     joined by ", ". Never write a general note about an entry listed in unidentifiedEntryRowIndexes. Never put
+      |     anything about one candidate, address, or contact here. Use [] when there is no general comment.
       |  2. Candidate extractionNotes: only the candidate itself: its name, kind, emails, its own phones, whether a
       |     contact belongs to it, and its addresses as a group, such as an empty address left out. The server adds
       |     every address note and every contact note to the candidate's list, so never repeat an address or contact

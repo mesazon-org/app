@@ -679,10 +679,10 @@
     28
   ],
   "extractionNotes": [
-    "Euro prices come from the cost column heading",
     "Left out row 4, heading \"GARDEN\", nothing beside it",
-    "Left out row 17, \"Product\" beside repeated column labels",
+    "Left out row 17, column labels \"Product\", nothing beside it",
     "Left out row 18, heading \"TOOLS\", nothing beside it",
-    "Left out row 29, \"Total\" beside an amount"
+    "Left out row 29, total \"Total, 1.250.000.000.295,94\", nothing beside it",
+    "Euro prices come from the cost column heading"
   ]
 }

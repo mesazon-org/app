@@ -679,10 +679,10 @@
     28
   ],
   "extractionNotes": [
-    "Prices without a currency use euros from the heading",
     "Left out row 4, heading \"GARDEN\", nothing beside it",
-    "Left out row 17, repeated column labels",
+    "Left out row 17, column labels \"Product\", nothing beside it",
     "Left out row 18, heading \"TOOLS\", nothing beside it",
-    "Left out row 29, \"Total\", with a total amount"
+    "Left out row 29, total \"Total, 1.250.000.000.295,94\", nothing beside it",
+    "Prices without a currency use euros from the heading"
   ]
 }
