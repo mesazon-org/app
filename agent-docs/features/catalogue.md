@@ -351,7 +351,7 @@ Answer in the hand-corrected goldens `spreadsheet-1/-2/-3.json` (issue 607, batc
 
 **Unrelated fixtures:**
 
-- `image-3.jpeg`: an office interior photo without text, a byte copy of `CustomerBookFileAiExtractUnrelatedContentGoldenSpec/image-4.jpeg` (agreed, not built: moving to `CustomerBookFileAiExtractGoldenSpec/image-14.jpeg`).
+- `image-3.jpeg`: an office interior photo without text, a byte copy of `CustomerBookFileAiExtractGoldenSpec/image-14.jpeg` (formerly `CustomerBookFileAiExtractUnrelatedContentGoldenSpec/image-4.jpeg`).
 - `pdf-2.pdf`: two pages of residents' association meeting notes.
 - `spreadsheet-4.csv`: a five-row `Name,Day,Shift` staff rota.
 
