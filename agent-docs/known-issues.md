@@ -241,6 +241,16 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Fix:** `SpreadsheetTool` opens the workbook read-only, `WorkbookFactory.create(file, null, true)`. The `true` is positional because POI's Java overload has no parameter names (`x$0..x$2`), a stated exception to the named-Boolean rule in [Scala](standards/scala.md).
 - **Verify:** `SpreadsheetToolSpec` "leave the .xlsx/.xls workbook file unchanged after converting it" (byte-identical before and after, records unchanged); `CatalogueFileApiSpec` and `CustomerBookFileApiSpec` XLS/XLSX success cases still pass. After any golden run, `git status` shows no change under `assets-test/`.
 
+## A new Scala file passes local lint but fails CI `checkLint`
+
+- **Status:** Workaround available (issue 607, 2026-11-23)
+- **Severity:** Medium
+- **Signature:** CI (or `ENABLE_SCALA_LINT_ON_COMPILE=false sbt "checkLint"`) fails with `scalafmt: …/<NewSpec>.scala isn't formatted properly!` and `(<module> / Test / scalafmtCheck) scalafmt: 1 files must be formatted`, although `sbt "runLint"` reported no change before the file was committed. Seen on `golden/CustomerBookFileAiExtractGoldenSpec.scala` after 44fb6bd.
+- **Cause:** `.scalafmt.conf` sets `project.git = true`, so scalafmt formats and checks only files git tracks; a new, untracked file is skipped by `runLint`, `checkLint` and format-on-compile alike, so "no change" proves nothing for it. Once the file is tracked, local compiles reformat it silently, because `build.sbt` turns `scalafmtOnCompile`/`scalafixOnCompile` on unless `ENABLE_SCALA_LINT_ON_COMPILE=false`, while CI sets that variable to `false` (`.github/workflows/job-scala-build.yml`) and only checks.
+- **Fix:** once the file is tracked, run `sbt "runLint"` and commit the formatting it produces.
+- **Prevention:** a slice that adds a new Scala file is not lint-verified until the file is tracked. Agents never stage, so the check runs in the slice after the commit that adds the file: `ENABLE_SCALA_LINT_ON_COMPILE=false sbt "checkLint"`, and any formatting goes into that next commit.
+- **Verify:** `ENABLE_SCALA_LINT_ON_COMPILE=false sbt "checkLint"` exits 0.
+
 ## Manual AI golden check ignores the API key given on the command line
 
 - **Status:** Workaround available (observed 2026-11-22, issue 607 slice 1)

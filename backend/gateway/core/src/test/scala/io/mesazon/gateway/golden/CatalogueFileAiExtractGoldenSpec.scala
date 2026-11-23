@@ -29,10 +29,14 @@ import java.nio.file.*
 
 class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
 
-  private inline val CsvBatchMaxDataRowsDefault    = 100
   private inline val CsvBatchMaxDataRowsCompaction = 15
 
   private given lcsJson: Lcs[Json] = new Patience[Json]
+
+  private final case class Context(
+      aiClientDataExtraction: AIClientDataExtraction,
+      spreadsheetTool: SpreadsheetTool,
+  )
 
   private val apiKey =
     sys.env.getOrElse(
@@ -58,35 +62,28 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
     else readFromString[CatalogueFileAIExtract](Files.readString(golden))
   }
 
-  private def buildAIClientDataExtraction(csvBatchMaxDataRows: Int): AIClientDataExtraction =
+  private def withContext[A](csvBatchMaxDataRowsOpt: Option[Int] = None)(f: Context => Task[A]): A =
     ZIO
-      .service[AIClientDataExtraction]
+      .serviceWithZIO[Context](f)
       .provide(
+        ZLayer.fromFunction(Context.apply),
         AIClientDataExtraction.live,
+        SpreadsheetTool.live,
         ZLayer.succeed(AppName("gateway-api")),
         AIClientDataExtractionConfig.live.map(environment =>
-          environment.update[AIClientDataExtractionConfig](
-            _.copy(
+          environment.update[AIClientDataExtractionConfig](aiClientDataExtractionConfig =>
+            aiClientDataExtractionConfig.copy(
               scheme = "https",
               host = "api.openai.com",
               port = 443,
               apiKey = apiKey,
               requestTimeout = Duration.fromSeconds(600),
-              sendMaxRetries = 2,
-              sendRetryDelay = Duration.fromSeconds(1),
-              csvBatchMaxDataRows = csvBatchMaxDataRows,
-              csvBatchParallelism = 4,
+              csvBatchMaxDataRows = csvBatchMaxDataRowsOpt.getOrElse(aiClientDataExtractionConfig.csvBatchMaxDataRows),
             )
           )
         ),
         SttpTestBackend.live,
       )
-      .zioValue
-
-  private def buildSpreadsheetTool: SpreadsheetTool =
-    ZIO
-      .service[SpreadsheetTool]
-      .provide(SpreadsheetTool.live)
       .zioValue
 
   private def mergeCatalogueFileAIExtracts(
@@ -122,237 +119,257 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
 
   "AIClientDataExtraction" when {
     "extractFromImage" should {
-      "match the golden answer for the price-list picture image-1.jpeg sent with its processing message" in {
-        assume(
-          apiKey.nonEmpty,
-          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-        )
+      "match the golden answer for the price-list picture image-1.jpeg sent with its processing message" in withContext() {
+        context =>
+          import context.*
 
-        val catalogueFileProcessingMessage =
-          "ignore cost, the items that are represented with 1 kg make them 12 kg per box, keep fruits keep them as it is, rest keep them as it is"
+          for {
+            _ = assume(
+              apiKey.nonEmpty,
+              "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            )
 
-        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("image-1.json")
+            catalogueFileProcessingMessage =
+              "ignore cost, the items that are represented with 1 kg make them 12 kg per box, keep fruits keep them as it is, rest keep them as it is"
 
-        val catalogueFileAIExtract = buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
-          .extractFromImage[CatalogueFileAIExtract](
-            FileScannedPath(assetDirectory.resolve("image-1.jpeg")),
-            SupportedMediaType.JPEG,
-            AIInstructions.extractCatalogueItemsFromImageInstructions,
-            Some(catalogueFileProcessingMessage),
-          )
-          .zioValue
+            catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("image-1.json")
 
-        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+            catalogueFileAIExtract <- aiClientDataExtraction.extractFromImage[CatalogueFileAIExtract](
+              FileScannedPath(assetDirectory.resolve("image-1.jpeg")),
+              SupportedMediaType.JPEG,
+              AIInstructions.extractCatalogueItemsFromImageInstructions,
+              Some(catalogueFileProcessingMessage),
+            )
+
+            _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          } yield ()
       }
 
-      "match the golden answer for the price-list picture image-2.jpeg" in {
-        assume(
-          apiKey.nonEmpty,
-          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-        )
+      "match the golden answer for the price-list picture image-2.jpeg" in withContext() { context =>
+        import context.*
 
-        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("image-2.json")
+        for {
+          _ = assume(
+            apiKey.nonEmpty,
+            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+          )
 
-        val catalogueFileAIExtract = buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
-          .extractFromImage[CatalogueFileAIExtract](
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("image-2.json")
+
+          catalogueFileAIExtract <- aiClientDataExtraction.extractFromImage[CatalogueFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-2.jpeg")),
             SupportedMediaType.JPEG,
             AIInstructions.extractCatalogueItemsFromImageInstructions,
             None,
           )
-          .zioValue
 
-        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+        } yield ()
       }
 
-      "match the golden answer with no items for the unrelated picture image-3.jpeg" in {
-        assume(
-          apiKey.nonEmpty,
-          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-        )
+      "match the golden answer with no items for the unrelated picture image-3.jpeg" in withContext() { context =>
+        import context.*
 
-        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("image-3.json")
+        for {
+          _ = assume(
+            apiKey.nonEmpty,
+            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+          )
 
-        val catalogueFileAIExtract = buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
-          .extractFromImage[CatalogueFileAIExtract](
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("image-3.json")
+
+          catalogueFileAIExtract <- aiClientDataExtraction.extractFromImage[CatalogueFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-3.jpeg")),
             SupportedMediaType.JPEG,
             AIInstructions.extractCatalogueItemsFromImageInstructions,
             None,
           )
-          .zioValue
 
-        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+        } yield ()
       }
     }
 
     "extractFromPdf" should {
-      "match the golden answer for the PDF price list pdf-1.pdf" in {
-        assume(
-          apiKey.nonEmpty,
-          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-        )
+      "match the golden answer for the PDF price list pdf-1.pdf" in withContext() { context =>
+        import context.*
 
-        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("pdf-1.json")
+        for {
+          _ = assume(
+            apiKey.nonEmpty,
+            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+          )
 
-        val catalogueFileAIExtract = buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
-          .extractFromPdf[CatalogueFileAIExtract](
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("pdf-1.json")
+
+          catalogueFileAIExtract <- aiClientDataExtraction.extractFromPdf[CatalogueFileAIExtract](
             FileScannedPath(assetDirectory.resolve("pdf-1.pdf")),
             "Catalogue-Price-List.PDF",
             AIInstructions.extractCatalogueItemsFromPdfInstructions,
             None,
           )
-          .zioValue
 
-        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+        } yield ()
       }
 
-      "match the golden answer with no items for the unrelated PDF pdf-2.pdf" in {
-        assume(
-          apiKey.nonEmpty,
-          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-        )
+      "match the golden answer with no items for the unrelated PDF pdf-2.pdf" in withContext() { context =>
+        import context.*
 
-        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("pdf-2.json")
+        for {
+          _ = assume(
+            apiKey.nonEmpty,
+            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+          )
 
-        val catalogueFileAIExtract = buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
-          .extractFromPdf[CatalogueFileAIExtract](
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("pdf-2.json")
+
+          catalogueFileAIExtract <- aiClientDataExtraction.extractFromPdf[CatalogueFileAIExtract](
             FileScannedPath(assetDirectory.resolve("pdf-2.pdf")),
             "pdf-2.pdf",
             AIInstructions.extractCatalogueItemsFromPdfInstructions,
             None,
           )
-          .zioValue
 
-        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+        } yield ()
       }
     }
 
     "extractFromCsv" should {
-      "match the golden answer for the spreadsheet spreadsheet-1.csv" in {
-        assume(
-          apiKey.nonEmpty,
-          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-        )
+      "match the golden answer for the spreadsheet spreadsheet-1.csv" in withContext() { context =>
+        import context.*
 
-        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-1.json")
-
-        val catalogueFileAIExtract = ZIO
-          .scoped(
-            buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
-              .extractFromCsv[CatalogueFileAIExtract](
-                buildSpreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-1.csv"))),
-                AIInstructions.extractCatalogueItemsFromFileInstructions,
-                None,
-              )
+        for {
+          _ = assume(
+            apiKey.nonEmpty,
+            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
-          .zioValue
-          .head
 
-        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
-      }
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-1.json")
 
-      "match the golden answer for the spreadsheet spreadsheet-2.xls" in {
-        assume(
-          apiKey.nonEmpty,
-          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-        )
-
-        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-2.json")
-
-        val catalogueFileAIExtract = ZIO
-          .scoped(
-            buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
-              .extractFromCsv[CatalogueFileAIExtract](
-                buildSpreadsheetTool.convertExcelToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-2.xls"))),
-                AIInstructions.extractCatalogueItemsFromFileInstructions,
-                None,
-              )
-          )
-          .zioValue
-          .head
-
-        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
-      }
-
-      "match the golden answer for the spreadsheet spreadsheet-3.xlsx" in {
-        assume(
-          apiKey.nonEmpty,
-          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-        )
-
-        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-3.json")
-
-        val catalogueFileAIExtract = ZIO
-          .scoped(
-            buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
-              .extractFromCsv[CatalogueFileAIExtract](
-                buildSpreadsheetTool.convertExcelToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-3.xlsx"))),
-                AIInstructions.extractCatalogueItemsFromFileInstructions,
-                None,
-              )
-          )
-          .zioValue
-          .head
-
-        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
-      }
-
-      "match the golden answer with shortened notes for spreadsheet-1.csv read in several groups" in {
-        assume(
-          apiKey.nonEmpty,
-          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-        )
-
-        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-1-notes-compaction.json")
-
-        val aiClientDataExtraction = buildAIClientDataExtraction(CsvBatchMaxDataRowsCompaction)
-
-        val catalogueFileAIExtracts = ZIO
-          .scoped(
+          catalogueFileAIExtracts <- ZIO.scoped(
             aiClientDataExtraction.extractFromCsv[CatalogueFileAIExtract](
-              buildSpreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-1.csv"))),
+              spreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-1.csv"))),
               AIInstructions.extractCatalogueItemsFromFileInstructions,
               None,
             )
           )
-          .zioValue
 
-        val catalogueFileAIExtractMerged = mergeCatalogueFileAIExtracts(catalogueFileAIExtracts)
+          catalogueFileAIExtract = catalogueFileAIExtracts.head
 
-        val noteCompactionOutput = aiClientDataExtraction
-          .noteCompaction(
+          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+        } yield ()
+      }
+
+      "match the golden answer for the spreadsheet spreadsheet-2.xls" in withContext() { context =>
+        import context.*
+
+        for {
+          _ = assume(
+            apiKey.nonEmpty,
+            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+          )
+
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-2.json")
+
+          catalogueFileAIExtracts <- ZIO.scoped(
+            aiClientDataExtraction.extractFromCsv[CatalogueFileAIExtract](
+              spreadsheetTool.convertExcelToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-2.xls"))),
+              AIInstructions.extractCatalogueItemsFromFileInstructions,
+              None,
+            )
+          )
+
+          catalogueFileAIExtract = catalogueFileAIExtracts.head
+
+          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+        } yield ()
+      }
+
+      "match the golden answer for the spreadsheet spreadsheet-3.xlsx" in withContext() { context =>
+        import context.*
+
+        for {
+          _ = assume(
+            apiKey.nonEmpty,
+            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+          )
+
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-3.json")
+
+          catalogueFileAIExtracts <- ZIO.scoped(
+            aiClientDataExtraction.extractFromCsv[CatalogueFileAIExtract](
+              spreadsheetTool.convertExcelToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-3.xlsx"))),
+              AIInstructions.extractCatalogueItemsFromFileInstructions,
+              None,
+            )
+          )
+
+          catalogueFileAIExtract = catalogueFileAIExtracts.head
+
+          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+        } yield ()
+      }
+
+      "match the golden answer with shortened notes for spreadsheet-1.csv read in several groups" in withContext(
+        csvBatchMaxDataRowsOpt = Some(CsvBatchMaxDataRowsCompaction)
+      ) { context =>
+        import context.*
+
+        for {
+          _ = assume(
+            apiKey.nonEmpty,
+            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+          )
+
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-1-notes-compaction.json")
+
+          catalogueFileAIExtracts <- ZIO.scoped(
+            aiClientDataExtraction.extractFromCsv[CatalogueFileAIExtract](
+              spreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-1.csv"))),
+              AIInstructions.extractCatalogueItemsFromFileInstructions,
+              None,
+            )
+          )
+
+          catalogueFileAIExtractMerged = mergeCatalogueFileAIExtracts(catalogueFileAIExtracts)
+
+          noteCompactionOutput <- aiClientDataExtraction.noteCompaction(
             catalogueFileAIExtractMerged.extractionNotes,
             AIInstructions.compactCatalogueFileNotesInstructions,
           )
-          .zioValue
 
-        val catalogueFileAIExtract = catalogueFileAIExtractMerged.copy(extractionNotes = noteCompactionOutput.notes)
+          catalogueFileAIExtract = catalogueFileAIExtractMerged.copy(extractionNotes = noteCompactionOutput.notes)
 
-        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+        } yield ()
       }
 
-      "match the golden answer with no items for the unrelated spreadsheet spreadsheet-4.csv" in {
-        assume(
-          apiKey.nonEmpty,
-          "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-        )
+      "match the golden answer with no items for the unrelated spreadsheet spreadsheet-4.csv" in withContext() {
+        context =>
+          import context.*
 
-        val catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-4.json")
+          for {
+            _ = assume(
+              apiKey.nonEmpty,
+              "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            )
 
-        val catalogueFileAIExtract = ZIO
-          .scoped(
-            buildAIClientDataExtraction(CsvBatchMaxDataRowsDefault)
-              .extractFromCsv[CatalogueFileAIExtract](
-                buildSpreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-4.csv"))),
+            catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-4.json")
+
+            catalogueFileAIExtracts <- ZIO.scoped(
+              aiClientDataExtraction.extractFromCsv[CatalogueFileAIExtract](
+                spreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-4.csv"))),
                 AIInstructions.extractCatalogueItemsFromFileInstructions,
                 None,
               )
-          )
-          .zioValue
-          .head
+            )
 
-        compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+            catalogueFileAIExtract = catalogueFileAIExtracts.head
+
+            _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          } yield ()
       }
     }
   }

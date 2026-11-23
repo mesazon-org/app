@@ -71,7 +71,7 @@ The check calls the AI integration point directly, with the production prompts. 
 
 ## Run order and failures
 
-**Agreed, not built (user decision 2026-11-23, [Scala](../standards/scala.md#for-comprehension-style) direction):** both golden specs write every case as `"..." in withContext { context => import context.*; for { ... } yield () }`, with a spec-private `Context` (the AI client and `SpreadsheetTool`) built from layers and run through `.zioValue`. The order below and the output stay the same; `assume`, the missing-golden `fail` and the comparison `fail` surface unchanged through `.zioValue`. Customer Book migrates in slice C2, Catalogue in slice C2b.
+**Test style (user decision 2026-11-23, [Scala](../standards/scala.md#for-comprehension-style) direction; Customer Book built in C2, Catalogue in C2b):** both golden specs write every case as `"..." in withContext { context => import context.*; for { ... } yield () }`, with a spec-private `Context` (the AI client and `SpreadsheetTool`) built from layers in `withContext` and run through `.zioValue`. Inside the `for`, `_ = assume(…)` comes first, then the golden load and the AI call (`<-`), then `_ = compareWithGolden(…)`; `assume`, the missing-golden `fail` and the comparison `fail` surface unchanged through `.zioValue` (a no-key run cancels every case). Customer Book's `withContext(f)` always uses the default batch size; Catalogue's is `withContext(csvBatchMaxDataRowsOpt: Option[Int] = None)(f)`: every case calls `withContext()` (the production default batch size) except the notes compaction case, `withContext(csvBatchMaxDataRowsOpt = Some(CsvBatchMaxDataRowsCompaction))` (15).
 
 For each case:
 
@@ -84,7 +84,7 @@ For each case:
 
 The spec loads `AIClientDataExtractionConfig.live`, so production defaults and their `${?ENV}` overrides choose the model and effort per file kind: `AI_CLIENT_DATA_EXTRACTION_{IMAGE,PDF,CSV,NOTE_COMPACTION}_{MODEL,REASONING_EFFORT}`.
 
-**Customer Book spec (user decision 2026-11-23, built in C2), and Catalogue agreed for slice C2b:** the spec overrides only these, every field set explicitly per [Scala](../standards/scala.md):
+**Both specs (user decision 2026-11-23; Customer Book built in C2, Catalogue in C2b):** each overrides only these, every field set explicitly per [Scala](../standards/scala.md):
 
 - `scheme`, `host`, `port`;
 - `apiKey`;
@@ -92,8 +92,6 @@ The spec loads `AIClientDataExtractionConfig.live`, so production defaults and t
 - Catalogue's notes compaction case only: `csvBatchMaxDataRows = 15`.
 
 Retries, retry delay, batch size and batch parallelism come from the production defaults and their environment variables: `send-max-retries = 2` (`AI_CLIENT_DATA_EXTRACTION_SEND_MAX_RETRIES`), `send-retry-delay = 1 second` (`…_SEND_RETRY_DELAY`), `csv-batch-max-data-rows = 100` (`…_CSV_BATCH_MAX_DATA_ROWS`) and `csv-batch-parallelism = 4` (`…_CSV_BATCH_PARALLELISM`). With the defaults, Customer Book's `spreadsheet-4.csv` reads in four groups (100/100/100/47) and every other spreadsheet in one.
-
-**Catalogue today (until C2b):** the spec also pins `sendMaxRetries = 2`, `sendRetryDelay = 1 s`, `csvBatchMaxDataRows` 100 (15 for the compaction case) and `csvBatchParallelism = 4`, the same values as the defaults.
 
 Compaction keeps the production `note-compaction-request-timeout`. The model name is not printed.
 
@@ -177,7 +175,7 @@ How the spec compares one case (spec-private code in `golden/CatalogueFileAiExtr
 - **Comparison rules have no permanent AI-free proof.** The user removed the scorer's unit specs with nothing replacing them, in line with "no tests for test-only code". The diffson round proved its output once with a temporary, reverted test (user decision Q2, [Difference output](#difference-output)); a later change to the encoding or the diff needs the same one-off proof.
 - **Order counts and changes cascade (user decisions, diffson round; epic known gap).** Every list is compared by position, with no pairing by codes or names. A reordered note is a difference, and a skipped or extra item among items that also differ shifts every later item into field changes.
 - **Note wording fails the check** (epic known gap 3, accepted).
-- **Run settings can be changed from the environment (user decision 2026-11-23, accepted).** Because the Customer Book spec, and Catalogue's after C2b, no longer pin retries, retry delay, batch size or parallelism, an exported `AI_CLIENT_DATA_EXTRACTION_SEND_MAX_RETRIES`, `…_SEND_RETRY_DELAY`, `…_CSV_BATCH_MAX_DATA_ROWS` or `…_CSV_BATCH_PARALLELISM` changes the check. A different batch size changes how spreadsheets are grouped: a single-group case that takes `.head` would then drop later groups and fail on missing entries, and Customer Book's `spreadsheet-4.csv` would be shortened from different groups. Run the check with these variables unset.
+- **Run settings can be changed from the environment (user decision 2026-11-23, accepted).** Because neither golden spec pins retries, retry delay, batch size or parallelism, an exported `AI_CLIENT_DATA_EXTRACTION_SEND_MAX_RETRIES`, `…_SEND_RETRY_DELAY`, `…_CSV_BATCH_MAX_DATA_ROWS` or `…_CSV_BATCH_PARALLELISM` changes the check. A different batch size changes how spreadsheets are grouped: a single-group case that takes `.head` would then drop later groups and fail on missing entries, and Customer Book's `spreadsheet-4.csv` would be shortened from different groups. Run the check with these variables unset.
 - **Look-alike characters fail the check invisibly** (epic known gap 6, accepted). A later run that picks the other of two identical-looking characters fails, and both sides of the difference print the same.
 - **Dependency compatibility (checked 2026-11-23).** difflicious and its `hearth` 0.4.2 left the build. `diffson-circe` 4.7.1 (built with Scala 3.3.8 LTS) brings `diffson-core`, circe 0.14.16 (resolved to the pinned 0.14.17), cats-core 2.13.0 (the repository's version), `scalac-compat-annotation` and `scala-collection-compat`, and no `hearth`. `show gateway-core/evicted` and `show gateway-it/evicted` select circe 0.14.17 and cats 2.13.0, with nothing new suspected binary-incompatible, and `Test/compile` passes for every module. Recheck `evicted` when diffson, circe or cats is upgraded.
 

@@ -332,28 +332,29 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         } yield ()
       }
 
-      "match the golden answer for the contact-list picture image-1.png sent with its processing message" in withContext { context =>
-        import context.*
+      "match the golden answer for the contact-list picture image-1.png sent with its processing message" in withContext {
+        context =>
+          import context.*
 
-        for {
-          _ = assume(
-            apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-          )
+          for {
+            _ = assume(
+              apiKey.nonEmpty,
+              "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            )
 
-          customerBookFileProcessingMessage = "omit phone numbers, keep everything else"
+            customerBookFileProcessingMessage = "omit phone numbers, keep everything else"
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-1-omit-phone-numbers.json")
+            customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-1-omit-phone-numbers.json")
 
-          customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
-            FileScannedPath(assetDirectory.resolve("image-1.png")),
-            SupportedMediaType.PNG,
-            AIInstructions.extractCustomersFromImageInstructions,
-            Some(customerBookFileProcessingMessage),
-          )
+            customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
+              FileScannedPath(assetDirectory.resolve("image-1.png")),
+              SupportedMediaType.PNG,
+              AIInstructions.extractCustomersFromImageInstructions,
+              Some(customerBookFileProcessingMessage),
+            )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
-        } yield ()
+            _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          } yield ()
       }
 
       "match the golden answer with no customers for the unrelated picture image-11.jpeg" in withContext { context =>
@@ -589,61 +590,65 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         } yield ()
       }
 
-      "match the golden answer with shortened notes for spreadsheet-4.csv read in several groups" in withContext { context =>
-        import context.*
+      "match the golden answer with shortened notes for spreadsheet-4.csv read in several groups" in withContext {
+        context =>
+          import context.*
 
-        for {
-          _ = assume(
-            apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-          )
-
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("spreadsheet-4.json")
-
-          customerBookFileAIExtracts <- ZIO.scoped(
-            aiClientDataExtraction.extractFromCsv[CustomerBookFileAIExtract](
-              spreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-4.csv"))),
-              AIInstructions.extractCustomersFromFileInstructions,
-              None,
+          for {
+            _ = assume(
+              apiKey.nonEmpty,
+              "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
             )
-          )
 
-          customerBookFileAIExtractMerged = mergeCustomerBookFileAIExtracts(customerBookFileAIExtracts)
+            customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("spreadsheet-4.json")
 
-          noteCompactionOutput <- aiClientDataExtraction.noteCompaction(
-            customerBookFileAIExtractMerged.extractionNotes,
-            AIInstructions.compactCustomerBookFileNotesInstructions,
-          )
+            customerBookFileAIExtracts <- ZIO.scoped(
+              aiClientDataExtraction.extractFromCsv[CustomerBookFileAIExtract](
+                spreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-4.csv"))),
+                AIInstructions.extractCustomersFromFileInstructions,
+                None,
+              )
+            )
 
-          customerBookFileAIExtract = customerBookFileAIExtractMerged.copy(extractionNotes = noteCompactionOutput.notes)
+            customerBookFileAIExtractMerged = mergeCustomerBookFileAIExtracts(customerBookFileAIExtracts)
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
-        } yield ()
+            noteCompactionOutput <- aiClientDataExtraction.noteCompaction(
+              customerBookFileAIExtractMerged.extractionNotes,
+              AIInstructions.compactCustomerBookFileNotesInstructions,
+            )
+
+            customerBookFileAIExtract = customerBookFileAIExtractMerged.copy(extractionNotes =
+              noteCompactionOutput.notes
+            )
+
+            _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          } yield ()
       }
 
-      "match the golden answer with no customers for the unrelated spreadsheet spreadsheet-5.csv" in withContext { context =>
-        import context.*
+      "match the golden answer with no customers for the unrelated spreadsheet spreadsheet-5.csv" in withContext {
+        context =>
+          import context.*
 
-        for {
-          _ = assume(
-            apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-          )
-
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("spreadsheet-5.json")
-
-          customerBookFileAIExtracts <- ZIO.scoped(
-            aiClientDataExtraction.extractFromCsv[CustomerBookFileAIExtract](
-              spreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-5.csv"))),
-              AIInstructions.extractCustomersFromFileInstructions,
-              None,
+          for {
+            _ = assume(
+              apiKey.nonEmpty,
+              "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
             )
-          )
 
-          customerBookFileAIExtract = customerBookFileAIExtracts.head
+            customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("spreadsheet-5.json")
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
-        } yield ()
+            customerBookFileAIExtracts <- ZIO.scoped(
+              aiClientDataExtraction.extractFromCsv[CustomerBookFileAIExtract](
+                spreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-5.csv"))),
+                AIInstructions.extractCustomersFromFileInstructions,
+                None,
+              )
+            )
+
+            customerBookFileAIExtract = customerBookFileAIExtracts.head
+
+            _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          } yield ()
       }
     }
   }
