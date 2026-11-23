@@ -4,9 +4,7 @@ title: AI Response Performance
 
 # AI Response Performance
 
-> **Status: built.** The single Catalogue check runs its 10 cases against hand-corrected golden answers and fails on any difference. It prints the whole answer with the differences marked in colour. The old scored checks are removed: every Catalogue and Customer Book extraction check, both note-shortening checks, the scoring and all old golden answers. Customer Book's source files are kept. Only its rebuild is not built yet ([gap 2](#2-customer-book-has-no-golden-check-until-it-is-rebuilt)). Notes in italics starting *Before this rework* describe the removed checks.
->
-> **Agreed, not built yet:** a failing case will print only a list of the differences, readable without colour, instead of the whole answer. The comparison rules and the golden answers stay exactly as they are. Until this is built, step 1's requirement 1, its scenarios 3, 4, 7 and 9, and its outcome describe the agreed output, not today's.
+> **Status: built.** The single Catalogue check runs its 10 cases against hand-corrected golden answers and fails on any difference. Every list is compared position by position, so order counts. A failing case prints only the comparison tool's indented list of differences, each placed by position, readable without colour and with no test id line. The old scored checks are removed: every Catalogue and Customer Book extraction check, both note-shortening checks, the scoring and all old golden answers. Customer Book's source files are kept. Only its rebuild is not built yet ([gap 2](#2-customer-book-has-no-golden-check-until-it-is-rebuilt)). Notes in italics starting *Before this rework* describe the removed checks.
 >
 > **First live run**, at the product's default settings: it took about 7 minutes, and every case got an answer, with no AI errors or timeouts. All 10 cases failed on differences. That is the agreed behaviour: the check reports differences, and the golden answers were not changed to make them pass (see gaps 3, 6 and 7).
 
@@ -50,7 +48,7 @@ This is a check that developers run by hand. Customers never see it, and it chan
    - the AI's notes, both the general notes and each item's notes.
 
    The product adds some details afterwards, so they are not compared here: the "Processed N of M entries" summary lines, the duplicate marks, and whether an item needs attention. A note worded differently from the golden answer is a difference. *Before this rework, notes were only counted and were not compared.*
-6. Order does not matter, for items and for plain lists such as notes and row numbers. An item with product codes (SKUs) is matched only with an expected item that has exactly the same set of codes. An item without codes is matched by exactly the same name. Inside a matched item, variants are matched by product code, then by label. *Before this rework, names also matched when they were at least 70% alike.* An expected item with no partner is missing; an answer item with no partner is extra.
+6. Every list is compared position by position, and order counts: items, variants, attributes, notes and row numbers. Nothing is paired by product code (SKU) or name. The comparison first lines up entries that are exactly the same, then compares the rest by position ([gap 8](#8-one-skipped-or-extra-item-can-make-many-later-items-differ)). A field left out and the same field written as empty ("null") count as the same. *Before this rework, names also matched when they were at least 70% alike.*
 7. Any difference fails the check. *Before this rework, a check passed whatever its score.*
 
 #### Non-functional
@@ -83,13 +81,13 @@ Each case has a golden answer made and corrected by hand as described above. In 
 | --- | --- |
 | 1. The model returns exactly the golden answer | - No difference is shown, and the case passes |
 | 2. The model misreads one price, for example 8.1 instead of 8.4 | - The difference shows both values, and the case fails |
-| 3. The model skips one row, for example "Κραμπί" | - That item is listed as missing, in the comparison tool's form for a part only in the golden answer, the items after it still match, and the case fails |
-| 4. The model returns an item the golden answer does not have | - That item is listed as extra, in the comparison tool's form for a part only in the AI's answer, and the case fails |
-| 5. The model adds a description the golden answer does not have | - The difference is shown, and the case fails |
+| 3. The model skips one row, for example "Κραμπί" | - When the items around it match the golden answer exactly, it shows as one `remove` at its position - Otherwise later items can be compared with the wrong golden item and show as many changes ([gap 8](#8-one-skipped-or-extra-item-can-make-many-later-items-differ)) - The case fails either way |
+| 4. The model returns an item the golden answer does not have | - An extra item at the end of the list shows as one `add` at `/candidates/-` (the end of the list) - Elsewhere, it is one `add` at its position when the items around it match exactly, otherwise many changes (gap 8) - The case fails either way |
+| 5. The model adds a description the golden answer does not have | - It shows as a `replace` with `"old" : null`, and the case fails |
 | 6. The model drops an accent, for example "Κραμπι" for "Κραμπί" | - The difference shows both texts, and the case fails. No closeness is shown. *Before this rework, the report also showed "1 character off, 83% alike".* |
-| 7. Only one of the AI's notes is worded differently | - The golden note is listed as missing and the reworded note as extra, and the case fails. *Before this rework, notes did not affect the result.* |
-| 8. The model returns the same items in a different order | - No difference is shown for the order |
-| 9. The model writes a name 90% alike to the golden name, with no product code | - They are not matched: the golden item is listed as missing and the AI's item as extra. *Before this rework, they were paired as one item.* |
+| 7. Only one of the AI's notes is worded differently | - It shows as a single `replace` at that note's position, and the case fails. *Before this rework, notes did not affect the result.* |
+| 8. The model returns the same items, notes or rows in a different order | - Each moved entry shows as an `add` plus a `remove`, and the case fails |
+| 9. The model writes a name 90% alike to the golden name, with no product code | - It shows as a changed name (`replace`) on the item at that position, and the case fails. *Before this rework, they were paired as one item.* |
 | 10. The model writes 8.40 where the golden answer has 8.4 | - It counts as the same, so no difference is shown, as before |
 | 11. An unrelated picture, spreadsheet or PDF is sent | - The answer must match its golden answer, which holds no items but still has its counts, row lists and notes, or the case fails |
 | 12. The note-shortening case runs | - The spreadsheet is read in groups, joined and its repeated notes shortened by the check's own copy of the product's step, and the result must match its golden answer, or the case fails |
@@ -99,7 +97,12 @@ Each case has a golden answer made and corrected by hand as described above. In 
 
 #### Requirements
 
-1. A failing case prints a line with a random test id, then a list of only the differences, readable without colour. A changed value shows where it is in the answer and both values. A part found on one side only, such as an item, a variant or a note, is listed as missing or extra in the comparison tool's own form. The source and model names are not printed. *Today, until this is built, the whole answer is printed with the differences marked only by colour: red for parts only in the AI's answer, green for parts only in the golden answer, and `answer -> golden` for a changed value ([gap 4](#4-a-failing-case-prints-the-whole-answer)).* *Before this rework, the report had a summary naming the source and the model, a "% right" table, a note-count line and a grouped problem list.*
+1. A failing case prints only the comparison tool's own output: the differences, readable without colour, as indented blocks, one per difference, with longer values spread over several lines. The run already names the failing case, and the source and model names are not printed. Each block is one of:
+   - `remove`: missing, only in the golden answer, so the AI left it out;
+   - `add`: extra, only in the AI's answer;
+   - `replace`: changed, with `old` the golden value and `value` the AI's.
+
+   Each block says where the difference is, by position, counting from 0. For example, `/candidates/8/variants/0/extractionNotes/0` is the first note of the first variant of the ninth item. A whole missing or extra item is one block holding the whole item. A field filled on one side only shows as a `replace` with `"old" : null`. *Before this rework, the report had a summary naming the source and the model, a "% right" table, a note-count line and a grouped problem list.*
 2. A missing golden answer is never created from the model's answer. A new golden answer is only ever written deliberately and corrected by hand.
 
 #### Request / Response / Outcome
@@ -127,7 +130,7 @@ None. The check does not go through the product's web interface.
 
 When its new golden answer was corrected by hand, the second picture was counted row by row: it has 125 priced rows (29 + 45 + 51 across its three columns). It has no repeated strip of rows: the top of the image is blank padding.
 
-Three of its product codes have one blurred digit. Their golden answer keeps the human reading (the user's choice). When the AI reads that digit differently, the item shows as one missing and one extra item.
+Three of its product codes have one blurred digit. Their golden answer keeps the human reading (the user's choice). When the AI reads that digit differently, it usually shows as a changed code on that item.
 
 **Settled:** nothing is left to decide.
 
@@ -143,11 +146,11 @@ Notes are now compared, and the check fails on any difference. The AI rarely wor
 
 **Accepted for now:** this was the user's choice. Revisit it if note wording makes the check fail too often to be useful.
 
-#### 4. A failing case prints the whole answer
+#### 4. A failing case prints only the differences
 
-Today a failing case prints the whole answer with the differences marked only in colour. That makes a small difference hard to find in a long answer, and without colour, missing and extra cannot be told apart.
+A failing case used to print the whole answer with the differences marked only in colour. A small difference was hard to find in a long answer, and without colour, missing and extra could not be told apart.
 
-**Decided:** the user chose a list of only the differences, readable without colour (step 1, requirement 1). This gap closes when that is built.
+**Built:** a failing case now prints only the differences, readable without colour (step 1, requirement 1). Nothing is left to decide.
 
 #### 5. The check's spreadsheet step is a copy of the product's
 
@@ -173,5 +176,11 @@ In the first live run, at the product's default settings, the AI broke some of t
 The check shows these as differences, and the golden answers keep the rules.
 
 **Accepted for now:** this was the user's choice. Any work on the AI instructions to fix these would be a separate request.
+
+#### 8. One skipped or extra item can make many later items differ
+
+The comparison first lines up list entries that are exactly the same, then compares what is left by position. A skipped or extra item shows as a single `remove` or `add` only when the items around it match the golden answer exactly. Otherwise each later item can be compared with the wrong golden item and print as many field changes, which hides the one real difference.
+
+**Accepted for now:** this was the user's choice.
 
 {% raw %}{% include abbreviations.md %}{% endraw %}

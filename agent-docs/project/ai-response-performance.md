@@ -1,6 +1,6 @@
 # AI response performance
 
-> **Status (issue 607, rework built 2026-11-23; diffson round agreed 2026-11-23, not built yet).** Product truth: [AI Response Performance](../../pages/epics/07-ai-response-performance.md). **Agreed, not built:** the comparison moves from difflicious to diffson with a differences-only output, every comparison rule and every golden unchanged ([Comparison](#comparison), [Difference output](#difference-output)); until it lands, the "Today" paragraphs in those two sections describe the code. **Built:** the spec with its ten cases and moved assets (slice 1), the difflicious comparison and `assertNoDiff` output (slice 2), and the spec's own spreadsheet join and note shortening for the notes compaction case, with `CatalogueFileService` unchanged (slice 3), and the [removal](#scope) of the old scored checks, their goldens and the four old Catalogue asset folders (slice 4). **Goldens:** all 10 are hand-corrected and committed: 5a (`image-1.json`, `image-2.json`, `pdf-1.json`), 5b (`spreadsheet-1.json`, `-2.json`, `-3.json`), 5c (`spreadsheet-1-notes-compaction.json`) and 5d (`image-3.json`, `pdf-2.json`, `spreadsheet-4.json`, unchanged from the capture). **First run at defaults (slice 6):** all 10 cases answered and all 10 failed on differences, see [First run at defaults](#first-run-at-defaults-2026-11-23). Open gaps: see [Open gaps](#open-gaps).
+> **Status (issue 607, rework built 2026-11-23; diffson round built 2026-11-23).** Product truth: [AI Response Performance](../../pages/epics/07-ai-response-performance.md). **Diffson round:** the comparison moved from difflicious to plain diffson (`lcsdiff`, user decision option 3): position-based, order counts in every list, a differences-only output, goldens unchanged ([Comparison](#comparison), [Difference output](#difference-output)). **Built:** the spec with its ten cases and moved assets (slice 1), the comparison (slice 2, difflicious; replaced by plain diffson in the diffson round), and the spec's own spreadsheet join and note shortening for the notes compaction case, with `CatalogueFileService` unchanged (slice 3), and the [removal](#scope) of the old scored checks, their goldens and the four old Catalogue asset folders (slice 4). **Goldens:** all 10 are hand-corrected and committed: 5a (`image-1.json`, `image-2.json`, `pdf-1.json`), 5b (`spreadsheet-1.json`, `-2.json`, `-3.json`), 5c (`spreadsheet-1-notes-compaction.json`) and 5d (`image-3.json`, `pdf-2.json`, `spreadsheet-4.json`, unchanged from the capture). **First run at defaults (slice 6):** all 10 cases answered and all 10 failed on differences, see [First run at defaults](#first-run-at-defaults-2026-11-23). Open gaps: see [Open gaps](#open-gaps).
 
 How the hand-run AI golden check compares a live model's raw answer with a hand-corrected golden answer. Any difference fails the case.
 
@@ -94,7 +94,7 @@ Compaction keeps the production `note-compaction-request-timeout`. The model nam
 
 ## Comparison
 
-**Agreed, not built (diffson round, user decisions 2026-11-23).** Comparison uses diffson (`org.gnieh %% diffson-circe` 4.7.1, in `test-kit`, with `circe-core` and `circe-parser` pinned there to the repository's `circeV`). difflicious is removed from the build. Every rule below is unchanged from the difflicious comparison (user decision Q3); only the output changes. The goldens are not changed and not re-run (Q4).
+**Diffson round (user decisions 2026-11-23, built 2026-11-23).** Comparison uses plain diffson (`org.gnieh %% diffson-circe` 4.7.1, `Dependencies.diffsonCirce`, in `test-kit`, with `circe-core` and `circe-parser` pinned there to the repository's `circeV`); difflicious was removed from the build. The user chose the library's own list comparison (option 3) over a keyed rewrite that kept the earlier pairing rules, so **the pairing rules of the difflicious comparison no longer apply** (this reverses the earlier Q3 answer). The goldens are not changed and not re-run (Q4).
 
 Every field of the raw answer is compared:
 
@@ -108,47 +108,48 @@ Not compared, because they are not part of the AI answer: the service's info-lin
 
 How the spec compares one case (spec-private code in `golden/CatalogueFileAiExtractGoldenSpec`):
 
-1. **Encode both sides the same way.** The golden is decoded with the production `json.ai.catalogueFileAIExtractCodec`, as before. The golden and the answer are then encoded with one spec-private jsoniter codec that writes every field (`null` and `[]` included, the selling unit's `perUnit` and `unitSize` too), and the text is parsed with circe. A `None` against a value is therefore a changed value, never a missing field.
-2. **Turn every list with a pairing rule into an object keyed by its pairing key.** diffson pairs object fields by name and ignores their order, so this keeps the pairing and order rules. Every key ends in an occurrence suffix `#1`, `#2`, … in order of appearance, always added, so equal keys pair in order of appearance and keys never collide:
+1. **Encode both sides the same way.** The golden is decoded with the production `json.ai.catalogueFileAIExtractCodec` before the AI call, as before. The golden and the answer are then encoded with the spec-private `catalogueFileAIExtractCodecFieldComplete` (`JsonCodecMaker.make` with `transientNone`, `transientEmpty` and `transientDefault` all `false`, passed with `using`; the four enum codecs are imported from `json.tapir`, the shared selling-unit codec is not, so `perUnit` and `unitSize` are written too) and parsed with `io.circe.parser.parse`. Absent and `null` count as the same (user decision Q2): both sides are written in full, so a field empty on one side and filled on the other is one `replace` with `"old":null` or `"value":null`.
+2. **Diff the golden into the answer** in `compareWithGolden`: `diff(golden JSON, answer JSON)` with `diffson.jsonpatch.lcsdiff.remembering` and a spec member `given Lcs[Json] = new Patience[Json]` (user decision Q1: the list describes what the AI did).
 
-   | List | Key (before the suffix) | Field value |
-   |---|---|---|
-   | `candidates` | `skus:` + the sorted, distinct SKU strings of its variants as a compact JSON array, such as `skus:["46103"]`, when any variant has a SKU; otherwise `name:<name>`; `no-name` when it has none. Items with codes pair only when the SKU sets are identical, in any order; one misread code makes the item missing plus extra | the item |
-   | `variants` | `sku:<sku>`, else `label:<label>`, else `no-sku-no-label` | the variant |
-   | `attributes` | the attribute `name` | the attribute |
-   | every notes list, `emptyEntryRows`, `unidentifiedEntryRows` | the value itself; a reworded note is one missing plus one extra | the note text or the row number |
+**Rules (user decisions 2026-11-23):**
 
-3. **Diff the golden into the answer** with `diffson.jsonpatch.simplediff.remembering` (user decision Q1: the list describes what the AI did). No list is left for diffson's array algorithm, which pairs unmatched elements by position; a list added to the model later would be compared whole and show as one `replace`.
-
-- **Values:** text is exact string equality. Numbers use circe's number equality, which ignores trailing zeros, so `8.40` equals `8.4` (epic scenario 10). There is no closeness and no 70% rule.
-- **Why not diffson alone (checked in its 4.7.1 source):** arrays are matched by a longest common subsequence of whole elements, and the unmatched elements left at the same position are diffed field by field. That would pair items by position, show a reworded note as one changed value, and shift every later item after an extra one.
-
-**Today (until built):** difflicious (`com.github.jatcwang %% difflicious-scalatest` 0.7.1, in `test-kit`). One `Differ[CatalogueFileAIExtract]` is derived in the spec with `pairBy` on the same keys (`Left(SKU set)` / `Right(name)`, `sku` else `label`, attribute `name`, values for notes and rows), a spec-private `differRefinedType` given for every Iron newtype and `useEquals` givens for the four enums; `PriceAmount` is Scala `BigDecimal`, whose equality ignores scale.
+- **Objects** (an item, a variant, a price, a selling unit) are compared field by field; field order never matters.
+- **Lists** (items, variants, attributes, every notes list, both row lists) are compared by position. diffson first matches the longest run of elements that are **entirely** equal, in order; elements left over at the same position are then compared field by field, and the rest are `add` or `remove`. **Order counts in every list** (Q1): reordered notes or rows are differences.
+- **There is no pairing by product codes, name, label or attribute name.** A misread code or a near-alike name shows as field changes on the item at that position, not as missing plus extra.
+- **Cascade (accepted, epic known gap):** a skipped or extra item is one `remove` or `add` only when its neighbours are entirely equal to the golden. When they also differ (for example only in `sellingUnitInferred`), every later item is compared with the wrong golden item and prints as field changes.
+- **Values:** text is exact string equality. Numbers use circe's number equality and hashing, which ignore trailing zeros, so `8.40` equals `8.4` (epic scenario 10). There is no closeness and no 70% rule.
 
 ## Difference output
 
-**Agreed, not built (user decisions Q1 and Q2, 2026-11-23; closes epic known gap 4).**
+**Built 2026-11-23 (user decisions 2026-11-23; closed epic known gap 4).** It replaced difflicious-scalatest's `assertNoDiff`, which printed a `Test id: <ULID>` line and then the whole answer, with one-sided parts told apart only by colour.
 
 - When nothing differs, nothing is printed and the case passes.
-- On any difference the case fails through ScalaTest `fail` with a message made of a `Test id: <random UUID>` line, then **one JSON Patch operation (RFC 6902) per line, in diffson-circe's own encoding**, readable without colour:
-  - **changed value:** `{"op":"replace","path":…,"value":<AI answer>,"old":<golden>}`;
-  - **missing** (only in the golden, the AI left it out): `{"op":"remove","path":…,"old":<the whole part>}`;
-  - **extra** (only in the AI's answer): `{"op":"add","path":…,"value":<the whole part>}`.
-- **Paths** are JSON Pointers over the keyed form, so they name items by their pairing key, not by position, for example `/candidates/skus:[\"46103\"]#1/variants/sku:46103#1/sellingUnitInferred` as it appears inside the JSON string. Quotes in a key are escaped (`\"`), and `~` and `/` in a key are written `~0` and `~1` (JSON Pointer rules).
-- A part on one side only prints as one line, however large (an item with its variants and notes). Lines follow diffson's walk (the golden's fields first, then the answer-only ones): deterministic, not sorted. The source and model names are not printed. No report file is written.
-- **Proof (user decision Q2):** one temporary test, run once without a key and then reverted, checks the printed lines for epic scenarios 1–10 on hand-made answers against a golden; its log is kept as evidence outside the repository. Nothing new stays in the repository.
-
-**Today (until built):** difflicious-scalatest's `assertNoDiff(catalogueFileAIExtract, catalogueFileAIExtractGolden)` (the spec mixes in `ScalatestDiff`). A failure prints a `Test id: <ULID>` line, then the **whole** answer, with a changed value as `answer -> golden` and one-sided parts told apart **only by colour** (red: answer only; green: golden only), which is lost when sbt output goes to a file.
+- On any difference the case fails through ScalaTest `fail` with **only** `jsonPatch.asJson.spaces2`: diffson-circe's JSON Patch (RFC 6902) as one indented JSON array, exactly the library's plain output, readable without colour. There is no test id line (user decision).
+  - **changed value:** `{"op" : "replace", "path" : …, "value" : <AI answer>, "old" : <golden>}`;
+  - **missing** (only in the golden, the AI left it out): `{"op" : "remove", "path" : …, "old" : <the whole part>}`;
+  - **extra** (only in the AI's answer): `{"op" : "add", "path" : …, "value" : <the whole part>}`.
+- **Paths** are JSON Pointers by position, for example `/candidates/16/variants/0/sellingUnit/quantity/value`; an element added at the end of a list is `/…/-`.
+- A part on one side only is printed in full, spread over lines. The source and model names are not printed. No report file is written.
+- **Proof (user decision Q2, done 2026-11-23):** one temporary test, run once without a key and then reverted, built answers from the committed goldens and checked the printed patch. It failed against a stub without the failure and passed with the comparison; its diff and logs are kept outside the repository. Observed operations:
+  - golden against itself, and `8.40` against `8.4`: no difference;
+  - price `8.1` for `8.4`: `replace /candidates/0/variants/0/price/amount`, `"value" : 8.1`, `"old" : 8.4`;
+  - a description the golden lacks: `replace /candidates/8/description` with `"old" : null`;
+  - one reworded note: a single positional `replace /extractionNotes/6`;
+  - two notes swapped: `add /extractionNotes/0` plus `remove /extractionNotes/2`;
+  - a skipped item between items equal to the golden: `remove /candidates/8` (the whole item);
+  - a skipped item whose later items also differ (`sellingUnitInferred`): three item pairs show as `name` and flag `replace`s, then `remove /candidates/11` (the cascade);
+  - an extra item at the end: `add /candidates/-`;
+  - `perUnit` absent in the answer: `replace …/perUnit` with `"value" : null` and the golden object as `"old"`.
 
 ## Open gaps
 
 - **Customer Book source assets kept without a spec (user decision Q5, deviation).** `assets-test/CustomerBookFileAiExtract{FromImage,FromPdf,FromSpreadsheet,UnrelatedContent}GoldenSpec/` stay in place for the later rebuild, although no spec reads them. This is an accepted exception to [Asset files](acceptance-testing.md#asset-files) ("one folder per spec"). The rebuilt specs must reuse these exact folder names, or move the files.
 - **The check's spreadsheet join and shortening are a copy (user decision, slice 3, option B; epic known gap 5, accepted for now).** The check copies only the merge; it has no skip rule, acceptance rule or fallback. A later change to the service's merge or compaction ([Catalogue step 3](../features/catalogue.md#cataloguefileserviceaiextract)) is not followed by the check; update the spec's copy by hand in the same PR. The service's acceptance rule and fallback are proved only by `fun/CatalogueFileServiceSpec`, never by the live check.
-- **Comparison rules have no permanent AI-free proof.** The user removed the scorer's unit specs with nothing replacing them, in line with "no tests for test-only code". The diffson round proves the pairing keys and epic scenarios 1–10 once with a temporary, reverted test (user decision Q2); later changes to the keyed form need the same one-off proof.
+- **Comparison rules have no permanent AI-free proof.** The user removed the scorer's unit specs with nothing replacing them, in line with "no tests for test-only code". The diffson round proved its output once with a temporary, reverted test (user decision Q2, [Difference output](#difference-output)); a later change to the encoding or the diff needs the same one-off proof.
+- **Order counts and changes cascade (user decisions, diffson round; epic known gap).** Every list is compared by position, with no pairing by codes or names. A reordered note is a difference, and a skipped or extra item among items that also differ shifts every later item into field changes.
 - **Note wording fails the check** (epic known gap 3, accepted).
 - **Look-alike characters fail the check invisibly** (epic known gap 6, accepted). A later run that picks the other of two identical-looking characters fails, and both sides of the difference print the same.
-- **Whole-answer, colour-only output** (epic known gap 4). Decided: the differences-only diffson output above; the gap closes when it is built.
-- **Dependency compatibility.** Today: difflicious 0.7.1 brings `hearth` 0.4.2, evicted by chimney's 0.4.4 with nothing suspected incompatible (checked in slice 1). After the diffson round: difflicious and its `hearth` 0.4.2 leave the build; `diffson-circe` 4.7.1 (built with Scala 3.3.8 LTS) brings `diffson-core`, circe 0.14.16 (resolved to the pinned 0.14.17), cats-core 2.13.0 (the repository's version), `scalac-compat-annotation` and `scala-collection-compat`, and no `hearth`. Recheck `show gateway-core/evicted` when diffson, circe or cats is upgraded.
+- **Dependency compatibility (checked 2026-11-23).** difflicious and its `hearth` 0.4.2 left the build. `diffson-circe` 4.7.1 (built with Scala 3.3.8 LTS) brings `diffson-core`, circe 0.14.16 (resolved to the pinned 0.14.17), cats-core 2.13.0 (the repository's version), `scalac-compat-annotation` and `scala-collection-compat`, and no `hearth`. `show gateway-core/evicted` and `show gateway-it/evicted` select circe 0.14.17 and cats 2.13.0, with nothing new suspected binary-incompatible, and `Test/compile` passes for every module. Recheck `evicted` when diffson, circe or cats is upgraded.
 
 ## First run at defaults (2026-11-23)
 

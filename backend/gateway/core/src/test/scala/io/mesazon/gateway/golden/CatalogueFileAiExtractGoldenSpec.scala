@@ -1,15 +1,20 @@
 package io.mesazon.gateway.golden
 
-import com.github.plokhotnyuk.jsoniter_scala.core.readFromString
-import difflicious.Differ
-import difflicious.implicits.*
-import difflicious.scalatest.ScalatestDiff
-import difflicious.utils.TypeName
-import io.github.iltotore.iron.RefinedType
+import com.github.plokhotnyuk.jsoniter_scala.core.{readFromString, writeToString, JsonValueCodec}
+import com.github.plokhotnyuk.jsoniter_scala.macros.{CodecMakerConfig, JsonCodecMaker}
+import diffson.circe.*
+import diffson.diff
+import diffson.jsonpatch.lcsdiff.remembering.*
+import diffson.lcs.{Lcs, Patience}
+import io.circe.Json
+import io.circe.parser.parse
+import io.circe.syntax.*
+import io.github.iltotore.iron.jsoniter.given
 import io.mesazon.domain.gateway.*
 import io.mesazon.gateway.clients.AIClientDataExtraction
 import io.mesazon.gateway.config.AIClientDataExtractionConfig
 import io.mesazon.gateway.json.ai.given
+import io.mesazon.gateway.json.tapir.*
 import io.mesazon.gateway.service.AIInstructions
 import io.mesazon.gateway.utils.*
 import io.mesazon.testkit.base.{SttpTestBackend, ZWordSpecBase}
@@ -17,33 +22,12 @@ import zio.*
 
 import java.nio.file.*
 
-class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
+class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
 
   private inline val CsvBatchMaxDataRowsDefault    = 100
   private inline val CsvBatchMaxDataRowsCompaction = 15
 
-  private given differRefinedType[WrappedType](using
-      mirror: RefinedType.Mirror[WrappedType],
-      typeName: TypeName[WrappedType],
-  ): Differ[WrappedType] =
-    Differ.useEquals[WrappedType](value =>
-      value.asInstanceOf[mirror.BaseType] match {
-        case text: String => s"\"$text\""
-        case other        => other.toString
-      }
-    )
-
-  private given currencyDiffer: Differ[Currency] =
-    Differ.useEquals[Currency](_.toString)
-
-  private given catalogueItemVariantUnitDiffer: Differ[CatalogueItemVariantUnit] =
-    Differ.useEquals[CatalogueItemVariantUnit](_.toString)
-
-  private given catalogueItemVariantUnitPerUnitDiffer: Differ[CatalogueItemVariantUnit.PerUnit] =
-    Differ.useEquals[CatalogueItemVariantUnit.PerUnit](_.toString)
-
-  private given catalogueItemVariantUnitUnitSizeDiffer: Differ[CatalogueItemVariantUnit.UnitSize] =
-    Differ.useEquals[CatalogueItemVariantUnit.UnitSize](_.toString)
+  private given lcsJson: Lcs[Json] = new Patience[Json]
 
   private val apiKey =
     sys.env.getOrElse(
@@ -57,29 +41,10 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
   private val goldenDirectory =
     Paths.get("src/test/resources/assets-golden/CatalogueFileAiExtractGoldenSpec")
 
-  private val catalogueFileAIExtractDiffer: Differ[CatalogueFileAIExtract] =
-    Differ
-      .derivedDeep[CatalogueFileAIExtract]
-      .configure(_.candidates)(
-        _.pairBy(catalogueItemAIExtract =>
-          if (catalogueItemAIExtract.variants.exists(_.sku.isDefined))
-            Left(catalogueItemAIExtract.variants.flatMap(_.sku).map(_.value).toSet)
-          else Right(catalogueItemAIExtract.name.map(_.value))
-        )
-      )
-      .configure(_.candidates.each.variants)(
-        _.pairBy(catalogueItemVariantAIExtract =>
-          catalogueItemVariantAIExtract.sku
-            .map(catalogueItemVariantSku => Left(catalogueItemVariantSku.value))
-            .getOrElse(Right(catalogueItemVariantAIExtract.label.map(_.value)))
-        )
-      )
-      .configure(_.candidates.each.variants.each.attributes)(_.pairBy(_.name))
-      .configure(_.candidates.each.variants.each.extractionNotes)(_.pairBy(identity))
-      .configure(_.candidates.each.extractionNotes)(_.pairBy(identity))
-      .configure(_.extractionNotes)(_.pairBy(identity))
-      .configure(_.emptyEntryRows)(_.pairBy(identity))
-      .configure(_.unidentifiedEntryRows)(_.pairBy(identity))
+  private val catalogueFileAIExtractCodecFieldComplete: JsonValueCodec[CatalogueFileAIExtract] =
+    JsonCodecMaker.make[CatalogueFileAIExtract](
+      CodecMakerConfig.withTransientNone(false).withTransientEmpty(false).withTransientDefault(false)
+    )
 
   private def loadCatalogueFileAIExtractGolden(goldenFileName: String): CatalogueFileAIExtract = {
     val golden = goldenDirectory.resolve(goldenFileName)
@@ -134,11 +99,21 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase, ScalatestDiff {
     )
   }
 
+  private def catalogueFileAIExtractJson(catalogueFileAIExtract: CatalogueFileAIExtract): Json =
+    parse(writeToString(catalogueFileAIExtract)(using catalogueFileAIExtractCodecFieldComplete))
+      .fold(parsingFailure => fail(s"Failed to parse the encoded answer: [${parsingFailure.message}]"), identity)
+
   private def compareWithGolden(
       catalogueFileAIExtract: CatalogueFileAIExtract,
       catalogueFileAIExtractGolden: CatalogueFileAIExtract,
-  ): Unit =
-    catalogueFileAIExtractDiffer.assertNoDiff(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+  ): Unit = {
+    val jsonPatch = diff(
+      catalogueFileAIExtractJson(catalogueFileAIExtractGolden),
+      catalogueFileAIExtractJson(catalogueFileAIExtract),
+    )
+
+    if (jsonPatch.ops.nonEmpty) fail(jsonPatch.asJson.spaces2)
+  }
 
   "AIClientDataExtraction" when {
     "extractFromImage" should {
