@@ -135,7 +135,7 @@ New epic → follow [Epic standards](pages/epics/EPIC-STANDARDS.md) and copy its
 - [Organization Onboarding](pages/epics/04-organization-onboarding.md) — create the organization and its owner membership, then upload a logo
 - [Customer Book](pages/epics/05-customer-book.md) — add, browse, open, update, and archive customers; manage a business's contacts
 - [Catalogue](pages/epics/06-catalogue.md) — add, browse, open, update, and archive items; upload an item's image
-- [AI Response Performance](pages/epics/07-ai-response-performance.md) — compare the raw AI extraction answer with hand-checked golden answers and fail on any difference (issue 607 rework built: Catalogue only; Customer Book to be rebuilt)
+- [AI Response Performance](pages/epics/07-ai-response-performance.md) — compare the raw AI extraction answer with hand-checked golden answers and fail on any difference (issue 607 rework built: Catalogue and Customer Book checks)
 
 ## Features
 

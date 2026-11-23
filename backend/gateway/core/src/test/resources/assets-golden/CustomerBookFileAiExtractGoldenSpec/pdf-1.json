@@ -1,0 +1,756 @@
+{
+  "entriesIdentified": 25,
+  "entriesProcessed": 25,
+  "individualCandidates": [
+    {
+      "fullName": "Elena Varga",
+      "emails": [
+        "elena.varga@example.com"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "99000101",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "4 Olive Grove Street",
+            "addressLine2": null,
+            "city": "Limassol",
+            "postalCode": "3010",
+            "country": "Cyprus",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Marco Lindqvist",
+      "emails": [
+        
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "96000103",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Nora Castell",
+      "emails": [
+        "nora.castell@example.org"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "7700900104",
+          "phoneCountryCode": "+44",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "9 Fern Lane",
+            "addressLine2": null,
+            "city": "Bath",
+            "postalCode": "BA1 1AA",
+            "country": "UK",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Petra Novik",
+      "emails": [
+        "petra.novik@example.com"
+      ],
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Jonah Reyes",
+      "emails": [
+        "jonah.reyes@example.net"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "99000108",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Aurelio Banks",
+      "emails": [
+        "aurelio.banks@example.com"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "97000110",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "2 Mill Street",
+            "addressLine2": null,
+            "city": "Paphos",
+            "postalCode": "8010",
+            "country": "Cyprus",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Hana Okafor",
+      "emails": [
+        
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "7700900112",
+          "phoneCountryCode": "+44",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Felix Duarte",
+      "emails": [
+        "felix.duarte@example.com"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "99000114",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Ingrid Sato",
+      "emails": [
+        "ingrid.sato@example.org"
+      ],
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Omar Whitfield",
+      "emails": [
+        
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "96000118",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "7 Cedar Close",
+            "addressLine2": null,
+            "city": "Limassol",
+            "postalCode": "4040",
+            "country": "Cyprus",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Tilda Marsh",
+      "emails": [
+        "tilda.marsh@example.net"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "99000120",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Rafael Ionescu",
+      "emails": [
+        "rafael.ionescu@example.com"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "97000122",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Yuki Brennan",
+      "emails": [
+        "yuki.brennan@example.org"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "7700900124",
+          "phoneCountryCode": "+44",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "15 Rose Row",
+            "addressLine2": null,
+            "city": "York",
+            "postalCode": "YO1 7AB",
+            "country": "UK",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    }
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "Brightway Logistics Ltd",
+      "emails": [
+        "accounts@brightway.example"
+      ],
+      "taxID": "CY10000001X",
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "22000102",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "12 Harbour Road",
+            "addressLine2": null,
+            "city": "Larnaca",
+            "postalCode": "6020",
+            "country": "Cyprus",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Tomas Hale",
+          "role": "operations manager",
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Kestrel Garden Supplies",
+      "emails": [
+        "hello@kestrel-garden.example"
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "25000105",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Ida Morrow",
+          "role": "buyer",
+          "email": "ida.morrow@kestrel-garden.example",
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Alder & Finch Architects",
+      "emails": [
+        
+      ],
+      "taxID": "CY10000007Y",
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "22000107",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "30 Stasinou Avenue",
+            "addressLine2": null,
+            "city": "Nicosia",
+            "postalCode": "1060",
+            "country": "Cyprus",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Lumen Dental Clinic",
+      "emails": [
+        "reception@lumen-dental.example"
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "24000109",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Dr. Sara Quill",
+          "role": "practice lead",
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Willow Lane Bakery",
+      "emails": [
+        "orders@willowlane.example"
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "25000111",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "customerBusinessContacts": [
+        
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Northwind Marine Services Ltd",
+      "emails": [
+        "info@northwind-marine.example"
+      ],
+      "taxID": "CY10000013Z",
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "24000113",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Port Area",
+            "addressLine2": "Warehouse 5",
+            "city": "Larnaca",
+            "postalCode": "6301",
+            "country": "Cyprus",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Leo Brandt",
+          "role": "fleet manager",
+          "email": null,
+          "phoneNumber": {
+            "phoneNationalNumber": "99000213",
+            "phoneCountryCode": "+357",
+            "phoneCountryCodeInferred": false
+          },
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        },
+        {
+          "fullName": "Mira Solberg",
+          "role": "accounts",
+          "email": "mira.solberg@northwind-marine.example",
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Copperleaf Cafe",
+      "emails": [
+        
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "22000115",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "18 Market Square",
+            "addressLine2": null,
+            "city": "Nicosia",
+            "postalCode": "1011",
+            "country": "Cyprus",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Ruth Ellery",
+          "role": "owner",
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Silverline Fitness",
+      "emails": [
+        "members@silverline-fit.example"
+      ],
+      "taxID": "CY10000017W",
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "25000117",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "customerBusinessContacts": [
+        
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Bluefern Interiors",
+      "emails": [
+        "studio@bluefern.example"
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "2079460119",
+          "phoneCountryCode": "+44",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Gwen Halloway",
+          "role": "designer",
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Granite Peak Builders Ltd",
+      "emails": [
+        
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "22000121",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Industrial Zone 3",
+            "addressLine2": "Unit 8",
+            "city": "Nicosia",
+            "postalCode": "2033",
+            "country": "Cyprus",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Harbourlight Books",
+      "emails": [
+        "shop@harbourlight.example"
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "24000123",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "customerBusinessContacts": [
+        
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Clearwater Pool Care",
+      "emails": [
+        "service@clearwater-pools.example"
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "25000125",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Dan Ortiz",
+          "role": "technician",
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    }
+  ],
+  "emptyEntryRowIndexes": [
+    
+  ],
+  "unidentifiedEntryRowIndexes": [
+    
+  ],
+  "extractionNotes": [
+    "Left out title \"Customer Directory - Seaside Print Studio\", nothing beside it",
+    "Left out page number \"Page 1 of 2\", nothing beside it",
+    "Left out page number \"Page 2 of 2\", nothing beside it"
+  ]
+}

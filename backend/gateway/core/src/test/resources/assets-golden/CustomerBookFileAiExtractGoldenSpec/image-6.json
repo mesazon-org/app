@@ -1,0 +1,182 @@
+{
+  "entriesIdentified": 5,
+  "entriesProcessed": 5,
+  "individualCandidates": [
+    {
+      "fullName": "Δημήτρης Λάμπρου",
+      "emails": [
+        "d.lamprou@mail.gr"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "6973112305",
+          "phoneCountryCode": "+30",
+          "phoneCountryCodeInferred": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Αγ. Νικολάου 12",
+            "addressLine2": null,
+            "city": "Πάτρα",
+            "postalCode": "26221",
+            "country": "Ελλάδα",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Εύα Στυλιανού",
+      "emails": [
+        "eva.stylianou@gmail.com"
+      ],
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Κύπρου 5",
+            "addressLine2": null,
+            "city": "Αθήνα",
+            "postalCode": "11527",
+            "country": "Ελλάδα",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Νίκος Παπαδόπουλος",
+      "emails": [
+        
+      ],
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        "Email address could not be fully read"
+      ]
+    }
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "Κρητικά Τρόφιμα ΕΠΕ",
+      "emails": [
+        "anna@kritika-trofima.gr"
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "2810334455",
+          "phoneCountryCode": "+30",
+          "phoneCountryCodeInferred": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "ΒΙ.ΠΕ. Ηρακλείου Οδός Γ΄",
+            "addressLine2": null,
+            "city": "Ηράκλειο",
+            "postalCode": "71601",
+            "country": "Ελλάδα",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Άννα Πετράκη",
+          "role": null,
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Τεχνική Δομή ΑΕ",
+      "emails": [
+        "k.maris@texniki-domi.gr"
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Λεωφ. Μεσογείων 278",
+            "addressLine2": null,
+            "city": "Χαλάνδρι",
+            "postalCode": "15232",
+            "country": "Ελλάδα",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Κώστας Μαρής",
+          "role": null,
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        "Phone number could not be fully read"
+      ]
+    }
+  ],
+  "emptyEntryRowIndexes": [
+    
+  ],
+  "unidentifiedEntryRowIndexes": [
+    
+  ],
+  "extractionNotes": [
+    "Left out title \"Πελάτες\", date beside it",
+    "Left out date \"12/03/2025\", title beside it",
+    "Left out column labels \"Όνομα/Επωνυμία\", nothing beside it",
+    "Phone country codes taken from the Greek addresses"
+  ]
+}

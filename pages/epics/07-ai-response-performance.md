@@ -4,19 +4,19 @@ title: AI Response Performance
 
 # AI Response Performance
 
-> **Status: built.** The single Catalogue check runs its 10 cases against hand-corrected golden answers and fails on any difference. Every list is compared position by position, so order counts. A failing case prints only the comparison tool's indented list of differences, each placed by position, readable without colour and with no test id line. The old scored checks are removed: every Catalogue and Customer Book extraction check, both note-shortening checks, the scoring and all old golden answers. Customer Book's source files are kept. Only its rebuild is not built yet ([gap 2](#2-customer-book-has-no-golden-check-until-it-is-rebuilt)). Notes in italics starting *Before this rework* describe the removed checks.
+> **Status: built.** The Catalogue check runs its 10 cases, and the Customer Book check its 23 cases, against hand-corrected golden answers, and each fails on any difference. Every list is compared position by position, so order counts. A failing case prints only the comparison tool's indented list of differences, each placed by position, readable without colour and with no test id line. The old scored checks are removed: every Catalogue and Customer Book extraction check, both note-shortening checks, the scoring and all old golden answers. Customer Book's source files were kept, and its check is rebuilt from them ([gap 2](#2-customer-books-golden-check-is-rebuilt)). Notes in italics starting *Before this rework* describe the removed checks.
 >
 > **First live run**, at the product's default settings: it took about 7 minutes, and every case got an answer, with no AI errors or timeouts. All 10 cases failed on differences. That is the agreed behaviour: the check reports differences, and the golden answers were not changed to make them pass (see gaps 3, 6 and 7). That run used the earlier comparison, which paired items by product code or name and printed the whole answer; the check has not been run live since it moved to position-by-position comparison.
 >
-> **Agreed, not built yet (user decision):** a Customer Book check built the same way, with 23 cases. Today Customer Book has no golden check. The Customer Book parts of requirements 1 and 3 to 6, and gaps 2 and 6, describe the agreed check.
+> **Customer Book check, built (user decision):** built the same way as Catalogue's, with 23 cases, described in the Customer Book parts of requirements 1 and 3 to 6 and in gaps 2 and 6. Its golden answers are hand-corrected from one careful capture under the notes-change instructions. It has not been run live at the product's default settings yet; that run is optional and needs the user's go-ahead.
 >
-> **Agreed, not built yet (user decision):** the product's AI instructions change so that the general notes come in a fixed order and "left out" notes follow one wording ([Catalogue]({{ site.baseurl }}{% link epics/06-catalogue.md %}) requirement 12 and scenario 36, [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}) requirement 22 and scenario 34). The golden answers follow that change, as requirements 1 and 2 describe.
+> **Notes change, built (user decision):** the product's AI instructions now put the general notes in a fixed order and give "left out" notes one wording ([Catalogue]({{ site.baseurl }}{% link epics/06-catalogue.md %}) requirement 12 and scenario 36, [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}) requirement 22 and scenario 34). The golden answers follow that change, as requirements 1 and 2 describe.
 
 ### Overview
 
 When the catalogue reads items out of a price list, or the customer book reads customers out of a contact list, an AI (artificial intelligence) model does the reading. This epic describes how the team checks the model's answer against a hand-checked correct answer. That check shows whether a change to the AI instructions made the answers better or worse, and how different AI models compare on the same sources.
 
-The check covers Catalogue extraction from pictures, PDFs and spreadsheets, including unrelated files that must give no results. One spreadsheet case also proves that repeated notes are shortened when a spreadsheet is read in groups. *Today only Catalogue has a check. After this round, a second check covers Customer Book extraction from pictures, PDFs and spreadsheets the same way (user decision, not built yet).*
+The check covers Catalogue extraction from pictures, PDFs and spreadsheets, including unrelated files that must give no results. One spreadsheet case also proves that repeated notes are shortened when a spreadsheet is read in groups. A second check covers Customer Book extraction from pictures, PDFs and spreadsheets the same way. *Before this round, only Catalogue had a check (user decision to add Customer Book's).*
 
 The check measures only the AI's own answer: what the AI returns before the product works on it. The product's own follow-up steps are fixed rules, not AI, and the product's existing automated tests already cover them. One example is finding duplicate names and product codes, then marking items that need attention. *Before this rework, the check ran the whole catalogue extraction and compared the final product response. Now it sends the source and the AI instructions straight to the AI, and compares the AI's answer.*
 
@@ -26,7 +26,7 @@ This is a check that developers run by hand. Customers never see it, and it chan
 
 - **Related** — [Catalogue]({{ site.baseurl }}{% link epics/06-catalogue.md %}) and [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}). Their extraction from pictures, PDFs and spreadsheets is the AI answer being checked.
 - **Out of scope** — Changes to the AI instructions themselves, and to what the product returns.
-- **Not built yet** — Customer Book golden check. This rework removed the old checks and their golden answers, but kept Customer Book's source files. The rebuild is agreed and described below, but not built: today Customer Book has no golden check.
+- **Related** — Customer Book's golden check. This rework removed the old checks and their golden answers, but kept Customer Book's source files, and the check is rebuilt from them ([gap 2](#2-customer-books-golden-check-is-rebuilt)).
 - **Not built yet** — A score or percentage, a history of past results, and running several models in one go. None was asked for.
 
 ### Requirements across the epic
@@ -35,13 +35,13 @@ This is a check that developers run by hand. Customers never see it, and it chan
 
 1. A **golden answer** is the correct AI answer, written down in advance, in the shape the AI returns it, not the shape of the final product response. It starts from one careful AI reading and is then corrected by hand against the source and the extraction rules, including the AI's notes. Running the check never changes a golden answer. *Before this rework, the golden notes were never hand-checked, because notes were not compared.*
 
-   Customer Book's golden answers are made and corrected the same way, from one new careful capture of all 23 cases taken after the notes change, only with the user's go-ahead. *Today a capture made before the change exists. After this, it is not used, and correction waits for the new capture (user decision).* The same correction rulings as Catalogue's apply (user decision):
+   Customer Book's golden answers are made and corrected the same way, from one new careful capture of all 23 cases taken after the notes change, only with the user's go-ahead. *A capture made before the notes change was not used (user decision).* The same correction rulings as Catalogue's apply (user decision):
    - for look-alike characters, the golden answer follows the source where there is evidence, otherwise the AI's choice ([gap 6](#6-characters-that-look-the-same-can-fail-a-case-without-a-visible-difference));
    - a blurred character keeps the human reading;
    - a missing accent, or a Greek-style spelling of a foreign word, does not get the "may be misspelled in the source" note; only a clear spelling mistake does.
 2. All golden answers are made again for the new check. Each new golden answer comes from one live AI run, which happens only when the developer gives the go-ahead and supplies the key. *Before this rework, the old golden answers were used. They are now removed and replaced.*
 
-   When the notes change is made, only the general notes of the 10 committed Catalogue golden answers are edited by hand to the new wording and order, with no new capture; nothing else in them changes. *Today the committed golden answers stay exactly as committed. After this, their general notes are edited once (user decision).*
+   With the notes change, only the general notes of the 10 committed Catalogue golden answers were edited by hand to the new wording and order, with no new capture; nothing else in them changed. *Before the notes change, the committed golden answers stayed exactly as committed (user decision to edit their general notes once).*
 3. The Catalogue check holds exactly these cases:
    - two price-list pictures, the first sent with the old check's exact processing message, kept word for word: "ignore cost, the items that are represented with 1 kg make them 12 kg per box, keep fruits keep them as it is, rest keep them as it is";
    - one PDF price list;
@@ -58,10 +58,10 @@ This is a check that developers run by hand. Customers never see it, and it chan
    - four spreadsheets, one of them a 347-row contact export;
    - four unrelated pictures, one unrelated PDF and one unrelated spreadsheet, which must give no customers.
 
-   *Today Customer Book has no check. After this, it has these cases (user decision).*
+   *Before this round, Customer Book had no check (user decision to add these cases).*
 4. The note-shortening case reuses an existing Catalogue CSV spreadsheet. For that case only, the group size is lowered, so the spreadsheet is read in two or more groups. In that case only, the check runs its own copy of the product's join-and-shorten step: it always joins the groups' answers the same way the product does, and always shortens the notes with the product's own shortening instructions. The other spreadsheet cases are read in one group and are not joined or shortened. Unlike the product, the check has no fallback and does not judge the shortened notes: if shortening fails, the case fails, where the product would quietly keep the original notes, and an empty or longer shortened answer is compared as it is. The answer is compared with its golden answer like any other case. *Before this rework, a separate note-shortening check sent five fixed note lists straight to the AI. That check and its golden answers are now gone, for Catalogue and Customer Book alike.*
 
-   For Customer Book, the 347-row export is the note-shortening case, at the normal group size, so it is read in several groups. It is joined and always shortened with the check's own copy of the product's step and Customer Book's own shortening instructions, with the same rules as above: no fallback, and the shortened notes compared as they are. The other Customer Book spreadsheets are read in one group and are not joined or shortened. *Today Customer Book has no such case. After this, it has this one (user decision).*
+   For Customer Book, the 347-row export is the note-shortening case, at the normal group size, so it is read in several groups. It is joined and always shortened with the check's own copy of the product's step and Customer Book's own shortening instructions, with the same rules as above: no fallback, and the shortened notes compared as they are. The other Customer Book spreadsheets are read in one group and are not joined or shortened. *Before this round, Customer Book had no such case (user decision).*
 5. Every field of the AI's answer is compared. That covers:
    - the items and their variants;
    - the AI's entry counts: entries identified and entries processed;
@@ -78,7 +78,7 @@ This is a check that developers run by hand. Customers never see it, and it chan
    - whether the AI worked out a name or a phone country code;
    - all of the AI's notes.
 
-   The product's follow-up rules are not compared, because they come after the AI's answer: the duplicate and missing marks, whether a customer needs attention, which email and phone become the default, the limit of two addresses with their retyping and "left out" notes, and the summary lines. *Today none of this is compared, because there is no check. After this, it is (user decision).*
+   The product's follow-up rules are not compared, because they come after the AI's answer: the duplicate and missing marks, whether a customer needs attention, which email and phone become the default, the limit of two addresses with their retyping and "left out" notes, and the summary lines. *Before this round, none of this was compared, because there was no check (user decision).*
 6. Every list is compared position by position, and order counts: items, variants, attributes, notes and row numbers, and for Customer Book also people, businesses, contacts, emails, phone numbers and addresses. Nothing is paired by product code (SKU) or name. The comparison first lines up entries that are exactly the same, then compares the rest by position ([gap 8](#8-one-skipped-or-extra-item-can-make-many-later-items-differ)). A field left out and the same field written as empty ("null") count as the same. *Before this rework, names also matched when they were at least 70% alike.*
 7. Any difference fails the check. *Before this rework, a check passed whatever its score.*
 
@@ -165,11 +165,11 @@ Three of its product codes have one blurred digit. Their golden answer keeps the
 
 **Settled:** nothing is left to decide.
 
-#### 2. Customer Book has no golden check until it is rebuilt
+#### 2. Customer Book's golden check is rebuilt
 
-This rework removed Customer Book's golden checks and their golden answers: ten contact-list pictures (one of them in a second case meant to leave out phone numbers, which by then no longer sent that message), two PDFs, four spreadsheets, unrelated files, and five note-shortening cases. The source files stay, ready for the rebuild. Until they are rebuilt, a change to the Customer Book AI instructions cannot be checked against golden answers.
+This rework removed Customer Book's golden checks and their golden answers: ten contact-list pictures (one of them in a second case meant to leave out phone numbers, which by then no longer sent that message), two PDFs, four spreadsheets, unrelated files, and five note-shortening cases. The source files were kept for the rebuild. Until it was rebuilt, a change to the Customer Book AI instructions could not be checked against golden answers.
 
-**Agreed, not built yet:** the user chose to rebuild it now, the same way as Catalogue's, with the cases and rules in requirements 1 and 3 to 6.
+**Built:** the user chose to rebuild it the same way as Catalogue's, and it now runs its 23 cases against hand-corrected golden answers (requirements 1 and 3 to 6). It has not been run live at the product's default settings yet. Nothing is left to decide.
 
 #### 3. Differences in note wording fail the check
 
@@ -191,7 +191,7 @@ The check joins spreadsheet groups and shortens notes with its own copy of the p
 
 #### 6. Characters that look the same can fail a case without a visible difference
 
-Some letters and marks look identical but are different characters. Examples are the Greek and Latin capitals X/Χ, I/Ι and L/Λ, and straight and curly apostrophes. Where the source gives evidence, such as the PDF's own text for an apostrophe, the golden answer follows the source. Otherwise it keeps the AI's choice. If the AI picks the other character in a later run, the case fails, but both sides of the difference look the same. The first live run confirmed it: look-alike Latin and Greek letters showed up as differences in the second picture. The same ruling applies to Customer Book's golden answers once its check is built (user decision), where names, emails and phone numbers raise the same choices.
+Some letters and marks look identical but are different characters. Examples are the Greek and Latin capitals X/Χ, I/Ι and L/Λ, and straight and curly apostrophes. Where the source gives evidence, such as the PDF's own text for an apostrophe, the golden answer follows the source. Otherwise it keeps the AI's choice. If the AI picks the other character in a later run, the case fails, but both sides of the difference look the same. The first live run confirmed it: look-alike Latin and Greek letters showed up as differences in the second picture. The same ruling applies to Customer Book's golden answers (user decision), where names, emails and phone numbers raise the same choices.
 
 **Accepted for now:** this was the user's choice.
 
