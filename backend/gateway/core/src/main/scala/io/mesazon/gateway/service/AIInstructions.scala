@@ -281,7 +281,8 @@ object AIInstructions {
       |  Suite, Floor, Shop, Block, Building, кв., офис, этаж, корп., or стр. Move them to addressLine2 even when
       |  they are in the same cell as the street, and join parts printed apart with ", ". addressLine2 is null when
       |  there is no building name or unit. Only when there is no street and no PO box does a building or place name
-      |  go in addressLine1. Postal code, city, and country go only in their own fields: in "3036 Λεμεσός" or
+      |  go in addressLine1. An area or district name printed with the street stays in addressLine1 with it, in
+      |  printed order. Postal code, city, and country go only in their own fields: in "3036 Λεμεσός" or
       |  "1065 Nicosia" the four digits, with any "CY-" prefix as printed, are the postalCode, and the city is copied
       |  as printed, in Greek or Latin letters, never translated. The free-text punctuation rule also applies at each
       |  cut where printed text is split into fields, but keep the commas inside addressLine2 between its parts. So
@@ -1158,6 +1159,9 @@ object AIInstructions {
       |     "Left out heading "FRUITS", nothing beside it". When tables sit side by side, each table's row is its own
       |     line and is never joined with the row of the table beside it, the left table comes before the right at the
       |     same height, and a line with several cells, other than column labels, quotes all of them, joined by ", ".
+      |     When a title, date or other piece that is not a table cell shares its printed row with another such piece,
+      |     each piece is its own left-out note with its own kind, naming the other as beside it, for example
+      |     "Left out title "Customers", date beside it", and the ", " join is only for the cells of one table row.
       |     Never write a general note about an entry listed in unidentifiedEntryRows. Never put anything about one
       |     item or variant here. Use [] when there is no general comment.
       |  2. Item extractionNotes: only the item itself: its name, its description, and how its variants were grouped.
@@ -1450,7 +1454,8 @@ object AIInstructions {
       |  Suite, Floor, Shop, Block, Building, кв., офис, этаж, корп., or стр. Move them to addressLine2 even when
       |  they are printed on the same line as the street, and join parts printed apart with ", ". addressLine2 is
       |  null when there is no building name or unit. Only when there is no street and no PO box does a building or
-      |  place name go in addressLine1. Postal code, city, and country go only in their own fields: in "3036 Λεμεσός"
+      |  place name go in addressLine1. An area or district name printed with the street stays in addressLine1 with
+      |  it, in printed order. Postal code, city, and country go only in their own fields: in "3036 Λεμεσός"
       |  or "1065 Nicosia" the four digits, with any "CY-" prefix as printed, are the postalCode, and the city is
       |  copied as printed, in Greek or Latin letters, never translated. The free-text punctuation rule also applies
       |  at each cut where printed text is split into fields, but keep the commas inside addressLine2 between its
@@ -1519,7 +1524,10 @@ object AIInstructions {
       |     "Left out heading "WHOLESALE CLIENTS", nothing beside it". When tables sit side by side, each table's row
       |     is its own line and is never joined with the row of the table beside it, the left table comes before the
       |     right at the same height, and a line with several cells, other than column labels, quotes all of them,
-      |     joined by ", ". Never write a general note about an entry listed in unidentifiedEntryRowIndexes. Never put
+      |     joined by ", ". When a title, date or other piece that is not a table cell shares its printed row with
+      |     another such piece, each piece is its own left-out note with its own kind, naming the other as beside it,
+      |     for example "Left out title "Customers", date beside it", and the ", " join is only for the cells of one
+      |     table row. Never write a general note about an entry listed in unidentifiedEntryRowIndexes. Never put
       |     anything about one candidate, address, or contact here. Use [] when there is no general comment.
       |  2. Candidate extractionNotes: only the candidate itself: its name, kind, emails, its own phones, whether a
       |     contact belongs to it, and its addresses as a group, such as an empty address left out. The server adds
