@@ -1,6 +1,6 @@
 # AI response performance
 
-> **Status (issue 607, rework agreed 2026-11-22, in progress).** Product truth: [AI Response Performance](../../pages/epics/07-ai-response-performance.md). Everything below describes the agreed design. **Built:** the spec with its ten cases and moved assets (slice 1), the difflicious comparison and `assertNoDiff` output (slice 2), and the spec's own spreadsheet join and note shortening for the notes compaction case, with `CatalogueFileService` unchanged (slice 3), and the [removal](#scope) of the old scored checks, their goldens and the four old Catalogue asset folders (slice 4). **Goldens:** all 10 are hand-corrected and committed: 5a (`image-1.json`, `image-2.json`, `pdf-1.json`), 5b (`spreadsheet-1.json`, `-2.json`, `-3.json`), 5c (`spreadsheet-1-notes-compaction.json`) and 5d (`image-3.json`, `pdf-2.json`, `spreadsheet-4.json`, unchanged from the capture). **Not run yet:** the check at default effort against these goldens (slice 6). Open gaps: see [Open gaps](#open-gaps).
+> **Status (issue 607, rework built 2026-11-23).** Product truth: [AI Response Performance](../../pages/epics/07-ai-response-performance.md). **Built:** the spec with its ten cases and moved assets (slice 1), the difflicious comparison and `assertNoDiff` output (slice 2), and the spec's own spreadsheet join and note shortening for the notes compaction case, with `CatalogueFileService` unchanged (slice 3), and the [removal](#scope) of the old scored checks, their goldens and the four old Catalogue asset folders (slice 4). **Goldens:** all 10 are hand-corrected and committed: 5a (`image-1.json`, `image-2.json`, `pdf-1.json`), 5b (`spreadsheet-1.json`, `-2.json`, `-3.json`), 5c (`spreadsheet-1-notes-compaction.json`) and 5d (`image-3.json`, `pdf-2.json`, `spreadsheet-4.json`, unchanged from the capture). **First run at defaults (slice 6):** all 10 cases answered and all 10 failed on differences, see [First run at defaults](#first-run-at-defaults-2026-11-23). Open gaps: see [Open gaps](#open-gaps).
 
 How the hand-run AI golden check compares a live model's raw answer with a hand-corrected golden answer. Any difference fails the case.
 
@@ -134,6 +134,25 @@ User decision, slice 2, **for the time being**. This reverses the earlier choice
 - **Look-alike characters fail the check invisibly** (epic known gap 6, accepted). A later run that picks the other of two identical-looking characters fails, and both sides of the difference print the same.
 - **Whole-answer, colour-only output** (epic known gap 4, for the time being). A differences-only output (a walker over `DiffResult`, built and dropped in slice 2) is the open alternative.
 - **Dependency compatibility: resolved in slice 1 (2026-11-22).** difflicious 0.7.1 is built on `hearth` 0.4.2, and chimney 2.1.1 brings 0.4.4. `show gateway-core/evicted` lists `hearth_3:0.4.4 is selected over 0.4.2` among the resolved conflicts only, with nothing from difflicious, fansi or hearth among the suspected binary-incompatible ones. `gateway-core/Test/compile` derives `Differ[CatalogueFileAIExtract]` (`derivedDeep`, 15 givens, 8 `configure` paths), and the spec constructs it eagerly without error in the dummy-key run. Recheck `evicted` when chimney or difflicious is upgraded.
+
+## First run at defaults (2026-11-23)
+
+One live run of all 10 cases with production models and effort and no overrides (issue 607, slice 6, user go-ahead): 7 min 16 s in total, no AI error or timeout, `image-2.jpeg` well within the 600-second deadline. **All 10 cases failed on differences.** No golden was changed by the run; a golden change needs the user's approval and its own slice.
+
+| Case | Differences (answer vs golden) |
+|---|---|
+| `image-1` | 2 names (`Πάραπα` for `Πάρκαπα`, `Ακτινίδιο` with an accent for the printed `Ακτινιδιο`); notes (7 answer, 7 golden, worded differently) |
+| `image-2` | 111 changed values: 94 `sellingUnitInferred` false where the golden has true (the `KG` column header read as each row's own unit), 16 names (misreads, `X`/`Χ` look-alikes, `IL` and `8τεμ` dropped, a missing space), 1 row shifted under `17103`; 11 items on each side from misread codes; notes (52 answer, 65 golden) |
+| `pdf-1` | notes only, including one missing misspelling note |
+| `spreadsheet-1` | counts (identified 24 for 26, processed 18 for 19); Bamboo canes selling unit missing (golden `1 Pack` per `10 Piece`) and its inferred flag |
+| `spreadsheet-2`, `-3` | row 28 reported in a left-out note instead of `unidentifiedEntryRows`, and the counts |
+| `spreadsheet-1-notes-compaction` | counts |
+| `image-3`, `pdf-2`, `spreadsheet-4` | note wording only |
+
+- In every spreadsheet case the answer's own counts do not add up (`entriesIdentified` is not processed + empty + unidentified), a prompt rule the default-effort model broke.
+- Three `image-2` codes have one blurred digit, and both the high-effort capture and this run read them differently from the golden: `46103` (COCONUTS) read `46163`, `71416` (SANTA MARIA 70/75 1L) read `71415`, `78208` (MOOLY) read `78200`.
+- No case showed a clear "answer right, golden wrong".
+- Evidence (outside the repository): the colour log, a plain copy and the parsed differences of the slice-6 run.
 
 ## Running
 

@@ -4,7 +4,9 @@ title: AI Response Performance
 
 # AI Response Performance
 
-> **Status: rework in progress.** Built: the single Catalogue check with its 10 cases, which fails on any difference; the new comparison and its whole-answer output, with the differences marked in colour; and the check's own copy of the spreadsheet join-and-shorten step. The old scored checks are removed: every Catalogue and Customer Book extraction check, both note-shortening checks, the scoring and all old golden answers. Customer Book's source files are kept for its rebuild in a later round. Not built yet: the new golden answers, so with a key every case fails today with "Golden file is missing". Notes in italics starting *Before this rework* describe the removed checks.
+> **Status: built.** The single Catalogue check runs its 10 cases against hand-corrected golden answers and fails on any difference. It prints the whole answer with the differences marked in colour. The old scored checks are removed: every Catalogue and Customer Book extraction check, both note-shortening checks, the scoring and all old golden answers. Customer Book's source files are kept. Only its rebuild is not built yet ([gap 2](#2-customer-book-has-no-golden-check-until-it-is-rebuilt)). Notes in italics starting *Before this rework* describe the removed checks.
+>
+> **First live run**, at the product's default settings: it took about 7 minutes, and every case got an answer, with no AI errors or timeouts. All 10 cases failed on differences. That is the agreed behaviour: the check reports differences, and the golden answers were not changed to make them pass (see gaps 3, 6 and 7).
 
 ### Overview
 
@@ -28,7 +30,7 @@ This is a check that developers run by hand. Customers never see it, and it chan
 #### Functional
 
 1. A **golden answer** is the correct AI answer, written down in advance, in the shape the AI returns it, not the shape of the final product response. It starts from one careful AI reading and is then corrected by hand against the source and the extraction rules, including the AI's notes. Running the check never changes a golden answer. *Before this rework, the golden notes were never hand-checked, because notes were not compared.*
-2. All golden answers are made again for the new check. Each new golden answer comes from one live AI run, which happens only when the developer gives the go-ahead and supplies the key. *Before this rework, the old golden answers were used. They are now removed, and the new ones are not made yet.*
+2. All golden answers are made again for the new check. Each new golden answer comes from one live AI run, which happens only when the developer gives the go-ahead and supplies the key. *Before this rework, the old golden answers were used. They are now removed and replaced.*
 3. The Catalogue check holds exactly these cases:
    - two price-list pictures, the first sent with the old check's exact processing message, kept word for word: "ignore cost, the items that are represented with 1 kg make them 12 kg per box, keep fruits keep them as it is, rest keep them as it is";
    - one PDF price list;
@@ -128,6 +130,8 @@ None. The check does not go through the product's web interface.
 
 When its new golden answer was corrected by hand, the second picture was counted row by row: it has 125 priced rows (29 + 45 + 51 across its three columns). It has no repeated strip of rows: the top of the image is blank padding.
 
+Three of its product codes have one blurred digit. Their golden answer keeps the human reading (the user's choice). When the AI reads that digit differently, the item shows as one missing and one extra item.
+
 **Settled:** nothing is left to decide.
 
 #### 2. Customer Book has no golden check until it is rebuilt
@@ -138,7 +142,7 @@ This rework removed Customer Book's golden checks and their golden answers: ten 
 
 #### 3. Differences in note wording fail the check
 
-Notes are now compared, and the check fails on any difference. The AI rarely words notes the same way twice, so a run can fail even when every item is right.
+Notes are now compared, and the check fails on any difference. The AI rarely words notes the same way twice, so a run can fail even when every item is right. The first live run confirmed it: the three unrelated files failed on note wording alone.
 
 **Accepted for now:** this was the user's choice. Revisit it if note wording makes the check fail too often to be useful.
 
@@ -156,8 +160,21 @@ The check joins spreadsheet groups and shortens notes with its own copy of the p
 
 #### 6. Characters that look the same can fail a case without a visible difference
 
-Some letters and marks look identical but are different characters. Examples are the Greek and Latin capitals X/Χ, I/Ι and L/Λ, and straight and curly apostrophes. Where the source gives evidence, such as the PDF's own text for an apostrophe, the golden answer follows the source. Otherwise it keeps the AI's choice. If the AI picks the other character in a later run, the case fails, but both sides of the difference look the same.
+Some letters and marks look identical but are different characters. Examples are the Greek and Latin capitals X/Χ, I/Ι and L/Λ, and straight and curly apostrophes. Where the source gives evidence, such as the PDF's own text for an apostrophe, the golden answer follows the source. Otherwise it keeps the AI's choice. If the AI picks the other character in a later run, the case fails, but both sides of the difference look the same. The first live run confirmed it: look-alike Latin and Greek letters showed up as differences in the second picture.
 
 **Accepted for now:** this was the user's choice.
+
+#### 7. At default settings the AI still breaks some reading rules
+
+In the first live run, at the product's default settings, the AI broke some of the Catalogue reading rules:
+
+- entry counts that do not add up;
+- an unreadable row reported as a left-out line;
+- a packaging unit dropped;
+- kilogram units taken from a column header not marked as worked out from context, which the [Catalogue]({{ site.baseurl }}{% link epics/06-catalogue.md %}) extraction rules already require (its requirement 10).
+
+The check shows these as differences, and the golden answers keep the rules.
+
+**Accepted for now:** this was the user's choice. Any work on the AI instructions to fix these would be a separate request.
 
 {% raw %}{% include abbreviations.md %}{% endraw %}

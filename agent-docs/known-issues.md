@@ -195,7 +195,7 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 
 ## Catalogue image golden exhausts the request timeout
 
-- **Status:** Manual-check timeout adjusted. On 2026-11-22 the issue 607 capture run at high effort answered all 10 cases, `image-2.jpeg` included, within the 600-second deadline (about 10 minutes in total). Reverification at default effort is pending.
+- **Status:** Resolved 2026-11-23. With 600 seconds per attempt, the issue 607 capture run at high effort (2026-11-22, about 10 minutes for all 10 cases) and the run at default effort (2026-11-23, 7 min 16 s for all 10) both answered every case, `image-2.jpeg` included, with no timeout.
 - **Signature:** `CatalogueFileAiExtractFromImageGoldenSpec` fails after about three minutes with `Unable to send message to AI` → `SttpClientException.TimeoutException` → `java.net.http.HttpTimeoutException: request timed out` for `/v1/chat/completions` (recorded before the issue 607 move; the same failure now names `/v1/responses`).
 - **Cause:** Each attempt exceeded the golden's 60-second read deadline; the client allowed two retries with exponential delay. The exception does not identify whether provider latency, request complexity, or connectivity caused the delay. No completion reached JSON decoding.
 - **Adjustment:** The catalogue image manual golden first moved to 180 seconds per attempt, and on 2026-11-17 to 600 seconds, because `CatalogueFileAiExtractFromImageGoldenSpec/image-2.jpeg` (about 150 rows) timed out on every 180-second attempt. It keeps two retries, so a timeout-only case can take roughly 30 minutes. The shared production default stays 180 seconds per attempt, with the existing environment override and client retry/error behavior retained.
