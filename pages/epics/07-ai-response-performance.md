@@ -41,7 +41,7 @@ This is a check that developers run by hand. Customers never see it, and it chan
    - a missing accent, or a Greek-style spelling of a foreign word, does not get the "may be misspelled in the source" note; only a clear spelling mistake does.
 2. All golden answers are made again for the new check. Each new golden answer comes from one live AI run, which happens only when the developer gives the go-ahead and supplies the key. *Before this rework, the old golden answers were used. They are now removed and replaced.*
 
-   With the notes change, only the general notes of the 10 committed Catalogue golden answers were edited by hand to the new wording and order, with no new capture; nothing else in them changed. *Before the notes change, the committed golden answers stayed exactly as committed (user decision to edit their general notes once).*
+   With the notes change, only the general notes of the committed Catalogue golden answers were edited by hand to the new wording and order, in the 7 of the 10 where they differed, with no new capture; nothing else in them changed. *Before the notes change, the committed golden answers stayed exactly as committed (user decision to edit their general notes once).*
 3. The Catalogue check holds exactly these cases:
    - two price-list pictures, the first sent with the old check's exact processing message, kept word for word: "ignore cost, the items that are represented with 1 kg make them 12 kg per box, keep fruits keep them as it is, rest keep them as it is";
    - one PDF price list;

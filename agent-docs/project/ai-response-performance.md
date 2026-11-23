@@ -6,7 +6,7 @@ How the hand-run AI golden check compares a live model's raw answer with a hand-
 
 ## Scope
 
-- **One spec, Catalogue only:** `golden/CatalogueFileAiExtractGoldenSpec`. Each source gets one explicit case, with no list or loop. These are the cases (the epic fixes the list, requirement 3):
+- **Two specs:** `golden/CatalogueFileAiExtractGoldenSpec` (10 cases, below) and `golden/CustomerBookFileAiExtractGoldenSpec` (23 cases, see [Customer Book check](#customer-book-check)). Each source gets one explicit case, with no list or loop. These are the Catalogue cases (the epic fixes the list, requirement 3):
 
   | Case | Asset | Declared name | Processing message | Model | Golden |
   |---|---|---|---|---|---|
@@ -207,6 +207,7 @@ One live run of all 10 cases with production models and effort and no overrides 
 sbt shutdown   # a running sbt 2 server keeps its own environment, so stop it first
 AI_CLIENT_DATA_EXTRACTION_API_KEY=… [AI_CLIENT_DATA_EXTRACTION_IMAGE_MODEL=… AI_CLIENT_DATA_EXTRACTION_IMAGE_REASONING_EFFORT=…] \
   sbt --server "gateway-core/testOnly io.mesazon.gateway.golden.CatalogueFileAiExtractGoldenSpec"
+AI_CLIENT_DATA_EXTRACTION_API_KEY=… sbt --server "gateway-core/testOnly io.mesazon.gateway.golden.CustomerBookFileAiExtractGoldenSpec"
 AI_CLIENT_DATA_EXTRACTION_API_KEY=… sbt --server "gateway-core/testOnly io.mesazon.gateway.golden.CatalogueFileAiExtractGoldenSpec -- -z \"spreadsheet-2.xls\""   # one case by name substring (spreadsheet-1.csv names two cases)
 sbt shutdown   # do not leave a server holding a real key
 ```
