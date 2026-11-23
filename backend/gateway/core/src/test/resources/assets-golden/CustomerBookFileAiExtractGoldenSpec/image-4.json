@@ -1,0 +1,67 @@
+{
+  "entriesIdentified": 1,
+  "entriesProcessed": 1,
+  "individualCandidates": [
+    
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "Northbridge Catering Supplies",
+      "emails": [
+        
+      ],
+      "taxID": "GB492701814",
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "15 Riverside Park",
+            "addressLine2": "Unit B",
+            "city": "Leeds",
+            "postalCode": "LS10 1AB",
+            "country": "UK",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Emma Walsh",
+          "role": "Purchasing Manager",
+          "email": "emma@northbridgecatering.com",
+          "phoneNumber": {
+            "phoneNationalNumber": "1134962081",
+            "phoneCountryCode": "+44",
+            "phoneCountryCodeInferred": false
+          },
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    }
+  ],
+  "emptyEntryRowIndexes": [
+    
+  ],
+  "unidentifiedEntryRowIndexes": [
+    
+  ],
+  "extractionNotes": [
+    "Left out slogan \"Quality Supplies for a Foodservice Industry\", nothing beside it",
+    "Left out slogan \"Kitchens\", nothing beside it",
+    "Left out slogan \"Businesses\", nothing beside it",
+    "Left out slogan \"Stronger Together\", nothing beside it",
+    "Website was not used"
+  ]
+}

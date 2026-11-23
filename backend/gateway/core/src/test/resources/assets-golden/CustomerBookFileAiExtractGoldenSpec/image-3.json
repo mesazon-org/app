@@ -1,0 +1,143 @@
+{
+  "entriesIdentified": 5,
+  "entriesProcessed": 4,
+  "individualCandidates": [
+    {
+      "fullName": "Ирина Смирнова",
+      "emails": [
+        "irina.smirnova@mail.ru"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "9214431872",
+          "phoneCountryCode": "+7",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Невский пр., 23",
+            "addressLine2": "кв. 4",
+            "city": "Санкт-Петербург",
+            "postalCode": "191186",
+            "country": "Россия",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Марина Вочкова",
+      "emails": [
+        
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "9206673321",
+          "phoneCountryCode": "+7",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        "Name may be misspelled in the source"
+      ]
+    }
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "ООО Балтик Сервис",
+      "emails": [
+        "office@baltserv.ru"
+      ],
+      "taxID": "7812459031",
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "8125554219",
+          "phoneCountryCode": "+7",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "ул. Моисеенко 11",
+            "addressLine2": null,
+            "city": "Санкт-Петербург",
+            "postalCode": null,
+            "country": "Россия",
+            "extractionNotes": [
+              "Postal code not shown"
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Олег Титов",
+          "role": "закупки",
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "ИП Соколова",
+      "emails": [
+        
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Светлана",
+          "role": null,
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        "Phone number could not be fully read"
+      ]
+    }
+  ],
+  "emptyEntryRowIndexes": [
+    
+  ],
+  "unidentifiedEntryRowIndexes": [
+    5
+  ],
+  "extractionNotes": [
+    "Left out date \"12.03.2024\", nothing beside it"
+  ]
+}
