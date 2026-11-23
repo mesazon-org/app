@@ -49,7 +49,7 @@ This is a check that developers run by hand. Customers never see it, and it chan
 
    The Customer Book check reuses the kept source files and holds exactly these 23 cases:
    - ten contact-list pictures;
-   - one of those pictures sent a second time with the old check's message asking to leave out phone numbers, kept word for word;
+   - the first of those pictures sent a second time with this processing message, word for word: "omit phone numbers, keep everything else";
    - two PDFs, one typed and one scanned from handwriting;
    - four spreadsheets, one of them a 347-row contact export;
    - four unrelated pictures, one unrelated PDF and one unrelated spreadsheet, which must give no customers.
@@ -163,7 +163,7 @@ Three of its product codes have one blurred digit. Their golden answer keeps the
 
 #### 2. Customer Book has no golden check until it is rebuilt
 
-This rework removed Customer Book's golden checks and their golden answers: ten contact-list pictures (one of them a second time with an instruction to leave out phone numbers), two PDFs, four spreadsheets, unrelated files, and five note-shortening cases. The source files stay, ready for the rebuild. Until they are rebuilt, a change to the Customer Book AI instructions cannot be checked against golden answers.
+This rework removed Customer Book's golden checks and their golden answers: ten contact-list pictures (one of them in a second case meant to leave out phone numbers, which by then no longer sent that message), two PDFs, four spreadsheets, unrelated files, and five note-shortening cases. The source files stay, ready for the rebuild. Until they are rebuilt, a change to the Customer Book AI instructions cannot be checked against golden answers.
 
 **Agreed, not built yet:** the user chose to rebuild it now, the same way as Catalogue's, with the cases and rules in requirements 1 and 3 to 6.
 
