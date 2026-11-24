@@ -165,6 +165,6 @@
   "extractionNotes": [
     "Left out title \"Клиенты.csv\", nothing beside it",
     "Left out column labels \"Имя\", nothing beside it",
-    "Individual customer roles were not used"
+    "Roles were not used"
   ]
 }

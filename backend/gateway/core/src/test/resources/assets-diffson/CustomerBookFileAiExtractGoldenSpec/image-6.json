@@ -1,8 +1,2 @@
 [
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/3",
-    "value" : "Country code taken from the address",
-    "old" : "Phone country codes taken from the address"
-  }
 ]

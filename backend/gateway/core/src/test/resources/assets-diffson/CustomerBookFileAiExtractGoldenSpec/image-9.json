@@ -1,14 +1,2 @@
 [
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/2/extractionNotes/1",
-    "value" : "Tax number could not be fully read",
-    "old" : "Tax number shown but not kept"
-  },
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/2",
-    "value" : "Country code taken from the address",
-    "old" : "Phone country codes taken from the address"
-  }
 ]

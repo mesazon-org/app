@@ -1,14 +1,17 @@
 [
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/2/extractionNotes/0",
-    "value" : "Country code +357 guessed, the address is in Ελλάδα",
-    "old" : "Country code +357 guessed, the address is in Greece"
+    "op" : "remove",
+    "path" : "/businessCandidates/2/extractionNotes/0",
+    "old" : "Country code taken from the address"
   },
   {
-    "op" : "replace",
-    "path" : "/businessCandidates/2/extractionNotes/0",
-    "value" : "Country code taken from the address",
-    "old" : "Phone country code taken from the address"
+    "op" : "add",
+    "path" : "/extractionNotes/-",
+    "value" : "Callback reminders were not used"
+  },
+  {
+    "op" : "add",
+    "path" : "/extractionNotes/-",
+    "value" : "Country code taken from the address"
   }
 ]

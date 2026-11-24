@@ -1,32 +1,13 @@
 [
   {
+    "op" : "replace",
+    "path" : "/extractionNotes/4",
+    "value" : "Currency taken from the price list header",
+    "old" : "Currency taken from the column header"
+  },
+  {
     "op" : "remove",
-    "path" : "/unidentifiedEntryRows/0",
-    "old" : 28
-  },
-  {
-    "op" : "replace",
     "path" : "/candidates/8/variants/0/extractionNotes/0",
-    "value" : "Price could not be fully read",
     "old" : "Price is marked TBD"
-  },
-  {
-    "op" : "add",
-    "path" : "/candidates/-",
-    "value" : {
-      "name" : "???",
-      "description" : null,
-      "variants" : [
-      ],
-      "extractionNotes" : [
-        "Item may need checking"
-      ]
-    }
-  },
-  {
-    "op" : "replace",
-    "path" : "/entriesProcessed",
-    "value" : 20,
-    "old" : 19
   }
 ]

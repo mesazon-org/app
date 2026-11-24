@@ -8,18 +8,14 @@
         
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "568401618",
-          "phoneCountryCode": "+52",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -92,11 +88,7 @@
         "georgios.loizou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "93804882",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -180,6 +172,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -189,11 +182,7 @@
         "alexandra.antoniou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "21754066983",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -225,7 +214,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -234,18 +223,14 @@
         "chrystalla.christodoulou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "3207328976",
-          "phoneCountryCode": "+357",
-          "phoneCountryCodeInferred": true
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -254,11 +239,7 @@
         "theodora.constantinou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "80894227093",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -303,7 +284,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -329,11 +310,7 @@
         "katerina.zorpas@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "5126248673",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -352,6 +329,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -406,11 +384,7 @@
         "anna.kyriacou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "680970086",
-          "phoneCountryCode": "+41",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -429,6 +403,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -454,11 +429,7 @@
         "andreas.christodoulou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "330626382",
-          "phoneCountryCode": "+56",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -477,6 +448,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -506,18 +478,14 @@
         
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "42271319963",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -623,11 +591,7 @@
         "christos.solomou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "545315844",
-          "phoneCountryCode": "+40",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -646,6 +610,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -796,11 +761,7 @@
         "christina.christodoulou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "8470938413",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -819,6 +780,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -828,11 +790,7 @@
         "chrystalla.christodoulou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "8372201740",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -864,7 +822,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -893,11 +851,7 @@
         "maria.solomou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "2231465890",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -916,6 +870,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -932,11 +887,6 @@
         },
         {
           "phoneNationalNumber": "98886022",
-          "phoneCountryCode": "+357",
-          "phoneCountryCodeInferred": true
-        },
-        {
-          "phoneNationalNumber": "2517813849394",
           "phoneCountryCode": "+357",
           "phoneCountryCodeInferred": true
         }
@@ -1036,7 +986,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code taken from the address"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -1045,11 +995,7 @@
         "stavros.loizou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "614904307",
-          "phoneCountryCode": "+36",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -1068,6 +1014,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -1077,11 +1024,7 @@
         "panagiotis.michaelides@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "706137007",
-          "phoneCountryCode": "+33",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -1100,6 +1043,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -1109,11 +1053,7 @@
         "elena.christofi@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "642434752",
-          "phoneCountryCode": "+39",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -1132,6 +1072,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -1141,11 +1082,7 @@
         "despina.savva@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "4140158132",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -1190,6 +1127,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -1199,18 +1137,14 @@
         "despina.demetriou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "99977783474",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -1275,18 +1209,14 @@
         "theodora.christofi@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "7355160706",
-          "phoneCountryCode": "+357",
-          "phoneCountryCodeInferred": true
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -1295,18 +1225,14 @@
         "antonis.savva@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "2845272011",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -1315,11 +1241,7 @@
         "irene.papadakis@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "411337836",
-          "phoneCountryCode": "+90",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -1351,6 +1273,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -1360,11 +1283,7 @@
         "eleni.ioannou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "4830845023",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -1383,6 +1302,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -1392,17 +1312,14 @@
         "irene.ioannou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "536284287",
-          "phoneCountryCode": "+32",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -1412,11 +1329,7 @@
         "eleni.demetriou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "4695335873",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -1435,7 +1348,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -1444,11 +1357,7 @@
         "despina.solomou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "03858365985",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -1467,7 +1376,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -1554,11 +1463,7 @@
         "demetris.papadopoulos@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "358334355",
-          "phoneCountryCode": "+20",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -1577,6 +1482,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -1792,11 +1698,7 @@
         "katerina.christofi@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "144434768",
-          "phoneCountryCode": "+58",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -1815,6 +1717,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -1824,18 +1727,14 @@
         "pavel.ivanova@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "6204969670",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -1844,11 +1743,7 @@
         "antonis.nikolaou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "6633009202890026",
-          "phoneCountryCode": "+357",
-          "phoneCountryCodeInferred": true
-        }
+        
       ],
       "addresses": [
         {
@@ -1880,7 +1775,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code taken from the address"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -1950,11 +1845,7 @@
         "foteini.nikolaou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "160772365",
-          "phoneCountryCode": "+93",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -1973,7 +1864,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -2027,18 +1918,14 @@
         "anna.michaelides@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "321143986",
-          "phoneCountryCode": "+53",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -2108,11 +1995,7 @@
         "costas.papadopoulos@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "897023465",
-          "phoneCountryCode": "+55",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -2131,6 +2014,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -2237,18 +2121,14 @@
         "theodora.loizou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "80721062523",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -2257,16 +2137,7 @@
         "irene.loizou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "8602017946",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        },
-        {
-          "phoneNationalNumber": "1863794050",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -2298,6 +2169,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -2307,11 +2179,7 @@
         "andreas.antoniou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "2263083753",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -2330,7 +2198,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -2339,11 +2207,6 @@
         "anna.charalambous@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "702226558",
-          "phoneCountryCode": "+58",
-          "phoneCountryCodeInferred": false
-        },
         {
           "phoneNationalNumber": "95908521",
           "phoneCountryCode": "+357",
@@ -2367,6 +2230,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -2408,11 +2272,7 @@
         "androulla.constantinou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "3865696511",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -2444,6 +2304,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -2469,18 +2330,14 @@
         "nikolas.solomou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "67418829858",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -2517,11 +2374,7 @@
         "panagiotis.papadakis@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "08599888150",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -2566,7 +2419,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -2612,18 +2465,14 @@
         
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "298979876",
-          "phoneCountryCode": "+98",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -2632,18 +2481,14 @@
         "michalis.constantinou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "608308279",
-          "phoneCountryCode": "+43",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -2652,11 +2497,7 @@
         "stavros.antoniou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "464894922",
-          "phoneCountryCode": "+36",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -2675,7 +2516,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -2712,11 +2553,7 @@
         "elena.kyriacou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "06502521086",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -2735,7 +2572,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -2745,11 +2582,7 @@
         "demetris.georgiou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "583652101",
-          "phoneCountryCode": "+66",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -2794,6 +2627,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -2803,11 +2637,7 @@
         "panagiotis.hadjipavlou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "162685361",
-          "phoneCountryCode": "+58",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -2826,6 +2656,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -2835,11 +2666,7 @@
         "androulla.papadakis@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "806272482",
-          "phoneCountryCode": "+33",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -2871,7 +2698,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -2928,11 +2755,7 @@
         "demetris.christofi@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "25930073256",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -2951,7 +2774,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -2961,18 +2784,14 @@
         "stavros.pericleous@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "288521142708",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -2981,11 +2800,7 @@
         "konstantin.volkova@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "02471842422",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -3004,7 +2819,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -3152,11 +2967,7 @@
         "michalis.charalambous@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "6683376492",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -3214,6 +3025,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -3268,11 +3080,7 @@
         "stavros.christofi@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "264202135",
-          "phoneCountryCode": "+48",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -3291,6 +3099,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -3320,17 +3129,14 @@
         "andreas.constantinou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "291943536",
-          "phoneCountryCode": "+47",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -3360,11 +3166,7 @@
         "theodora.michaelides@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "006525444",
-          "phoneCountryCode": "+674",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -3383,6 +3185,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -3392,18 +3195,14 @@
         "eleni.solomou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "71692624",
-          "phoneCountryCode": "+592",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -3412,16 +3211,7 @@
         "michalis.hadjipavlou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "5373763562",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        },
-        {
-          "phoneNationalNumber": "855840648",
-          "phoneCountryCode": "+46",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -3440,7 +3230,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -3469,11 +3259,7 @@
         "demetris.panayiotou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "711691473",
-          "phoneCountryCode": "+53",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -3492,6 +3278,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -3501,18 +3288,14 @@
         "costas.hadjipavlou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "145065504",
-          "phoneCountryCode": "+36",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -3618,11 +3401,7 @@
         "panagiotis.loizou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "129882763",
-          "phoneCountryCode": "+53",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -3641,6 +3420,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -3683,11 +3463,6 @@
       ],
       "phoneNumbers": [
         {
-          "phoneNationalNumber": "1270116330",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        },
-        {
           "phoneNationalNumber": "09506545",
           "phoneCountryCode": "+357",
           "phoneCountryCodeInferred": true
@@ -3710,7 +3485,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -3719,11 +3494,7 @@
         "sophia.kyprianou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "83187945159",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -3742,7 +3513,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -3752,11 +3523,7 @@
         "michalis.loizou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "3806631676",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -3775,7 +3542,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -3848,18 +3615,14 @@
         "elena.efstathiou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "484021192",
-          "phoneCountryCode": "+34",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -3868,11 +3631,7 @@
         "sophia.zorpas@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "631638652",
-          "phoneCountryCode": "+91",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -3891,6 +3650,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -3900,11 +3660,7 @@
         "christos.loizou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "21383240",
-          "phoneCountryCode": "+420",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -3923,6 +3679,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -3980,11 +3737,7 @@
         "alexandra.constantinou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "074823736",
-          "phoneCountryCode": "+43",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -4003,7 +3756,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -4032,11 +3785,6 @@
           "phoneNationalNumber": "99071308",
           "phoneCountryCode": "+357",
           "phoneCountryCodeInferred": true
-        },
-        {
-          "phoneNationalNumber": "4665346963",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
         }
       ],
       "addresses": [
@@ -4056,6 +3804,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -4142,11 +3891,7 @@
         "chrystalla.efstathiou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "5620267641249",
-          "phoneCountryCode": "+357",
-          "phoneCountryCodeInferred": true
-        }
+        
       ],
       "addresses": [
         {
@@ -4178,7 +3923,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code taken from the address"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -4203,11 +3948,7 @@
         "katerina.constantinou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "539014778",
-          "phoneCountryCode": "+90",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -4239,6 +3980,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -4314,11 +4056,6 @@
       ],
       "phoneNumbers": [
         {
-          "phoneNationalNumber": "831189574",
-          "phoneCountryCode": "+62",
-          "phoneCountryCodeInferred": false
-        },
-        {
           "phoneNationalNumber": "84768165",
           "phoneCountryCode": "+357",
           "phoneCountryCodeInferred": true
@@ -4354,6 +4091,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -4363,18 +4101,14 @@
         "nikolas.pericleous@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "015817445",
-          "phoneCountryCode": "+57",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -4383,16 +4117,7 @@
         "yiannis.christodoulou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "8259781208",
-          "phoneCountryCode": "+57",
-          "phoneCountryCodeInferred": false
-        },
-        {
-          "phoneNationalNumber": "728356099",
-          "phoneCountryCode": "+33",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -4411,6 +4136,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -4420,11 +4146,7 @@
         "demetris.vasiliou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "83094172560",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -4456,7 +4178,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -4465,11 +4187,6 @@
         "chrystalla.christodoulou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "995329894",
-          "phoneCountryCode": "+58",
-          "phoneCountryCodeInferred": false
-        },
         {
           "phoneNationalNumber": "29257037",
           "phoneCountryCode": "+357",
@@ -4519,6 +4236,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -4528,18 +4246,14 @@
         "michalis.michaelides@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "672924194",
-          "phoneCountryCode": "+84",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -4609,18 +4323,14 @@
         "kyriacos.georgiou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "06006611741",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -4629,11 +4339,7 @@
         "sophia.hadjipavlou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "19266479995",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -4652,6 +4358,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -4661,11 +4368,7 @@
         "kyriacos.christodoulou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "08955419778",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -4684,7 +4387,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -4698,11 +4401,6 @@
           "phoneNationalNumber": "32094916",
           "phoneCountryCode": "+357",
           "phoneCountryCodeInferred": true
-        },
-        {
-          "phoneNationalNumber": "5898459386",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
         }
       ],
       "addresses": [
@@ -4735,6 +4433,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -4744,18 +4443,14 @@
         "sophia.pericleous@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "882351189",
-          "phoneCountryCode": "+30",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -4764,11 +4459,7 @@
         "loukas.papadopoulos@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "9221091186",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -4787,6 +4478,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -4844,11 +4536,7 @@
         "androulla.papadakis@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "7246269440674",
-          "phoneCountryCode": "+357",
-          "phoneCountryCodeInferred": true
-        }
+        
       ],
       "addresses": [
         {
@@ -4880,7 +4568,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code taken from the address"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -4905,11 +4593,7 @@
         "theodora.savva@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "6186236170",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -4928,6 +4612,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -4937,11 +4622,6 @@
         "nikolas.christofi@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "05995961987",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        },
         {
           "phoneNationalNumber": "91863699",
           "phoneCountryCode": "+357",
@@ -4978,7 +4658,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -5032,11 +4712,7 @@
         "despina.antoniou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "02823470615",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -5055,7 +4731,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -5064,18 +4740,14 @@
         "panagiotis.efstathiou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "691141605",
-          "phoneCountryCode": "+45",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -5116,11 +4788,7 @@
         "foteini.ioannou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "1576346796",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -5152,7 +4820,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -5161,11 +4829,7 @@
         "stavros.pericleous@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "2611973786",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -5184,7 +4848,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -5209,11 +4873,7 @@
         "theodora.christodoulou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "980435213",
-          "phoneCountryCode": "+20",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -5232,6 +4892,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -5257,18 +4918,14 @@
         "stavros.papadopoulos@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "287987342",
-          "phoneCountryCode": "+98",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -5322,11 +4979,7 @@
         "loukas.papadopoulos@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "3629996225",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -5358,6 +5011,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -5383,11 +5037,7 @@
         "panagiotis.constantinou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "95159547441",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -5406,6 +5056,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -5489,18 +5140,14 @@
         "eleni.charalambous@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "03971036919",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -5542,17 +5189,14 @@
         "demetris.nikolaou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "352538032",
-          "phoneCountryCode": "+51",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -5671,17 +5315,14 @@
         "anna.pericleous@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "768968998",
-          "phoneCountryCode": "+61",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -5691,11 +5332,7 @@
         "elena.loizou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "574339838",
-          "phoneCountryCode": "+91",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -5714,6 +5351,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -5769,11 +5407,7 @@
         "andrei.smirnov@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "640244772",
-          "phoneCountryCode": "+64",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -5805,6 +5439,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -5814,11 +5449,7 @@
         "foteini.georgiou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "07209593227",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -5837,7 +5468,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -5847,11 +5478,7 @@
         "panagiotis.christofi@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "08735092560",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -5870,7 +5497,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -5912,18 +5539,14 @@
         "panagiotis.christodoulou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "140593349",
-          "phoneCountryCode": "+41",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -5993,11 +5616,7 @@
         "andreas.papadakis@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "543075376",
-          "phoneCountryCode": "+64",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -6016,7 +5635,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -6025,11 +5644,7 @@
         "foteini.kyprianou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "5392994950",
-          "phoneCountryCode": "+47",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -6048,6 +5663,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -6057,11 +5673,7 @@
         "loukas.zorpas@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "898217024306",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -6093,7 +5705,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -6224,18 +5836,14 @@
         "chrystalla.christodoulou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "4842489837",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -6244,18 +5852,14 @@
         "panagiotis.vasiliou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "7671954631",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -6354,11 +5958,7 @@
         "christina.nikolaou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "1017027850",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -6377,6 +5977,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -6386,11 +5987,7 @@
         "andreas.papadopoulos@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "210831341",
-          "phoneCountryCode": "+51",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -6409,6 +6006,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -6482,18 +6080,14 @@
         "elena.savva@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "8529294983",
-          "phoneCountryCode": "+357",
-          "phoneCountryCodeInferred": true
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -6534,11 +6128,7 @@
         "androulla.ioannou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "718837299",
-          "phoneCountryCode": "+65",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -6557,6 +6147,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -6627,18 +6218,14 @@
         "stavros.nikolaou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "2880395005007801",
-          "phoneCountryCode": "+357",
-          "phoneCountryCodeInferred": true
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -6647,18 +6234,14 @@
         "foteini.efstathiou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "9627440034",
-          "phoneCountryCode": "+357",
-          "phoneCountryCodeInferred": true
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -6683,18 +6266,14 @@
         "marios.demetriou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "46891876",
-          "phoneCountryCode": "+423",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -6703,16 +6282,7 @@
         "eleni.constantinou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "490563836",
-          "phoneCountryCode": "+98",
-          "phoneCountryCodeInferred": false
-        },
-        {
-          "phoneNationalNumber": "0173282908",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -6731,6 +6301,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -6761,11 +6332,6 @@
       ],
       "phoneNumbers": [
         {
-          "phoneNationalNumber": "07339789418",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        },
-        {
           "phoneNationalNumber": "95494737",
           "phoneCountryCode": "+357",
           "phoneCountryCodeInferred": true
@@ -6788,7 +6354,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -6798,17 +6364,14 @@
         "yiannis.kyriacou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "887417151",
-          "phoneCountryCode": "+98",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -6850,11 +6413,7 @@
         "eleni.christofi@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "8971994079",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -6873,6 +6432,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -6898,11 +6458,7 @@
         "georgios.savva@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "4509570945",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -6921,6 +6477,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -6930,11 +6487,7 @@
         "georgios.papadakis@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "453967589",
-          "phoneCountryCode": "+51",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -6953,6 +6506,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -6962,11 +6516,7 @@
         "andreas.pericleous@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "552529385",
-          "phoneCountryCode": "+55",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -6985,6 +6535,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -6994,11 +6545,7 @@
         "georgios.loizou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "9758426610",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -7017,6 +6564,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -7042,11 +6590,7 @@
         "christos.solomou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "07889575728",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -7065,7 +6609,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -7075,18 +6619,14 @@
         "maria.constantinou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "3967144665",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -7095,11 +6635,7 @@
         "chrystalla.constantinou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "08234816514",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -7118,7 +6654,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -7144,11 +6680,7 @@
         "christina.papadakis@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "983982144",
-          "phoneCountryCode": "+57",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -7167,6 +6699,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -7192,11 +6725,7 @@
         "antonis.efstathiou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "626646375",
-          "phoneCountryCode": "+57",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -7228,6 +6757,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -7333,18 +6863,14 @@
         "chrystalla.hadjipavlou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "01890098236",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -7353,11 +6879,7 @@
         "anna.vasiliou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "83612775788",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -7376,7 +6898,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -7478,18 +7000,14 @@
         "irene.papadakis@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "9932141145",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -7514,18 +7032,14 @@
         "kyriacos.nikolaou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "8628145678",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -7534,11 +7048,7 @@
         "georgios.efstathiou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "702347141",
-          "phoneCountryCode": "+27",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -7557,6 +7067,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -7611,11 +7122,7 @@
         "despina.ioannou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "95628227",
-          "phoneCountryCode": "+255",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -7634,6 +7141,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -7643,11 +7151,7 @@
         "loukas.vasiliou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "188588856",
-          "phoneCountryCode": "+63",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -7666,6 +7170,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -7720,11 +7225,7 @@
         "marina.egorov@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "3770545770",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -7743,6 +7244,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -7797,11 +7299,7 @@
         "theodora.solomou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "2790769409",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -7820,6 +7318,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -7829,11 +7328,7 @@
         "christos.papadakis@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "147647158",
-          "phoneCountryCode": "+94",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -7852,6 +7347,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -7906,11 +7402,7 @@
         "androulla.papadopoulos@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "3539842035",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -7929,6 +7421,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -7970,18 +7463,14 @@
         "christos.papadopoulos@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "28694646665",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -7990,18 +7479,14 @@
         "christos.panayiotou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "8567607965",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -8126,11 +7611,7 @@
         "theodora.vasiliou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "60991470",
-          "phoneCountryCode": "+994",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -8162,6 +7643,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -8171,18 +7653,14 @@
         "theodora.christofi@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "676185600",
-          "phoneCountryCode": "+82",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -8191,11 +7669,7 @@
         "kyriacos.nikolaou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "3843394482",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -8214,7 +7688,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -8256,11 +7730,7 @@
         "michalis.papadopoulos@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "9880762794",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -8279,7 +7749,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -8333,11 +7803,7 @@
         "costas.papadakis@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "525830929",
-          "phoneCountryCode": "+55",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -8356,6 +7822,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -8365,18 +7832,14 @@
         
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "69450820873",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -8385,11 +7848,7 @@
         "antonis.panayiotou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "4129920147",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -8447,6 +7906,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -8456,11 +7916,7 @@
         "andreas.savva@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "339219691",
-          "phoneCountryCode": "+81",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -8479,6 +7935,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -8488,11 +7945,7 @@
         "anna.demetriou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "132267215",
-          "phoneCountryCode": "+82",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -8537,6 +7990,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -8546,11 +8000,7 @@
         "stavros.christofi@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "149646214",
-          "phoneCountryCode": "+95",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -8569,6 +8019,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -8578,11 +8029,7 @@
         "christos.zorpas@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "850015662",
-          "phoneCountryCode": "+52",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -8601,7 +8048,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -8630,11 +8077,7 @@
         "nikolas.efstathiou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "0654302818",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -8666,6 +8109,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -8720,16 +8164,7 @@
         "christina.georgiou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "824999088",
-          "phoneCountryCode": "+54",
-          "phoneCountryCodeInferred": false
-        },
-        {
-          "phoneNationalNumber": "353599221",
-          "phoneCountryCode": "+93",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -8761,6 +8196,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -8828,11 +8264,7 @@
         "demetris.loizou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "799261812",
-          "phoneCountryCode": "+94",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -8877,6 +8309,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -8886,18 +8319,14 @@
         "anna.antoniou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "808028504",
-          "phoneCountryCode": "+66",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -8906,11 +8335,7 @@
         "alexandra.charalambous@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "07417778644",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -8929,6 +8354,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -8970,11 +8396,7 @@
         "eleni.georgiou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "071910677157",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -8993,7 +8415,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -9050,18 +8472,14 @@
         "anna.kyriacou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "162746297",
-          "phoneCountryCode": "+48",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -9183,18 +8601,14 @@
         "christos.savva@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "909246749",
-          "phoneCountryCode": "+45",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -9203,11 +8617,7 @@
         "marios.pericleous@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "807807762",
-          "phoneCountryCode": "+47",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -9226,6 +8636,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -9235,11 +8646,7 @@
         "yiannis.antoniou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "87765154067",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -9271,7 +8678,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -9280,18 +8687,14 @@
         "georgios.papadakis@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "01860269966",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -9390,18 +8793,14 @@
         "christina.hadjipavlou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "08478023549",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -9410,11 +8809,7 @@
         "loukas.ioannou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "215840352",
-          "phoneCountryCode": "+61",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -9433,7 +8828,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -9442,18 +8837,14 @@
         "foteini.loizou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "936597924",
-          "phoneCountryCode": "+49",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -9462,11 +8853,7 @@
         "nikolas.georgiou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "0440596300",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -9485,6 +8872,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -9510,18 +8898,14 @@
         "anna.nikolaou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "80635871",
-          "phoneCountryCode": "+420",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -9546,11 +8930,7 @@
         "yiannis.christofi@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "02540793858",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -9569,7 +8949,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -9579,18 +8959,14 @@
         "andreas.christodoulou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "29424242632",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -9615,11 +8991,7 @@
         "costas.pericleous@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "0691054649",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -9638,6 +9010,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -9647,11 +9020,7 @@
         "christina.kyprianou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "42971534817",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -9670,7 +9039,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -9680,11 +9049,7 @@
         "theodora.hadjipavlou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "204198697",
-          "phoneCountryCode": "+34",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -9703,6 +9068,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -9728,18 +9094,14 @@
         "sophia.michaelides@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "865656883",
-          "phoneCountryCode": "+46",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -9748,18 +9110,14 @@
         
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "09024242508",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -9800,11 +9158,7 @@
         "nikolas.constantinou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "726759290",
-          "phoneCountryCode": "+43",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -9849,6 +9203,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -9858,11 +9213,7 @@
         "antonis.nikolaou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "8802",
-          "phoneCountryCode": "+41",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -9920,7 +9271,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -9929,17 +9280,14 @@
         "stavros.kyprianou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "7366781179",
-          "phoneCountryCode": "+7",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -9949,18 +9297,14 @@
         "yiannis.panayiotou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "02246342736",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -9969,11 +9313,7 @@
         "katerina.papadopoulos@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "1641358913",
-          "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -9992,6 +9332,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -10060,11 +9401,6 @@
       ],
       "phoneNumbers": [
         {
-          "phoneNationalNumber": "290425129",
-          "phoneCountryCode": "+60",
-          "phoneCountryCodeInferred": false
-        },
-        {
           "phoneNationalNumber": "30588599",
           "phoneCountryCode": "+357",
           "phoneCountryCodeInferred": true
@@ -10100,7 +9436,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -10109,16 +9445,7 @@
         "demetris.savva@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "678683513",
-          "phoneCountryCode": "+882",
-          "phoneCountryCodeInferred": false
-        },
-        {
-          "phoneNationalNumber": "629214401",
-          "phoneCountryCode": "+44",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -10176,6 +9503,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -10230,11 +9558,7 @@
         "katerina.zorpas@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "261342147",
-          "phoneCountryCode": "+92",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -10253,7 +9577,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone number left out, not a real number"
       ]
     },
     {
@@ -10262,16 +9586,7 @@
         "elena.kyriacou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "09033786",
-          "phoneCountryCode": "+221",
-          "phoneCountryCodeInferred": false
-        },
-        {
-          "phoneNationalNumber": "8777626766",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -10290,7 +9605,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     },
@@ -10316,11 +9631,7 @@
         "christos.papadopoulos@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "07060537288",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -10339,7 +9650,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined",
+        "Phone number left out, not a real number",
         "Empty addresses were left out"
       ]
     },
@@ -10349,11 +9660,7 @@
         "demetris.georgiou@example.com"
       ],
       "phoneNumbers": [
-        {
-          "phoneNationalNumber": "911890568",
-          "phoneCountryCode": "+51",
-          "phoneCountryCodeInferred": false
-        }
+        
       ],
       "addresses": [
         {
@@ -10372,6 +9679,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
+        "Phone number left out, not a real number",
         "Empty address was left out"
       ]
     }
@@ -10404,6 +9712,6 @@
     "The Source column was not used",
     "The Language column was not used",
     "The Linked Locations column was not used",
-    "Phone country codes taken from the address"
+    "Country code taken from the country used across the file"
   ]
 }

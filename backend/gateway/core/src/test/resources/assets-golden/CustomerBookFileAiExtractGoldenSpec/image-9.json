@@ -197,6 +197,6 @@
   "extractionNotes": [
     "Left out title \"Πελάτες\", nothing beside it",
     "Left out column labels \"Όνομα\", nothing beside it",
-    "Phone country codes taken from the address"
+    "Country code taken from the address"
   ]
 }

@@ -1,44 +1,20 @@
 [
   {
-    "op" : "replace",
+    "op" : "remove",
     "path" : "/extractionNotes/0",
-    "value" : "Left out supplier \"AMALTHIA TRADING (LIMASSOL) LTD\", nothing beside it",
     "old" : "Unlabelled leading numbers are treated as product codes"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/1",
-    "value" : "Left out contact \"Asomatos Tel.25-952011-Fax25-952321 / 25-952177\", nothing beside it",
-    "old" : "Left out supplier name \"AMALTHIA TRADING (LIMASSOL) LTD\", nothing beside it"
-  },
-  {
-    "op" : "remove",
-    "path" : "/extractionNotes/2",
-    "old" : "Left out contact line \"Asomatos Tel.25-952011-Fax25-952321 / 25-952177\", nothing beside it"
-  },
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/3",
-    "value" : "Left out heading \"ΣΤΙΣ ΤΙΜΕΣ ΔΕΝ ΣΥΜΠΕΡΙΛΑΜΒΑΝΕΤΑΙ ΤΟ Φ.Π.Α\", nothing beside it",
-    "old" : "Left out VAT notice \"ΣΤΙΣ ΤΙΜΕΣ ΔΕΝ ΣΥΜΠΕΡΙΛΑΜΒΑΝΕΤΑΙ ΤΟ Φ.Π.Α\", nothing beside it"
-  },
-  {
-    "op" : "replace",
     "path" : "/extractionNotes/4",
-    "value" : "Left out title \"Amalthia\", nothing beside it",
-    "old" : "Left out logo \"Amalthia\", nothing beside it"
+    "value" : "Left out title \"Amalthia by Papanikolis\", nothing beside it",
+    "old" : "Left out \"Amalthia\", nothing beside it"
   },
   {
     "op" : "replace",
     "path" : "/extractionNotes/5",
-    "value" : "Left out supplier \"by Papanicolis\", nothing beside it",
-    "old" : "Left out logo text \"by Papanikolis\", nothing beside it"
-  },
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/6",
     "value" : "Left out date \"ΤΕΤΑΡΤΗ 04.11.2026\", nothing beside it",
-    "old" : "Left out date \"ΤΕΤΑΡΤΗ\", nothing beside it"
+    "old" : "Left out \"by Papanikolis\", nothing beside it"
   },
   {
     "op" : "remove",
@@ -46,105 +22,93 @@
     "old" : "Left out date \"04.11.2026\", nothing beside it"
   },
   {
+    "op" : "remove",
+    "path" : "/extractionNotes/6",
+    "old" : "Left out date \"ΤΕΤΑΡΤΗ\", nothing beside it"
+  },
+  {
     "op" : "replace",
-    "path" : "/extractionNotes/8",
+    "path" : "/extractionNotes/7",
     "value" : "Left out heading \"ΚΑΡΥΔΙΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΚΑΡΥΔΙΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/13",
-    "value" : "Left out heading \"KIWI HAYWARD ΕΛΛΑΔΑ (ΝΕΑΣ ΣΟΔΕΙΑΣ)\", nothing beside it",
+    "path" : "/extractionNotes/12",
+    "value" : "Left out heading \"KIWI HAYWARD ΕΛΛΑΔΑ(ΝΕΑΣ ΣΟΔΕΙΑΣ)\", nothing beside it",
     "old" : "Left out heading \"KIWI HAYWARD ΕΛΛΑΔΑ (ΝΕΑΣ ΕΣΟΔΕΙΑΣ)\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/14",
-    "value" : "Left out heading \"KIWI ΤΣΕΛΙΔΗΣ ΕΛΛΑΔΑΣ\", nothing beside it",
+    "path" : "/extractionNotes/13",
+    "value" : "Left out heading \"KIWI ZIZELIANΕΣ ΕΛΛΑΔΑΣ\", nothing beside it",
     "old" : "Left out heading \"KIWI ΤΣΙΧΕΛΙΔΗΣ ΕΛΛΑΔΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/16",
-    "value" : "Left out heading \"ΠΟΡΤΟΚΑΛΙΑ ΜΕΡΛΙΝ S.AFRICA/ΕΛΛΑΔΑΣ\", nothing beside it",
+    "path" : "/extractionNotes/15",
+    "value" : "Left out heading \"ΠΟΡΤΟΚΑΛΙΑ MERLIN S.AFRICA/ΕΛΛΑΔΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΠΟΡΤΟΚΑΛΙΑ ΜΕΡΛΙΝ S.AFRICA / ΕΛΛΑΔΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/22",
-    "value" : "Left out heading \"ΚΑΛΑΜΠΟΚΙ ΦΥΛΛΑ ΣΕ ΑΛΜΗ\", nothing beside it",
-    "old" : "Left out heading \"ΚΛΗΜΑΤΟΦΥΛΛΑ ΣΕ ΑΛΜΗ\", nothing beside it"
+    "path" : "/extractionNotes/17",
+    "value" : "Left out heading \"ΓΚΡΕΪΠΦΡΟΥΤ ΚΥΠΡΙΑΚΑ\", nothing beside it",
+    "old" : "Left out heading \"ΚΡΕΙΠΦΡΟΥΤ ΚΥΠΡΙΑΚΑ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/24",
-    "value" : "Left out heading \"ΜΑΝΓΚΟ (ΕΤΟΙΜΟ/READY TO EAT BY AIR)\", nothing beside it",
+    "path" : "/extractionNotes/23",
+    "value" : "Left out heading \"MANGO (ΕΤΟΙΜΟ/READY TO EAT & RIPE)\", nothing beside it",
     "old" : "Left out heading \"MANGO ΠΕΡΟΥ (READY TO EAT BY AIR)\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/27",
+    "path" : "/extractionNotes/26",
     "value" : "Left out heading \"ΑΧΛΑΔΙΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΑΧΛΑΔΙΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/28",
-    "value" : "Left out heading \"ΑΧΛΑΔΙΑ ΟΛΛΑΝΔΙΑΣ / BY TRACK)\", nothing beside it",
-    "old" : "Left out heading \"ΑΧΛΑΔΙΑ ΟΛΛΑΝΔΙΑΣ (BY TRACK)\", nothing beside it"
-  },
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/33",
-    "value" : "Left out heading \"ΜΗΛΑ FOYJI (PINK) LADY ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
+    "path" : "/extractionNotes/32",
+    "value" : "Left out heading \"ΜΗΛΑ FOR (PINK LADY ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΜΗΛΑ FOR (PINK) LADY ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/34",
+    "path" : "/extractionNotes/33",
     "value" : "Left out heading \"ΜΗΛΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΜΗΛΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/35",
+    "path" : "/extractionNotes/34",
     "value" : "Left out heading \"ΜΗΛΑ RED CHIEF ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΜΗΛΑ RED CHIEF ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/36",
+    "path" : "/extractionNotes/35",
     "value" : "Left out heading \"ΜΗΛΑ R.GALA ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΜΗΛΑ R.GALA ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/37",
+    "path" : "/extractionNotes/36",
     "value" : "Left out heading \"ΜΗΛΑ GRANNY ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΜΗΛΑ GRANNY ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/42",
-    "value" : "Left out heading \"ΤΣΙΑΤΟΠΟΥΛΑ ΚΥΠΡΙΑΚΗ\", nothing beside it",
-    "old" : "Left out heading \"ΣΙΤΑΡΟΠΟΥΛΑ ΚΥΠΡΙΑΚΗ\", nothing beside it"
+    "path" : "/extractionNotes/43",
+    "value" : "Left out heading \"ΠΙΠΕΡΙΑ ΙΣΡΑΗΛ/ΟΛΛΑΝΔΙΑΣ\", nothing beside it",
+    "old" : "Left out heading \"ΠΙΠΕΡΙΑ ΙΣΡΑΗΛ / ΟΛΛΑΝΔΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/47",
-    "value" : "Left out heading \"ΚΡΕΜΜΥΔΙΑ ΟΛΛΑΝΔΙΑΣ/ΕΛΛΑΔΑΣ\", nothing beside it",
+    "path" : "/extractionNotes/46",
+    "value" : "Left out heading \"ΚΡΕΜΜΥΔΙΑ ΟΛΛΑΝΔ/ΕΛΛΑΔΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΚΡΕΜΜΥΔΙΑ ΟΛΛΑΝΔΙΑΣ/ ΕΛΛΑΔΑΣ\", nothing beside it"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/1/variants/0/sku",
-    "value" : "45601",
-    "old" : "45501"
-  },
-  {
-    "op" : "remove",
-    "path" : "/candidates/7/extractionNotes/0",
-    "old" : "Name may be misspelled in the source"
   },
   {
     "op" : "replace",
@@ -154,15 +118,21 @@
   },
   {
     "op" : "replace",
-    "path" : "/candidates/27/name",
-    "value" : "ΘΑΣΟΥ (261/290)",
-    "old" : "THASOU (261/290)"
-  },
-  {
-    "op" : "replace",
     "path" : "/candidates/31/name",
     "value" : "ΠΑΠΟΥΤΣΟΣΥΚΑ ΙΤΑΛΙΑ",
     "old" : "ΠΑΠΟΥΤΣΟΣΥΚΑ IL ΙΤΑΛΙ"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/31/variants/0/price/amount",
+    "value" : 6.60,
+    "old" : 5.6
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/31/variants/0/sellingUnit/quantity/value",
+    "value" : 2.5,
+    "old" : 2
   },
   {
     "op" : "remove",
@@ -172,13 +142,13 @@
   {
     "op" : "replace",
     "path" : "/candidates/34/name",
-    "value" : "MANGO KIET ΑΙΓΥΠΤΟΥ",
+    "value" : "MANGO KEITT ΑΙΓΥΠΤΟΥ",
     "old" : "MANGO KIETT ΑΙΓΥΠΤΟΥ"
   },
   {
     "op" : "replace",
     "path" : "/candidates/35/name",
-    "value" : "PINEAPPLE ΣΕΛ. COSTA RIKA",
+    "value" : "PINEAPPLE ΣΑΝ COSTA RIKA",
     "old" : "PINEAPPLE 8τεμ COSTA RIKA"
   },
   {
@@ -187,16 +157,33 @@
     "old" : "Name partly unclear, please check"
   },
   {
-    "op" : "replace",
-    "path" : "/candidates/37/name",
-    "value" : "ΑΒΟΚΑΝΤΟ FUERTE ΚΥΠ",
-    "old" : "ΑΒΟΚΑΝΤΟ FUERTE ΚΥΠΡ"
+    "op" : "remove",
+    "path" : "/candidates/37/extractionNotes/0",
+    "old" : "Name partly unclear, please check"
+  },
+  {
+    "op" : "add",
+    "path" : "/candidates/38/variants/0/extractionNotes/-",
+    "value" : "Selling unit could not be fully read"
   },
   {
     "op" : "replace",
-    "path" : "/candidates/38/variants/0/sellingUnit/quantity/value",
-    "value" : 2.8,
-    "old" : 2
+    "path" : "/candidates/38/variants/0/sellingUnitInferred",
+    "value" : false,
+    "old" : true
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/38/variants/0/sellingUnit",
+    "value" : null,
+    "old" : {
+      "quantity" : {
+        "value" : 2,
+        "unit" : "Kilogram"
+      },
+      "perUnit" : null,
+      "unitSize" : null
+    }
   },
   {
     "op" : "replace",
@@ -206,44 +193,20 @@
   },
   {
     "op" : "replace",
-    "path" : "/candidates/46/variants/0/sellingUnit/quantity/value",
-    "value" : 6,
-    "old" : 5
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/48/name",
-    "value" : "ΚΡΥΣΤΑΛΛΙΑ 70/75 1L",
-    "old" : "KRISTALLIA 70/75 1L"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/49/name",
-    "value" : "ΚΡΥΣΤΑΛΛΙΑ 58/60 2L",
-    "old" : "KRISTALLIA 58/60 2L"
-  },
-  {
-    "op" : "replace",
     "path" : "/candidates/50/variants/0/sku",
-    "value" : "71445",
+    "value" : "71415",
     "old" : "71416"
   },
   {
     "op" : "replace",
-    "path" : "/candidates/58/variants/0/sku",
-    "value" : "13202",
-    "old" : "13102"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/71/name",
-    "value" : "SIZE 75/80 LOOSE",
-    "old" : "SIZE 75/80 1L"
+    "path" : "/candidates/67/variants/0/sku",
+    "value" : "17140",
+    "old" : "17109"
   },
   {
     "op" : "replace",
     "path" : "/candidates/84/name",
-    "value" : "1Bx2τεμ (PACK)",
+    "value" : "18Χ2τεμ (PACK)",
     "old" : "18X2τεμ (PACK)"
   },
   {
@@ -260,7 +223,7 @@
   {
     "op" : "replace",
     "path" : "/candidates/90/name",
-    "value" : "ΜΟΥΣ ΙΤΑΛΙΑΣ",
+    "value" : "ΜΑΡΟΥΛΙ ΙΤΑΛΙΑΣ",
     "old" : "MOOLY ΙΤΑΛΙΑΣ"
   },
   {
@@ -271,9 +234,25 @@
   },
   {
     "op" : "replace",
+    "path" : "/candidates/93/name",
+    "value" : "BABY JAMS (12x125g)",
+    "old" : "BABY MAIS (12x125g)"
+  },
+  {
+    "op" : "add",
+    "path" : "/candidates/93/extractionNotes/-",
+    "value" : "Name may be misspelled in the source"
+  },
+  {
+    "op" : "replace",
     "path" : "/candidates/96/name",
     "value" : "CHICCORY ΟΛΛΑΝΔΙΑΣ",
     "old" : "CHICORY ΟΛΛΑΝΔΙΑΣ"
+  },
+  {
+    "op" : "add",
+    "path" : "/candidates/96/extractionNotes/-",
+    "value" : "Name may be misspelled in the source"
   },
   {
     "op" : "replace",
@@ -283,14 +262,14 @@
   },
   {
     "op" : "replace",
-    "path" : "/candidates/109/name",
-    "value" : "ΛΥΡΑ ΚΟΚΚΙΝΑ ΟΛΛΑΝΔΙΑΣ",
-    "old" : "ΑΨΑ ΚΟΚΚΙΝΑ ΟΛΛΑΝΔΙΑΣ"
-  },
-  {
-    "op" : "replace",
     "path" : "/candidates/113/name",
     "value" : "ΠΑΝΤΖΑΡΙΑ 12x500g ΟΛΛΑΝΔΙΑ",
     "old" : "ΠΑΝΤΖΑΡΙΑ 12x500g ΛΙΘΟΥΑΝΙΑ"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/122/name",
+    "value" : "ΚΟΚΑΡΙ",
+    "old" : "ΚΟΝΑΡΙ"
   }
 ]

@@ -1,8 +1,12 @@
 [
   {
-    "op" : "replace",
+    "op" : "remove",
     "path" : "/businessCandidates/0/extractionNotes/0",
-    "value" : "Country code taken from the address",
-    "old" : "Phone country code taken from the address"
+    "old" : "Country code taken from the address"
+  },
+  {
+    "op" : "add",
+    "path" : "/extractionNotes/-",
+    "value" : "Country code taken from the address"
   }
 ]

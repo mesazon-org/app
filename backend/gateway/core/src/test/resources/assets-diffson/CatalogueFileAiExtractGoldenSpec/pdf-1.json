@@ -2,40 +2,35 @@
   {
     "op" : "replace",
     "path" : "/extractionNotes/0",
-    "value" : "The ΕΛΛΕΙΨΗ columns appear to contain prices",
+    "value" : "The ΕΛΛΕΙΨΗ columns appear to show prices",
     "old" : "\"ΕΛΛΕΙΨΗ\" columns appear to show prices"
   },
   {
-    "op" : "replace",
-    "path" : "/extractionNotes/1",
-    "value" : "Left out title \"M.CH. FRUITHAVEN TRADERS LTD\", tax number beside it",
-    "old" : "Left out logo \"M.CH FRUITHAVEN\", nothing beside it"
-  },
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/2",
-    "value" : "Left out supplier detail \"T.I.C:60099862T\", company name beside it",
-    "old" : "Left out date label \"Period:\", dates below it"
-  },
-  {
     "op" : "add",
-    "path" : "/extractionNotes/3",
-    "value" : "Left out supplier detail \"Tel +35799255087 +35799254569\", email beside it"
+    "path" : "/extractionNotes/2",
+    "value" : "Left out \"EST. 2024\", nothing beside it"
   },
   {
     "op" : "add",
     "path" : "/extractionNotes/4",
-    "value" : "Left out supplier detail \"info@mchfruithaven.com\", telephone numbers beside it"
+    "value" : "Left out \"M.CH. FRUITHAVEN TRADERS LTD\", tax number beside it"
   },
   {
     "op" : "add",
     "path" : "/extractionNotes/5",
-    "value" : "Left out supplier detail \"Agiou Epiktitou 17, Agios Athanasios, Limassol, Cyprus\", nothing beside it"
+    "value" : "Left out \"T.I.C:60099862T\", supplier name beside it"
   },
   {
-    "op" : "add",
-    "path" : "/extractionNotes/6",
-    "value" : "Left out heading \"Period:\", nothing beside it"
+    "op" : "replace",
+    "path" : "/extractionNotes/7",
+    "value" : "Left out \"Tel +35799255087 +35799254569\", email beside it",
+    "old" : "Left out \"M.CH. FRUITHAVEN TRADERS LTD T.I.C:60099862T\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/8",
+    "value" : "Left out \"info@mchfruithaven.com\", telephone numbers beside it",
+    "old" : "Left out \"Tel +35799255087 +35799254569 info@mchfruithaven.com\", nothing beside it"
   },
   {
     "op" : "remove",
@@ -43,23 +38,8 @@
     "old" : "Left out column labels \"Product\", nothing beside it"
   },
   {
-    "op" : "remove",
-    "path" : "/extractionNotes/10",
-    "old" : "Left out address \"Agiou Epiktitou 17, Agios Athanasios, Limassol, Cyprus\", nothing beside it"
-  },
-  {
-    "op" : "remove",
-    "path" : "/extractionNotes/9",
-    "old" : "Left out contact line \"Tel +35799255087 +35799254569 info@mchfruithaven.com\", nothing beside it"
-  },
-  {
-    "op" : "remove",
-    "path" : "/extractionNotes/8",
-    "old" : "Left out supplier name \"M.CH. FRUITHAVEN TRADERS LTD T.I.C:60099862T\", nothing beside it"
-  },
-  {
-    "op" : "remove",
-    "path" : "/candidates/7/extractionNotes/0",
-    "old" : "Name may be misspelled in the source"
+    "op" : "add",
+    "path" : "/extractionNotes/12",
+    "value" : "Left out column labels \"Product\", nothing beside it"
   }
 ]

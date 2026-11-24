@@ -1,2 +1,7 @@
 [
+  {
+    "op" : "remove",
+    "path" : "/extractionNotes/0",
+    "old" : "Left out title \"Клиенты.csv\", nothing beside it"
+  }
 ]

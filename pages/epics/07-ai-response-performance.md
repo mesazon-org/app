@@ -15,6 +15,8 @@ title: AI Response Performance
 > **Stored patches, built (user decision):** each case keeps a stored patch, its list of differences from the golden answer, and prints it beside today's; a difference never fails a case (requirements 7 and 8). All 33 first stored patches were written by one run at the product's default settings on 2026-11-24, with the user's go-ahead, so every case now prints its Stored and Current blocks.
 >
 > **Reading-consistency round, built 2026-11-24 (user decision).** The product's AI instructions now aim to read the same file as alike as possible on every run: fixed note sentences, settled ambiguous rules and character-by-character copying ([Catalogue]({{ site.baseurl }}{% link epics/06-catalogue.md %}) step 10, [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}) step 8). The golden answers were corrected to the new rules: 262 corrections across 17 of them. One run at the product's default settings on 2026-11-24, with the user's go-ahead, then rewrote all 33 stored patches (requirement 8). All 33 cases ran, and the differences from the golden answers fell from 598 to 282, with 18 cases now showing none (13 before). The largest drops were Catalogue's second picture (162 to 50) and Customer Book's 347-row export (356 to 185). A few cases rose slightly: Catalogue's first picture and its PDF (8 to 12), and one Customer Book picture (0 to 2).
+>
+> **Reading-consistency round 2, built (user decision).** After the user's own runs still showed too much noise, Customer Book reading changed again ([Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}) step 8): a phone number that cannot be real is left out with one fixed note; country-code basis notes always say "Country code", use a longer fixed source list, and repeat on a candidate only when its basis differs from the shared note; unused details belonging to an entry in a picture or PDF get one `<Kind> were not used` note per kind; and a left-out line with no listed kind, such as each slogan or tagline line, gets its own note with no kind word, `Left out "<line>", <beside>`, as in Catalogue. Spreadsheets are now read with more AI reasoning so the State/Region rule is followed ([gap 10](#10-spreadsheet-reads-are-slower-and-cost-more)). Two runs at the product's default settings on 2026-11-24 passed all 33 cases, and the first rewrote the stored patches: differences from the golden answers fell from 282 to 232. Reading the same files twice gave identical answers in 21 of 33 cases. Most of the remaining run-to-run differences are in Customer Book's 347-row export and Catalogue's dense price-list photo ([gap 7](#7-at-default-settings-the-ai-still-breaks-some-reading-rules)).
 
 ### Overview
 
@@ -66,6 +68,8 @@ This is a check that developers run by hand. Customers never see it, and it chan
 4. The note-shortening case reuses an existing Catalogue CSV spreadsheet. For that case only, the group size is lowered, so the spreadsheet is read in two or more groups. In that case only, the check runs its own copy of the product's join-and-shorten step: it always joins the groups' answers the same way the product does, and always shortens the notes with the product's own shortening instructions. The other spreadsheet cases are read in one group and are not joined or shortened. Unlike the product, the check has no fallback and does not judge the shortened notes: if shortening fails, the case fails, where the product would quietly keep the original notes, and an empty or longer shortened answer is compared as it is. The answer is compared with its golden answer like any other case. *Before this rework, a separate note-shortening check sent five fixed note lists straight to the AI. That check and its golden answers are now gone, for Catalogue and Customer Book alike.*
 
    For Customer Book, the 347-row export is the note-shortening case, at the normal group size, so it is read in several groups. It is joined and always shortened with the check's own copy of the product's step and Customer Book's own shortening instructions, with the same rules as above: no fallback, and the shortened notes compared as they are. The other Customer Book spreadsheets are read in one group and are not joined or shortened. *Before this round, Customer Book had no such case (user decision).*
+
+   The general notes come in the same order whether a spreadsheet is read in one group or several: shortening re-sorts them into the order of kinds and merges repeats, and with fixed sentences, repeats read identically.
 5. Every field of the AI's answer is compared. That covers:
    - the items and their variants;
    - the AI's entry counts: entries identified and entries processed;
@@ -222,6 +226,8 @@ In the first live run, at the product's default settings, the AI broke some of t
 
 The check shows these as differences, and the golden answers keep the rules.
 
+In the reading-consistency round 2 runs, the AI still sometimes took the city from a State or Region column in Customer Book's 347-row export, was inconsistent about whether to write a customer's own country-code note, and re-read names and digits differently in Catalogue's dense price-list photo.
+
 **Accepted for now:** this was the user's choice. Any work on the AI instructions to fix these would be a separate request.
 
 #### 8. One skipped or extra item can make many later items differ
@@ -233,6 +239,12 @@ The comparison first lines up list entries that are exactly the same, then compa
 #### 9. A difference never turns the check red
 
 A case never fails on a difference: it prints its Stored and Current blocks and passes. A degradation is seen only by someone who reads and compares the two blocks; nothing in the result itself shows it.
+
+**Accepted for now:** this was the user's choice.
+
+#### 10. Spreadsheet reads are slower and cost more
+
+To make the AI follow the rule that a State or Region column is never the city, spreadsheets are now read with more AI reasoning (medium instead of low), in the product as well as in the check. Every spreadsheet read therefore takes longer and costs more. *Before this round, spreadsheets were read with low reasoning.*
 
 **Accepted for now:** this was the user's choice.
 

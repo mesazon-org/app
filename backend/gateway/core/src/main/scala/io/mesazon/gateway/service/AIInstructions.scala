@@ -61,7 +61,7 @@ object AIInstructions {
       |        }
       |      ],
       |      "fullNameInferred": false,
-      |      "extractionNotes": ["Second phone's country code taken from the address"]
+      |      "extractionNotes": ["Country code taken from the address"]
       |    }
       |  ],
       |  "businessCandidates": [
@@ -84,7 +84,7 @@ object AIInstructions {
       |            "phoneCountryCodeInferred": true
       |          },
       |          "fullNameInferred": false,
-      |          "extractionNotes": ["Phone country code taken from the other numbers"]
+      |          "extractionNotes": ["Country code taken from the other numbers"]
       |        }
       |      ],
       |      "businessNameInferred": true,
@@ -252,19 +252,22 @@ object AIInstructions {
       |- Phones. phoneNationalNumber holds only the national number, without the country code; phoneCountryCode holds
       |  the dialling code. Make a best-effort attempt at a valid pair for the country. A code written with the number,
       |  such as "+357 99123456" or "00357 99123456", or in its own dialling-code column, is read, not inferred: split
-      |  it out. A "+" or "00" prefix that is not a real country code, such as +808, +877, or +87, is not split: keep
-      |  every digit in phoneNationalNumber, with phoneCountryCode: null and phoneCountryCodeInferred: false, and add
-      |  the note "Phone country code could not be determined" on the phone's owner. When no code is written, apply
-      |  this interpretation sequence internally:
-      |  1. Read the phone in its context: the entry's own address, one country used across the file, or the processing
-      |     message.
+      |  it out. Leave out a phone only when it plainly cannot be real: its first group after the "+" or "00", as
+      |  printed, is not a real country code, such as "+563 30 626382", "+808", "+877", "+87", or "+6 741-882-9858",
+      |  or its digit count is impossible for its code, such as 16 digits. Never apply finer judgements, such as
+      |  about area codes. Never return such a phone, and add the note "Phone number left out, not a real number"
+      |  once on its owner, even when several of the owner's phones are left out. When no code is written, apply this
+      |  interpretation sequence internally:
+      |  1. Read the phone in its context: its own format, such as a 10-digit North American number, the entry's own
+      |     address, one country used across the file, or the processing message.
       |  2. Compare that context with real international dialling codes and with the length and format of the national
       |     number for that country.
-      |  3. If the clues agree, return the code with phoneCountryCodeInferred: true and one note on the phone's owner,
-      |     the candidate or the contact, giving its basis as "<Field> taken from <source>", such as
-      |     "Country code taken from the address". When the basis is shared by the whole source, such as one
-      |     country used throughout, write that note once at top level instead. A code taken from the processing
-      |     message gets no basis note, but a conflict with the address still gets the note in step 4.
+      |  3. If the clues agree, return the code with phoneCountryCodeInferred: true. Its basis note is
+      |     "Country code taken from <source>", such as "Country code taken from the address". When one country is
+      |     used across the whole file, write "Country code taken from the country used across the file" once at top
+      |     level, and write a basis note on the phone's owner, the candidate or the contact, only when its basis
+      |     differs from that shared one. A code taken from the processing message gets no basis note, but a conflict
+      |     with the address still gets the note in step 4.
       |  4. If the clues conflict, such as an address in one country and a number whose length and format fit another,
       |     still make the best guess. Prefer the country whose length and format fit the national number, together
       |     with the country used across the rest of the file or the processing message. The address's city or
@@ -273,7 +276,8 @@ object AIInstructions {
       |     "Country code +357 guessed, the address is in Greece". A guess is not an error: the phone stays a normal
       |     returned phone.
       |  5. A number written with no "+" or "00" always gets a code from step 3 or step 4, never phoneCountryCode:
-      |     null. Never leave out a phone only because its country code is missing.
+      |     null, but only when its digit count is possible for that code. When no code fits its digit count, leave it
+      |     out with that one note on its owner. Never leave out a phone only because its country code is missing.
       |- When the source clearly marks one email or phone as the main one, list it first; otherwise keep source order.
       |- Addresses. Missing, null, empty, and whitespace-only address text is empty. Keep an address when at least one
       |  of its five text fields has content, even when partial. Note its missing parts in that address's
@@ -332,19 +336,20 @@ object AIInstructions {
       |  instead. Use plain everyday words a customer would understand, and avoid technical words such as infer,
       |  context, schema, or format codes. Summarise a long list of names as a count, for example
       |  "Eight marketing columns were not used". For example,
-      |  use ["Name taken from the email", "Second phone's country code taken from the address"] instead of
+      |  use ["Name taken from the email", "Country code taken from the address"] instead of
       |  one long sentence about both.
       |- These notes are fixed sentences; write them exactly, never reworded:
       |  - "<Detail> could not be fully read"
       |  - "<Detail> partly unclear, please check"
       |  - "<Detail> may be misspelled in the source"
-      |  - "<Field> taken from <source>", where <source> is one of the address, the other numbers, the email; use
-      |    your own words only when none fits
+      |  - "<Field> taken from <source>", where <source> is one of the address, the other numbers, the email, the
+      |    number, the country used across the file; use your own words only when none fits. For a phone's
+      |    country code, <Field> is always "Country code"
       |  - "Country code <code> guessed, the address is in <country>"
       |  - "<Parts> is missing" or "<Parts> are missing", with the parts in the order street, city, postal code,
       |    country
       |  - "Empty address was left out" or "Empty addresses were left out"
-      |  - "Phone country code could not be determined"
+      |  - "Phone number left out, not a real number"
       |  - "AI could not detect relevant customer data in this file."
       |- Candidate, address, and contact extractionNotes are required arrays of comments about their own extraction.
       |  Put one plain comment in each entry, with no bullet prefix, numbering, or position prefix. Use [] when there
@@ -375,8 +380,9 @@ object AIInstructions {
       |     labels, total, date, page number, footer, or letterhead. A row whose other cells name columns, such as
       |     "Email" or "Phone", is column labels, not a heading. <beside> is "nothing beside it" or the other printed
       |     content on the same row, outside the quoted line, such as "contact details beside it". The line's own
-      |     cells, including the other column labels, are never beside it. Use your own words after "Left out" only
-      |     when no kind fits. For column labels, quote only the first label, for example
+      |     cells, including the other column labels, are never beside it. When no listed kind fits, write the note
+      |     with no kind word: "Left out row <n>, "<line>", <beside>". Never invent a kind. For column labels, quote
+      |     only the first label, for example
       |     "Left out row 17, column labels "Product", nothing beside it". For every other kind, quote the whole line
       |     exactly as printed, with its cells joined by ", ", for example
       |     "Left out row 7, heading "WHOLESALE CLIENTS", nothing beside it". Rows that could not be returned are
@@ -868,8 +874,9 @@ object AIInstructions {
       |     labels, total, date, page number, or footer. A row whose other cells name columns, such as "KG", "€", or
       |     "Price", is column labels, not a heading. <beside> is "nothing beside it" or the other printed content on
       |     the same row, outside the quoted line, such as "prices beside it". The line's own cells, including the
-      |     other column labels, are never beside it. Use your own words after "Left out" only when no kind fits. For
-      |     column labels, quote only the first label, for example
+      |     other column labels, are never beside it. When no listed kind fits, write the note with no kind word:
+      |     "Left out row <n>, "<line>", <beside>". Never invent a kind. For column labels, quote only the first label,
+      |     for example
       |     "Left out row 17, column labels "Product", nothing beside it". For every other kind, quote the whole line
       |     exactly as printed, with its cells joined by ", ", for example
       |     "Left out row 7, heading "FRUITS", nothing beside it". Rows that could not be returned are reported only
@@ -1239,8 +1246,9 @@ object AIInstructions {
       |     is column labels, not a heading, so a row "ΚΑΣΤΑΝΑ ΕΛΛΑΔΑΣ", "KG", "€" gives
       |     "Left out column labels "ΚΑΣΤΑΝΑ ΕΛΛΑΔΑΣ", nothing beside it". <beside> is "nothing beside it" or the
       |     other printed content on the same row, outside the quoted line, such as "prices beside it". The line's own
-      |     cells, including the other column labels, are never beside it. Use your own words after "Left out" only
-      |     when no kind fits. For column labels, quote only the first label, for example
+      |     cells, including the other column labels, are never beside it. When no listed kind fits, write the note
+      |     with no kind word: "Left out "<line>", <beside>". Never invent a kind. For column labels, quote only the
+      |     first label, for example
       |     "Left out column labels "Product", nothing beside it". For every other
       |     kind, quote the whole line exactly as printed, for example
       |     "Left out heading "FRUITS", nothing beside it". When tables sit side by side, each table's row is its own
@@ -1333,7 +1341,7 @@ object AIInstructions {
       |        }
       |      ],
       |      "fullNameInferred": false,
-      |      "extractionNotes": ["Second phone's country code taken from the address"]
+      |      "extractionNotes": ["Country code taken from the address"]
       |    }
       |  ],
       |  "businessCandidates": [
@@ -1356,7 +1364,7 @@ object AIInstructions {
       |            "phoneCountryCodeInferred": true
       |          },
       |          "fullNameInferred": false,
-      |          "extractionNotes": ["Phone country code taken from the other numbers"]
+      |          "extractionNotes": ["Country code taken from the other numbers"]
       |        }
       |      ],
       |      "businessNameInferred": true,
@@ -1401,7 +1409,9 @@ object AIInstructions {
       |   Map each table separately. For labelled text outside a table, such as a business card, associate labels and
       |   values through their placement and meaning. A detail that maps to no field in the shape, such as a balance, a
       |   comment, a birthday, or a loyalty tier, is left out of the candidates. Add one top-level extractionNotes
-      |   entry for each kind of left-out detail, not one per entry, for example "Balances were not used".
+      |   entry for each kind of left-out detail, not one per entry, worded "<Kind> were not used", for example
+      |   "Comments were not used". These notes are only for details belonging to an entry, such as a website, a
+      |   comment, a callback reminder, or a role.
       |4. Read each record through that mapping, preserving the association between each field and its own value. A
       |   blank or unclear field does not shift values or make other fields unavailable. Assess each field
       |   independently: an unreadable name, for example, does not invalidate a readable phone.
@@ -1513,19 +1523,22 @@ object AIInstructions {
       |- Phones. phoneNationalNumber holds only the national number, without the country code; phoneCountryCode holds
       |  the dialling code. Make a best-effort attempt at a valid pair for the country. A code written with the number,
       |  such as "+357 99123456" or "00357 99123456", or in its own dialling-code column, is read, not inferred: split
-      |  it out. A "+" or "00" prefix that is not a real country code, such as +808, +877, or +87, is not split: keep
-      |  every digit in phoneNationalNumber, with phoneCountryCode: null and phoneCountryCodeInferred: false, and add
-      |  the note "Phone country code could not be determined" on the phone's owner. When no code is written, apply
-      |  this interpretation sequence internally:
-      |  1. Read the phone in its context: the entry's own address, one country used across the source, or the
-      |     processing message.
+      |  it out. Leave out a phone only when it plainly cannot be real: its first group after the "+" or "00", as
+      |  printed, is not a real country code, such as "+563 30 626382", "+808", "+877", "+87", or "+6 741-882-9858",
+      |  or its digit count is impossible for its code, such as 16 digits. Never apply finer judgements, such as
+      |  about area codes. Never return such a phone, and add the note "Phone number left out, not a real number"
+      |  once on its owner, even when several of the owner's phones are left out. When no code is written, apply this
+      |  interpretation sequence internally:
+      |  1. Read the phone in its context: its own format, such as a 10-digit North American number, the entry's own
+      |     address, one country used across the source, or the processing message.
       |  2. Compare that context with real international dialling codes and with the length and format of the national
       |     number for that country.
-      |  3. If the clues agree, return the code with phoneCountryCodeInferred: true and one note on the phone's owner,
-      |     the candidate or the contact, giving its basis as "<Field> taken from <source>", such as
-      |     "Country code taken from the address". When the basis is shared by the whole source, such as one
-      |     country used throughout, write that note once at top level instead. A code taken from the processing
-      |     message gets no basis note, but a conflict with the address still gets the note in step 4.
+      |  3. If the clues agree, return the code with phoneCountryCodeInferred: true. Its basis note is
+      |     "Country code taken from <source>", such as "Country code taken from the address". When each entry's own
+      |     address gives the code, write "Country code taken from the address" once at top level, and write a basis
+      |     note on the phone's owner, the candidate or the contact, only when its basis differs from that shared one.
+      |     A code taken from the processing message gets no basis note, but a conflict with the address still gets
+      |     the note in step 4.
       |  4. If the clues conflict, such as an address in one country and a number whose length and format fit another,
       |     still make the best guess. Prefer the country whose length and format fit the national number, together
       |     with the country used across the rest of the source or the processing message. The address's city or
@@ -1534,7 +1547,8 @@ object AIInstructions {
       |     "Country code +357 guessed, the address is in Greece". A guess is not an error: the phone stays a normal
       |     returned phone.
       |  5. A number written with no "+" or "00" always gets a code from step 3 or step 4, never phoneCountryCode:
-      |     null. Never leave out a phone only because its country code is missing.
+      |     null, but only when its digit count is possible for that code. When no code fits its digit count, leave it
+      |     out with that one note on its owner. Never leave out a phone only because its country code is missing.
       |- When the source clearly marks one email or phone as the main one, list it first; otherwise keep source order.
       |- Addresses. Missing, null, empty, and whitespace-only address text is empty. Keep an address when at least one
       |  of its five text fields has content, even when partial. Note its missing parts in that address's
@@ -1592,19 +1606,22 @@ object AIInstructions {
       |  instead. Use plain everyday words a customer would understand, and avoid technical words such as infer,
       |  context, schema, or format codes. Summarise a long list of names as a count, for example
       |  "Eight marketing columns were not used". For example,
-      |  use ["Name taken from the email", "Second phone's country code taken from the address"] instead of
+      |  use ["Name taken from the email", "Country code taken from the address"] instead of
       |  one long sentence about both.
       |- These notes are fixed sentences; write them exactly, never reworded:
       |  - "<Detail> could not be fully read"
       |  - "<Detail> partly unclear, please check"
       |  - "<Detail> may be misspelled in the source"
-      |  - "<Field> taken from <source>", where <source> is one of the address, the other numbers, the email; use
-      |    your own words only when none fits
+      |  - "<Field> taken from <source>", where <source> is one of the address, the other numbers, the email, the
+      |    number; use your own words only when none fits. For a phone's
+      |    country code, <Field> is always "Country code"
       |  - "Country code <code> guessed, the address is in <country>"
       |  - "<Parts> is missing" or "<Parts> are missing", with the parts in the order street, city, postal code,
       |    country
       |  - "Empty address was left out" or "Empty addresses were left out"
-      |  - "Phone country code could not be determined"
+      |  - "Phone number left out, not a real number"
+      |  - "<Kind> were not used", where <Kind> is one of Websites, Comments, Callback reminders, Roles; use your own
+      |    words only when none fits
       |  - "AI could not detect relevant customer data in this $sourceName."
       |- Candidate, address, and contact extractionNotes are required arrays of comments about their own extraction.
       |  Put one plain comment in each entry, with no bullet prefix, numbering, or position prefix. Use [] when there
@@ -1625,8 +1642,8 @@ object AIInstructions {
       |     1. how the labels were read, as a tentative label interpretation.
       |     2. one note for each line left out as a non-customer, in source order: a PDF page by page, top to bottom,
       |        and an image top to bottom, finishing each column before the next.
-      |     3. one note for each kind of detail left out because it maps to no field, worded like
-      |        "Balances were not used".
+      |     3. one note for each kind of detail left out because it maps to no field, worded "<Kind> were not used",
+      |        such as "Websites were not used".
       |     4. shared assumptions, such as one country code used for the whole $sourceName, written once here instead
       |        of on each candidate.
       |     5. the nothing-detected note.
@@ -1635,8 +1652,10 @@ object AIInstructions {
       |     total, date, page number, footer, or letterhead. A row whose other cells name columns, such as "Email" or
       |     "Phone", is column labels, not a heading. <beside> is "nothing beside it" or the other printed content on
       |     the same row, outside the quoted line, such as "contact details beside it". The line's own cells,
-      |     including the other column labels, are never beside it. Use your own words after "Left out" only when no
-      |     kind fits. For column labels, quote only the first label, for example
+      |     including the other column labels, are never beside it. When no listed kind fits, write the note with no
+      |     kind word: "Left out "<line>", <beside>", such as "Left out "СНАБЖАЕМ", nothing beside it". Never invent a
+      |     kind. A slogan or tagline printed on a card or page is such a line: each printed line gets its own note,
+      |     quoted whole. For column labels, quote only the first label, for example
       |     "Left out column labels "Name", nothing beside it".
       |     For every other kind, quote the whole line exactly as printed, for example
       |     "Left out heading "WHOLESALE CLIENTS", nothing beside it". When tables sit side by side, each table's row
