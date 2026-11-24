@@ -24,6 +24,10 @@ import java.nio.file.*
 
 class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
 
+  private inline val AiClientDataExtractionEnvPrefix = "AI_CLIENT_DATA_EXTRACTION_"
+
+  private inline val AiClientDataExtractionApiKeyEnvName = "AI_CLIENT_DATA_EXTRACTION_API_KEY"
+
   private given lcsJson: Lcs[Json] = new Patience[Json]
 
   private final case class Context(
@@ -33,7 +37,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
 
   private val apiKey =
     sys.env.getOrElse(
-      "AI_CLIENT_DATA_EXTRACTION_API_KEY",
+      AiClientDataExtractionApiKeyEnvName,
       "",
     )
 
@@ -42,6 +46,15 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
 
   private val goldenDirectory =
     Paths.get("src/test/resources/assets-golden/CustomerBookFileAiExtractGoldenSpec")
+
+  private val diffsonDirectory =
+    Paths.get("src/test/resources/assets-diffson/CustomerBookFileAiExtractGoldenSpec")
+
+  private val isProductDefaultSettings: Boolean =
+    !sys.env.keys.exists(environmentVariableName =>
+      environmentVariableName.startsWith(AiClientDataExtractionEnvPrefix) &&
+        environmentVariableName != AiClientDataExtractionApiKeyEnvName
+    )
 
   private val customerBookFileAIExtractCodecFieldComplete: JsonValueCodec[CustomerBookFileAIExtract] =
     JsonCodecMaker.make[CustomerBookFileAIExtract](
@@ -99,6 +112,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
       .fold(parsingFailure => fail(s"Failed to parse the encoded answer: [${parsingFailure.message}]"), identity)
 
   private def compareWithGolden(
+      goldenFileName: String,
       customerBookFileAIExtract: CustomerBookFileAIExtract,
       customerBookFileAIExtractGolden: CustomerBookFileAIExtract,
   ): Unit = {
@@ -106,8 +120,21 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
       customerBookFileAIExtractJson(customerBookFileAIExtractGolden),
       customerBookFileAIExtractJson(customerBookFileAIExtract),
     )
+    val currentText = jsonPatch.asJson.spaces2
+    val storedPath  = diffsonDirectory.resolve(goldenFileName)
 
-    if (jsonPatch.ops.nonEmpty) fail(jsonPatch.asJson.spaces2)
+    if (Files.exists(storedPath)) {
+      info("Stored:\n" + Files.readString(storedPath))
+      info("Current:\n" + currentText)
+    } else if (isProductDefaultSettings) {
+      Files.createDirectories(diffsonDirectory)
+      Files.writeString(storedPath, currentText, StandardOpenOption.CREATE_NEW)
+      info("Current:\n" + currentText)
+      info(s"Stored patch written: ${storedPath.toAbsolutePath}")
+    } else {
+      info("Current:\n" + currentText)
+      info("Nothing stored: the settings are not the product defaults")
+    }
   }
 
   "AIClientDataExtraction" when {
@@ -121,7 +148,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-1.json")
+          goldenFileName                  = "image-1.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-1.png")),
@@ -130,7 +158,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -143,7 +171,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-2.json")
+          goldenFileName                  = "image-2.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-2.png")),
@@ -152,7 +181,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -165,7 +194,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-3.json")
+          goldenFileName                  = "image-3.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-3.png")),
@@ -174,7 +204,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -187,7 +217,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-4.json")
+          goldenFileName                  = "image-4.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-4.png")),
@@ -196,7 +227,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -209,7 +240,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-5.json")
+          goldenFileName                  = "image-5.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-5.png")),
@@ -218,7 +250,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -231,7 +263,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-6.json")
+          goldenFileName                  = "image-6.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-6.png")),
@@ -240,7 +273,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -253,7 +286,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-7.json")
+          goldenFileName                  = "image-7.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-7.png")),
@@ -262,7 +296,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -275,7 +309,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-8.json")
+          goldenFileName                  = "image-8.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-8.png")),
@@ -284,7 +319,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -297,7 +332,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-9.json")
+          goldenFileName                  = "image-9.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-9.png")),
@@ -306,7 +342,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -319,7 +355,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-10.json")
+          goldenFileName                  = "image-10.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-10.png")),
@@ -328,7 +365,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -344,7 +381,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
 
             customerBookFileProcessingMessage = "omit phone numbers, keep everything else"
 
-            customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-1-omit-phone-numbers.json")
+            goldenFileName                  = "image-1-omit-phone-numbers.json"
+            customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
             customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
               FileScannedPath(assetDirectory.resolve("image-1.png")),
@@ -353,7 +391,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
               Some(customerBookFileProcessingMessage),
             )
 
-            _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+            _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
           } yield ()
       }
 
@@ -366,7 +404,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-11.json")
+          goldenFileName                  = "image-11.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-11.jpeg")),
@@ -375,7 +414,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -388,7 +427,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-12.json")
+          goldenFileName                  = "image-12.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-12.webp")),
@@ -397,7 +437,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -410,7 +450,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-13.json")
+          goldenFileName                  = "image-13.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-13.png")),
@@ -419,7 +460,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -432,7 +473,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("image-14.json")
+          goldenFileName                  = "image-14.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromImage[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-14.jpeg")),
@@ -441,7 +483,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
     }
@@ -456,7 +498,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("pdf-1.json")
+          goldenFileName                  = "pdf-1.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromPdf[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("pdf-1.pdf")),
@@ -465,7 +508,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -478,7 +521,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("pdf-2.json")
+          goldenFileName                  = "pdf-2.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromPdf[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("pdf-2.pdf")),
@@ -487,7 +531,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -500,7 +544,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("pdf-3.json")
+          goldenFileName                  = "pdf-3.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtract <- aiClientDataExtraction.extractFromPdf[CustomerBookFileAIExtract](
             FileScannedPath(assetDirectory.resolve("pdf-3.pdf")),
@@ -509,7 +554,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
     }
@@ -524,7 +569,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("spreadsheet-1.json")
+          goldenFileName                  = "spreadsheet-1.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtracts <- ZIO.scoped(
             aiClientDataExtraction.extractFromCsv[CustomerBookFileAIExtract](
@@ -536,7 +582,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
 
           customerBookFileAIExtract = customerBookFileAIExtracts.head
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -549,7 +595,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("spreadsheet-2.json")
+          goldenFileName                  = "spreadsheet-2.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtracts <- ZIO.scoped(
             aiClientDataExtraction.extractFromCsv[CustomerBookFileAIExtract](
@@ -561,7 +608,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
 
           customerBookFileAIExtract = customerBookFileAIExtracts.head
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -574,7 +621,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("spreadsheet-3.json")
+          goldenFileName                  = "spreadsheet-3.json"
+          customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
           customerBookFileAIExtracts <- ZIO.scoped(
             aiClientDataExtraction.extractFromCsv[CustomerBookFileAIExtract](
@@ -586,7 +634,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
 
           customerBookFileAIExtract = customerBookFileAIExtracts.head
 
-          _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
         } yield ()
       }
 
@@ -600,7 +648,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
               "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
             )
 
-            customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("spreadsheet-4.json")
+            goldenFileName                  = "spreadsheet-4.json"
+            customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
             customerBookFileAIExtracts <- ZIO.scoped(
               aiClientDataExtraction.extractFromCsv[CustomerBookFileAIExtract](
@@ -621,7 +670,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
               noteCompactionOutput.notes
             )
 
-            _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+            _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
           } yield ()
       }
 
@@ -635,7 +684,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
               "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
             )
 
-            customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden("spreadsheet-5.json")
+            goldenFileName                  = "spreadsheet-5.json"
+            customerBookFileAIExtractGolden = loadCustomerBookFileAIExtractGolden(goldenFileName)
 
             customerBookFileAIExtracts <- ZIO.scoped(
               aiClientDataExtraction.extractFromCsv[CustomerBookFileAIExtract](
@@ -647,7 +697,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
 
             customerBookFileAIExtract = customerBookFileAIExtracts.head
 
-            _ = compareWithGolden(customerBookFileAIExtract, customerBookFileAIExtractGolden)
+            _ = compareWithGolden(goldenFileName, customerBookFileAIExtract, customerBookFileAIExtractGolden)
           } yield ()
       }
     }

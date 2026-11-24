@@ -4,7 +4,7 @@ title: AI Response Performance
 
 # AI Response Performance
 
-> **Status: built.** The Catalogue check runs its 10 cases, and the Customer Book check its 23 cases, against hand-corrected golden answers, and each fails on any difference. Every list is compared position by position, so order counts. A failing case prints only the comparison tool's indented list of differences, each placed by position, readable without colour and with no test id line. The old scored checks are removed: every Catalogue and Customer Book extraction check, both note-shortening checks, the scoring and all old golden answers. Customer Book's source files were kept, and its check is rebuilt from them ([gap 2](#2-customer-books-golden-check-is-rebuilt)). Notes in italics starting *Before this rework* describe the removed checks.
+> **Status: built.** The Catalogue check runs its 10 cases, and the Customer Book check its 23 cases, against hand-corrected golden answers. Every list is compared position by position, so order counts. A difference never fails a case: each case prints its stored and current differences as the comparison tool's indented lists, each placed by position, readable without colour and with no test id line. The old scored checks are removed: every Catalogue and Customer Book extraction check, both note-shortening checks, the scoring and all old golden answers. Customer Book's source files were kept, and its check is rebuilt from them ([gap 2](#2-customer-books-golden-check-is-rebuilt)). Notes in italics starting *Before this rework* describe the removed checks.
 >
 > **First live run**, at the product's default settings: it took about 7 minutes, and every case got an answer, with no AI errors or timeouts. All 10 cases failed on differences. That is the agreed behaviour: the check reports differences, and the golden answers were not changed to make them pass (see gaps 3, 6 and 7). That run used the earlier comparison, which paired items by product code or name and printed the whole answer; the check has not been run live since it moved to position-by-position comparison.
 >
@@ -12,7 +12,7 @@ title: AI Response Performance
 >
 > **Notes change, built (user decision):** the product's AI instructions now put the general notes in a fixed order and give "left out" notes one wording ([Catalogue]({{ site.baseurl }}{% link epics/06-catalogue.md %}) requirement 12 and scenario 36, [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}) requirement 22 and scenario 34). The golden answers follow that change, as requirements 1 and 2 describe.
 >
-> **Agreed, not built yet (user decision): stored patches.** Each case will keep a stored patch, its list of differences from the golden answer, and print it beside today's, and a difference will never fail a case. Until this is built, requirements 7 and 8, non-functional requirement 2, step 1's last bullet, scenarios 1 to 12 and 16 to 19, step 1's requirements 1 and 2, the response, the outcome, and gaps 3, 6 and 9 describe the agreed behaviour. Today any difference fails the case, a failing case prints one list, and nothing is saved.
+> **Stored patches, built (user decision):** each case keeps a stored patch, its list of differences from the golden answer, and prints it beside today's; a difference never fails a case (requirements 7 and 8). The first stored patches are not written yet: all 33 come from one run at the product's default settings, which needs the user's go-ahead. Until then, every case prints only its Current block.
 
 ### Overview
 
@@ -82,20 +82,20 @@ This is a check that developers run by hand. Customers never see it, and it chan
 
    The product's follow-up rules are not compared, because they come after the AI's answer: the duplicate and missing marks, whether a customer needs attention, which email and phone become the default, the limit of two addresses with their retyping and "left out" notes, and the summary lines. *Before this round, none of this was compared, because there was no check (user decision).*
 6. Every list is compared position by position, and order counts: items, variants, attributes, notes and row numbers, and for Customer Book also people, businesses, contacts, emails, phone numbers and addresses. Nothing is paired by product code (SKU) or name. The comparison first lines up entries that are exactly the same, then compares the rest by position ([gap 8](#8-one-skipped-or-extra-item-can-make-many-later-items-differ)). A field left out and the same field written as empty ("null") count as the same. *Before this rework, names also matched when they were at least 70% alike.*
-7. A difference never fails a case: each case prints its stored and current differences, and the developer judges by eye whether the AI got better or worse ([gap 9](#9-a-difference-never-turns-the-check-red)). *Today any difference fails the case. After this, it never does (user decision).* *Before this rework, a check passed whatever its score.*
+7. A difference never fails a case: each case prints its stored and current differences, and the developer judges by eye whether the AI got better or worse ([gap 9](#9-a-difference-never-turns-the-check-red)). *Before stored patches, any difference failed the case (user decision).* *Before this rework, a check passed whatever its score.*
 8. Each case of both checks keeps a **stored patch**: its list of differences from the golden answer, from an accepted run.
    - A run writes a case's stored patch only when it has none, and only at the product's default settings. A run at any other model or setting prints only the current differences, with a line saying nothing was stored because the settings are not the defaults.
    - A run never overwrites a stored patch. To refresh one, the developer deletes it on purpose and runs again.
    - Stored patches are committed and reviewed like golden answers. They come from one run at the product's default settings, with the user's go-ahead and key.
    - Editing a golden answer means deleting its stored patch and rewriting it in the same change.
-   - The first stored patches are made once each check's golden answers are final, which they now are after the notes change.
+   - The first stored patches are made once each check's golden answers are final, which they now are after the notes change. They are not written yet (see the status above).
 
-   *Today there are no stored patches. After this, there are (user decision).*
+   *Before stored patches, there were none (user decision).*
 
 #### Non-functional
 
 1. The check also fails when something goes wrong: the AI cannot be reached or runs out of time, the answer cannot be read, a golden answer is missing, or note shortening fails. These still fail as before, although a difference never does.
-2. Results are shown on screen. A run saves only a missing stored patch (requirement 8), and nothing else. *Today nothing is saved, and to compare runs the developer keeps the output they want. After this, the stored patch is what each run is compared with (user decision).*
+2. Results are shown on screen. A run saves only a missing stored patch (requirement 8), and nothing else. *Before stored patches, nothing was saved, and to compare runs the developer kept the output they wanted (user decision).*
 3. The developer supplies their own AI key when they run the check. No key is ever stored in the repository. Without a key, the check is skipped, as before.
 
 ### User flow
@@ -142,7 +142,7 @@ Each case has a golden answer made and corrected by hand as described above. In 
 
 #### Requirements
 
-1. Each case prints two labelled blocks, "Stored" then "Current", with no score and no count; a case with no stored patch prints only "Current" (scenarios 16 and 18). Each block is the comparison tool's own output: the differences, readable without colour, as indented blocks, one per difference, with longer values spread over several lines. *Today only a failing case prints, and it prints one list. After this, every case prints its blocks (user decision).* The run already names the failing case, and that name includes its source file. The differences themselves name neither the source nor the model. Each block is one of:
+1. Each case prints two labelled blocks, "Stored" then "Current", with no score and no count; a case with no stored patch prints only "Current" (scenarios 16 and 18). Each block is the comparison tool's own output: the differences, readable without colour, as indented blocks, one per difference, with longer values spread over several lines. *Before stored patches, only a failing case printed, and it printed one list (user decision).* The run already names each case, and that name includes its source file. The differences themselves name neither the source nor the model. Each block is one of:
    - `remove`: missing, only in the golden answer, so the AI left it out;
    - `add`: extra, only in the AI's answer;
    - `replace`: changed, with `old` the golden value and `value` the AI's.
@@ -163,7 +163,7 @@ Response is empty. The result is each case's printed Stored and Current blocks.
 **Outcome**
 
 - The developer sees each case's stored and current differences, readable without colour, and judges whether the AI got better or worse.
-- Only a missing stored patch is saved, by a default-settings run, and the golden answers are unchanged. *Today any difference fails the case and nothing is saved (user decision to change both).*
+- Only a missing stored patch is saved, by a default-settings run, and the golden answers are unchanged. *Before stored patches, any difference failed the case and nothing was saved (user decision).*
 
 #### Http Error Responses
 
@@ -187,7 +187,7 @@ This rework removed Customer Book's golden checks and their golden answers: ten 
 
 #### 3. Differences in note wording fill the patch
 
-Notes are now compared, and every difference shows in the Current block. The AI rarely words notes the same way twice, so a case can show differences even when every item is right. *Today such a case fails. After this, it passes and shows them (user decision).* The first live run confirmed it: the three unrelated files failed on note wording alone. The agreed notes change (a fixed order of general notes and one "left out" wording) is meant to make general-note differences rarer; it does not change how the AI words item, variant or customer notes.
+Notes are now compared, and every difference shows in the Current block. The AI rarely words notes the same way twice, so a case can show differences even when every item is right. *Before stored patches, such a case failed (user decision).* The first live run confirmed it: the three unrelated files failed on note wording alone. The agreed notes change (a fixed order of general notes and one "left out" wording) is meant to make general-note differences rarer; it does not change how the AI words item, variant or customer notes.
 
 **Accepted for now:** this was the user's choice. Revisit it if note wording makes the differences too long to be useful.
 
@@ -195,7 +195,7 @@ Notes are now compared, and every difference shows in the Current block. The AI 
 
 A failing case used to print the whole answer with the differences marked only in colour. A small difference was hard to find in a long answer, and without colour, missing and extra could not be told apart.
 
-**Built:** a failing case now prints only the differences, readable without colour (step 1, requirement 1). Nothing is left to decide.
+**Built:** a case now prints only the differences, readable without colour (step 1, requirement 1). Nothing is left to decide.
 
 #### 5. The check's spreadsheet step is a copy of the product's
 
@@ -205,7 +205,7 @@ The check joins spreadsheet groups and shortens notes with its own copy of the p
 
 #### 6. Characters that look the same can show a difference that looks like none
 
-Some letters and marks look identical but are different characters. Examples are the Greek and Latin capitals X/Χ, I/Ι and L/Λ, and straight and curly apostrophes. Where the source gives evidence, such as the PDF's own text for an apostrophe, the golden answer follows the source. Otherwise it keeps the AI's choice. If the AI picks the other character in a later run, it shows as a difference whose two sides look the same. *Today that difference also fails the case.* The first live run confirmed it: look-alike Latin and Greek letters showed up as differences in the second picture. The same ruling applies to Customer Book's golden answers (user decision), where names, emails and phone numbers raise the same choices.
+Some letters and marks look identical but are different characters. Examples are the Greek and Latin capitals X/Χ, I/Ι and L/Λ, and straight and curly apostrophes. Where the source gives evidence, such as the PDF's own text for an apostrophe, the golden answer follows the source. Otherwise it keeps the AI's choice. If the AI picks the other character in a later run, it shows as a difference whose two sides look the same. *Before stored patches, that difference also failed the case.* The first live run confirmed it: look-alike Latin and Greek letters showed up as differences in the second picture. The same ruling applies to Customer Book's golden answers (user decision), where names, emails and phone numbers raise the same choices.
 
 **Accepted for now:** this was the user's choice.
 

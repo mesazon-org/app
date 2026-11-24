@@ -31,6 +31,10 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
 
   private inline val CsvBatchMaxDataRowsCompaction = 15
 
+  private inline val AiClientDataExtractionEnvPrefix = "AI_CLIENT_DATA_EXTRACTION_"
+
+  private inline val AiClientDataExtractionApiKeyEnvName = "AI_CLIENT_DATA_EXTRACTION_API_KEY"
+
   private given lcsJson: Lcs[Json] = new Patience[Json]
 
   private final case class Context(
@@ -40,7 +44,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
 
   private val apiKey =
     sys.env.getOrElse(
-      "AI_CLIENT_DATA_EXTRACTION_API_KEY",
+      AiClientDataExtractionApiKeyEnvName,
       "",
     )
 
@@ -49,6 +53,15 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
 
   private val goldenDirectory =
     Paths.get("src/test/resources/assets-golden/CatalogueFileAiExtractGoldenSpec")
+
+  private val diffsonDirectory =
+    Paths.get("src/test/resources/assets-diffson/CatalogueFileAiExtractGoldenSpec")
+
+  private val isProductDefaultSettings: Boolean =
+    !sys.env.keys.exists(environmentVariableName =>
+      environmentVariableName.startsWith(AiClientDataExtractionEnvPrefix) &&
+        environmentVariableName != AiClientDataExtractionApiKeyEnvName
+    )
 
   private val catalogueFileAIExtractCodecFieldComplete: JsonValueCodec[CatalogueFileAIExtract] =
     JsonCodecMaker.make[CatalogueFileAIExtract](
@@ -106,6 +119,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
       .fold(parsingFailure => fail(s"Failed to parse the encoded answer: [${parsingFailure.message}]"), identity)
 
   private def compareWithGolden(
+      goldenFileName: String,
       catalogueFileAIExtract: CatalogueFileAIExtract,
       catalogueFileAIExtractGolden: CatalogueFileAIExtract,
   ): Unit = {
@@ -113,8 +127,21 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
       catalogueFileAIExtractJson(catalogueFileAIExtractGolden),
       catalogueFileAIExtractJson(catalogueFileAIExtract),
     )
+    val currentText = jsonPatch.asJson.spaces2
+    val storedPath  = diffsonDirectory.resolve(goldenFileName)
 
-    if (jsonPatch.ops.nonEmpty) fail(jsonPatch.asJson.spaces2)
+    if (Files.exists(storedPath)) {
+      info("Stored:\n" + Files.readString(storedPath))
+      info("Current:\n" + currentText)
+    } else if (isProductDefaultSettings) {
+      Files.createDirectories(diffsonDirectory)
+      Files.writeString(storedPath, currentText, StandardOpenOption.CREATE_NEW)
+      info("Current:\n" + currentText)
+      info(s"Stored patch written: ${storedPath.toAbsolutePath}")
+    } else {
+      info("Current:\n" + currentText)
+      info("Nothing stored: the settings are not the product defaults")
+    }
   }
 
   "AIClientDataExtraction" when {
@@ -132,7 +159,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
             catalogueFileProcessingMessage =
               "ignore cost, the items that are represented with 1 kg make them 12 kg per box, keep fruits keep them as it is, rest keep them as it is"
 
-            catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("image-1.json")
+            goldenFileName               = "image-1.json"
+            catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden(goldenFileName)
 
             catalogueFileAIExtract <- aiClientDataExtraction.extractFromImage[CatalogueFileAIExtract](
               FileScannedPath(assetDirectory.resolve("image-1.jpeg")),
@@ -141,7 +169,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
               Some(catalogueFileProcessingMessage),
             )
 
-            _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+            _ = compareWithGolden(goldenFileName, catalogueFileAIExtract, catalogueFileAIExtractGolden)
           } yield ()
       }
 
@@ -154,7 +182,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("image-2.json")
+          goldenFileName               = "image-2.json"
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden(goldenFileName)
 
           catalogueFileAIExtract <- aiClientDataExtraction.extractFromImage[CatalogueFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-2.jpeg")),
@@ -163,7 +192,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, catalogueFileAIExtract, catalogueFileAIExtractGolden)
         } yield ()
       }
 
@@ -176,7 +205,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("image-3.json")
+          goldenFileName               = "image-3.json"
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden(goldenFileName)
 
           catalogueFileAIExtract <- aiClientDataExtraction.extractFromImage[CatalogueFileAIExtract](
             FileScannedPath(assetDirectory.resolve("image-3.jpeg")),
@@ -185,7 +215,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, catalogueFileAIExtract, catalogueFileAIExtractGolden)
         } yield ()
       }
     }
@@ -200,7 +230,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("pdf-1.json")
+          goldenFileName               = "pdf-1.json"
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden(goldenFileName)
 
           catalogueFileAIExtract <- aiClientDataExtraction.extractFromPdf[CatalogueFileAIExtract](
             FileScannedPath(assetDirectory.resolve("pdf-1.pdf")),
@@ -209,7 +240,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, catalogueFileAIExtract, catalogueFileAIExtractGolden)
         } yield ()
       }
 
@@ -222,7 +253,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("pdf-2.json")
+          goldenFileName               = "pdf-2.json"
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden(goldenFileName)
 
           catalogueFileAIExtract <- aiClientDataExtraction.extractFromPdf[CatalogueFileAIExtract](
             FileScannedPath(assetDirectory.resolve("pdf-2.pdf")),
@@ -231,7 +263,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
             None,
           )
 
-          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, catalogueFileAIExtract, catalogueFileAIExtractGolden)
         } yield ()
       }
     }
@@ -246,7 +278,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-1.json")
+          goldenFileName               = "spreadsheet-1.json"
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden(goldenFileName)
 
           catalogueFileAIExtracts <- ZIO.scoped(
             aiClientDataExtraction.extractFromCsv[CatalogueFileAIExtract](
@@ -258,7 +291,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
 
           catalogueFileAIExtract = catalogueFileAIExtracts.head
 
-          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, catalogueFileAIExtract, catalogueFileAIExtractGolden)
         } yield ()
       }
 
@@ -271,7 +304,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-2.json")
+          goldenFileName               = "spreadsheet-2.json"
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden(goldenFileName)
 
           catalogueFileAIExtracts <- ZIO.scoped(
             aiClientDataExtraction.extractFromCsv[CatalogueFileAIExtract](
@@ -283,7 +317,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
 
           catalogueFileAIExtract = catalogueFileAIExtracts.head
 
-          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, catalogueFileAIExtract, catalogueFileAIExtractGolden)
         } yield ()
       }
 
@@ -296,7 +330,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-3.json")
+          goldenFileName               = "spreadsheet-3.json"
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden(goldenFileName)
 
           catalogueFileAIExtracts <- ZIO.scoped(
             aiClientDataExtraction.extractFromCsv[CatalogueFileAIExtract](
@@ -308,7 +343,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
 
           catalogueFileAIExtract = catalogueFileAIExtracts.head
 
-          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, catalogueFileAIExtract, catalogueFileAIExtractGolden)
         } yield ()
       }
 
@@ -323,7 +358,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
             "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
           )
 
-          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-1-notes-compaction.json")
+          goldenFileName               = "spreadsheet-1-notes-compaction.json"
+          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden(goldenFileName)
 
           catalogueFileAIExtracts <- ZIO.scoped(
             aiClientDataExtraction.extractFromCsv[CatalogueFileAIExtract](
@@ -342,7 +378,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
 
           catalogueFileAIExtract = catalogueFileAIExtractMerged.copy(extractionNotes = noteCompactionOutput.notes)
 
-          _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          _ = compareWithGolden(goldenFileName, catalogueFileAIExtract, catalogueFileAIExtractGolden)
         } yield ()
       }
 
@@ -356,7 +392,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
               "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
             )
 
-            catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden("spreadsheet-4.json")
+            goldenFileName               = "spreadsheet-4.json"
+            catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden(goldenFileName)
 
             catalogueFileAIExtracts <- ZIO.scoped(
               aiClientDataExtraction.extractFromCsv[CatalogueFileAIExtract](
@@ -368,7 +405,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
 
             catalogueFileAIExtract = catalogueFileAIExtracts.head
 
-            _ = compareWithGolden(catalogueFileAIExtract, catalogueFileAIExtractGolden)
+            _ = compareWithGolden(goldenFileName, catalogueFileAIExtract, catalogueFileAIExtractGolden)
           } yield ()
       }
     }
