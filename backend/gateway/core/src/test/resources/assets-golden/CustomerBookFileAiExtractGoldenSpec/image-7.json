@@ -23,8 +23,7 @@
             "postalCode": null,
             "country": null,
             "extractionNotes": [
-              "Postal code is not shown",
-              "Country is not shown"
+              "Postal code and country are missing"
             ]
           },
           "addressType": "Billing"
@@ -56,8 +55,7 @@
             "postalCode": null,
             "country": null,
             "extractionNotes": [
-              "Postal code is not shown",
-              "Country is not shown"
+              "Postal code and country are missing"
             ]
           },
           "addressType": "Billing"
@@ -92,8 +90,7 @@
             "postalCode": null,
             "country": null,
             "extractionNotes": [
-              "Postal code is not shown",
-              "Country is not shown"
+              "Postal code and country are missing"
             ]
           },
           "addressType": "Billing"
@@ -138,8 +135,7 @@
             "postalCode": null,
             "country": null,
             "extractionNotes": [
-              "Postal code is not shown",
-              "Country is not shown"
+              "Postal code and country are missing"
             ]
           },
           "addressType": "Billing"
@@ -173,7 +169,7 @@
     "Left out date \"12.03.2025\", nothing beside it",
     "Left out title \"Список клиентов\", nothing beside it",
     "Left out column labels \"Имя / Компания\", nothing beside it",
-    "Left out footer \"Уточнить ИНН\", nothing beside it",
-    "Left out footer \"Перезвонить в пн!\", nothing beside it"
+    "Left out footer \"Перезвонить в пн!\", nothing beside it",
+    "Left out footer \"Уточнить ИНН\", nothing beside it"
   ]
 }

@@ -64,7 +64,7 @@ object AIClientDataExtraction {
     private inline val dataRowNumberOffset      = 1L
     private inline val responseFormatName       = "ai_client_response"
     private inline val inputMessageRoleUser     = "user"
-    private inline val inputImageDetailAuto     = "auto"
+    private inline val inputImageDetailHigh     = "high"
     private inline val responsesStatusCompleted = "completed"
 
     private def isRetryableSendError(error: Throwable): Boolean = error match {
@@ -184,7 +184,7 @@ object AIClientDataExtraction {
         instructions,
         List(
           InputContentItem.InputImage(
-            detail = inputImageDetailAuto,
+            detail = inputImageDetailHigh,
             fileId = None,
             imageUrl = Some(s"data:$imageMime;base64,$imageBase64"),
           )

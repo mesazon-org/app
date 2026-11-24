@@ -75,7 +75,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Email address could not be fully read"
+        "Email could not be fully read"
       ]
     }
   ],
@@ -177,6 +177,6 @@
     "Left out title \"Πελάτες\", date beside it",
     "Left out date \"12/03/2025\", title beside it",
     "Left out column labels \"Όνομα/Επωνυμία\", nothing beside it",
-    "Phone country codes taken from the Greek addresses"
+    "Phone country codes taken from the address"
   ]
 }

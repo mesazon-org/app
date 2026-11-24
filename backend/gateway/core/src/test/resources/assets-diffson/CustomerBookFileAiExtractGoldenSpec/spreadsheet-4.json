@@ -1,37 +1,26 @@
 [
   {
-    "op" : "add",
-    "path" : "/individualCandidates/2/extractionNotes/-",
-    "value" : "Name taken from the email address"
-  },
-  {
     "op" : "replace",
-    "path" : "/individualCandidates/2/fullName",
-    "value" : "Ap Dse",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/2/fullNameInferred",
-    "value" : true,
-    "old" : false
+    "path" : "/individualCandidates/0/phoneNumbers/0/phoneNationalNumber",
+    "value" : "68401618",
+    "old" : "568401618"
   },
   {
     "op" : "add",
-    "path" : "/individualCandidates/3/extractionNotes/-",
-    "value" : "Name taken from the email address"
+    "path" : "/individualCandidates/5/extractionNotes/0",
+    "value" : "Phone country code could not be determined"
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/3/fullName",
-    "value" : "We Ref",
-    "old" : null
+    "path" : "/individualCandidates/5/phoneNumbers/0/phoneNationalNumber",
+    "value" : "00793804882",
+    "old" : "93804882"
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/3/fullNameInferred",
-    "value" : true,
-    "old" : false
+    "path" : "/individualCandidates/5/phoneNumbers/0/phoneCountryCode",
+    "value" : null,
+    "old" : "+7"
   },
   {
     "op" : "replace",
@@ -43,13 +32,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/5/addresses/3/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/6/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -61,42 +44,18 @@
     "op" : "replace",
     "path" : "/individualCandidates/6/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
+  },
+  {
+    "op" : "add",
+    "path" : "/individualCandidates/7/extractionNotes/-",
+    "value" : "Country code taken from the number"
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/7/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/8/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Phone country code could not be identified"
-  },
-  {
-    "op" : "remove",
-    "path" : "/individualCandidates/8/extractionNotes/1",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/8/phoneNumbers/0/phoneNationalNumber",
-    "value" : "94227093",
-    "old" : "80894227093"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/8/phoneNumbers/0/phoneCountryCode",
-    "value" : "+808",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/8/addresses/2/address/extractionNotes/0",
-    "value" : "Street, city and postal code are missing",
-    "old" : "Address is incomplete"
+    "path" : "/individualCandidates/7/phoneNumbers/0/phoneCountryCode",
+    "value" : "+1",
+    "old" : "+357"
   },
   {
     "op" : "replace",
@@ -108,36 +67,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/10/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/12/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/12/addresses/0/address/extractionNotes/0",
-    "value" : "Street, city and postal code are missing",
-    "old" : "Address is incomplete"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/14/extractionNotes/0",
-    "value" : "Phone country code could not be determined"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/14/phoneNumbers/0/phoneNationalNumber",
-    "value" : "56330626382",
-    "old" : "330626382"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/14/phoneNumbers/0/phoneCountryCode",
-    "value" : null,
-    "old" : "+56"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -149,12 +79,12 @@
     "op" : "replace",
     "path" : "/individualCandidates/14/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "remove",
     "path" : "/individualCandidates/16/extractionNotes/0",
-    "old" : "Phone country code could not be identified"
+    "old" : "Phone country code could not be determined"
   },
   {
     "op" : "replace",
@@ -170,12 +100,6 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/18/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
     "path" : "/individualCandidates/19/addresses/0/address/city",
     "value" : "Limassol",
     "old" : null
@@ -184,7 +108,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/19/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -196,7 +120,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/20/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "add",
@@ -242,7 +166,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/21/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "add",
@@ -262,45 +186,9 @@
     }
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/27/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/30/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
+    "op" : "remove",
     "path" : "/individualCandidates/31/extractionNotes/0",
-    "value" : "Third phone country code could not be determined",
-    "old" : "Third phone's country code could not be identified"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/32/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/32/extractionNotes/-",
-    "value" : "An empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/32/phoneNumbers/0/phoneNationalNumber",
-    "value" : "36614904307",
-    "old" : "614904307"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/32/phoneNumbers/0/phoneCountryCode",
-    "value" : null,
-    "old" : "+36"
+    "old" : "Phone country code taken from the address"
   },
   {
     "op" : "replace",
@@ -312,13 +200,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/32/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/33/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -330,19 +212,13 @@
     "op" : "replace",
     "path" : "/individualCandidates/34/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
     "path" : "/individualCandidates/34/addresses/0/addressType",
     "value" : "Billing",
     "old" : "ShippingAndBilling"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/35/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
   },
   {
     "op" : "replace",
@@ -354,7 +230,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/35/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -372,7 +248,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/35/addresses/1/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Postal code is missing"
+    "old" : "City and postal code are missing"
   },
   {
     "op" : "replace",
@@ -390,7 +266,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/35/addresses/2/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Postal code is missing"
+    "old" : "City and postal code are missing"
   },
   {
     "op" : "add",
@@ -427,16 +303,15 @@
     }
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/40/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
+    "op" : "add",
+    "path" : "/individualCandidates/40/extractionNotes/-",
+    "value" : "Country code taken from the number"
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/42/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
+    "path" : "/individualCandidates/40/phoneNumbers/0/phoneCountryCode",
+    "value" : "+1",
+    "old" : "+357"
   },
   {
     "op" : "replace",
@@ -448,7 +323,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/42/addresses/1/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -475,12 +350,6 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/43/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
     "path" : "/individualCandidates/45/addresses/0/address/city",
     "value" : "Limassol",
     "old" : null
@@ -489,13 +358,13 @@
     "op" : "replace",
     "path" : "/individualCandidates/45/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/46/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
+    "path" : "/individualCandidates/45/addresses/0/addressType",
+    "value" : "Shipping",
+    "old" : "ShippingAndBilling"
   },
   {
     "op" : "replace",
@@ -507,7 +376,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/46/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "add",
@@ -527,9 +396,8 @@
     }
   },
   {
-    "op" : "replace",
+    "op" : "remove",
     "path" : "/individualCandidates/50/extractionNotes/0",
-    "value" : "An empty address was left out",
     "old" : "Empty address was left out"
   },
   {
@@ -542,7 +410,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/50/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "add",
@@ -571,7 +439,13 @@
     "op" : "replace",
     "path" : "/individualCandidates/52/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/52/addresses/0/addressType",
+    "value" : "Shipping",
+    "old" : "ShippingAndBilling"
   },
   {
     "op" : "replace",
@@ -583,42 +457,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/53/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/54/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/54/addresses/3/address/extractionNotes/0",
-    "value" : "Street, city and postal code are missing",
-    "old" : "Address is incomplete"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/55/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/55/extractionNotes/-",
-    "value" : "An empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/55/phoneNumbers/0/phoneNationalNumber",
-    "value" : "58144434768",
-    "old" : "144434768"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/55/phoneNumbers/0/phoneCountryCode",
-    "value" : null,
-    "old" : "+58"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -630,36 +469,12 @@
     "op" : "replace",
     "path" : "/individualCandidates/55/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
-    "op" : "replace",
+    "op" : "remove",
     "path" : "/individualCandidates/57/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/57/addresses/1/address/extractionNotes/0",
-    "value" : "Street, city and postal code are missing",
-    "old" : "Address is incomplete"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/60/extractionNotes/-",
-    "value" : "Phone country code could not be determined"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/60/phoneNumbers/0/phoneNationalNumber",
-    "value" : "93160772365",
-    "old" : "160772365"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/60/phoneNumbers/0/phoneCountryCode",
-    "value" : null,
-    "old" : "+93"
+    "old" : "Phone country code taken from the address"
   },
   {
     "op" : "replace",
@@ -671,7 +486,13 @@
     "op" : "replace",
     "path" : "/individualCandidates/60/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/60/addresses/0/addressType",
+    "value" : "Shipping",
+    "old" : "ShippingAndBilling"
   },
   {
     "op" : "replace",
@@ -683,7 +504,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/61/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "add",
@@ -704,12 +525,6 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/65/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
     "path" : "/individualCandidates/65/addresses/0/address/city",
     "value" : "Larnaca",
     "old" : null
@@ -718,19 +533,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/65/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/70/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/71/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -742,7 +545,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/71/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -760,7 +563,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/71/addresses/1/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Postal code is missing"
+    "old" : "City and postal code are missing"
   },
   {
     "op" : "add",
@@ -789,42 +592,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/72/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/73/extractionNotes/0",
-    "value" : "First phone country code could not be determined",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/73/extractionNotes/-",
-    "value" : "An empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/73/phoneNumbers/0/phoneNationalNumber",
-    "value" : "58702226558",
-    "old" : "702226558"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/73/phoneNumbers/0/phoneCountryCode",
-    "value" : null,
-    "old" : "+58"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/74/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/75/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -836,12 +604,12 @@
     "op" : "replace",
     "path" : "/individualCandidates/75/addresses/1/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "remove",
     "path" : "/individualCandidates/77/extractionNotes/0",
-    "old" : "Phone country code could not be identified"
+    "old" : "Phone country code could not be determined"
   },
   {
     "op" : "replace",
@@ -857,12 +625,6 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/78/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
     "path" : "/individualCandidates/78/addresses/0/address/city",
     "value" : "Limassol",
     "old" : null
@@ -871,13 +633,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/78/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/79/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -889,7 +645,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/79/addresses/1/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "add",
@@ -909,23 +665,6 @@
     }
   },
   {
-    "op" : "add",
-    "path" : "/individualCandidates/84/extractionNotes/-",
-    "value" : "Phone country code could not be determined"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/84/phoneNumbers/0/phoneNationalNumber",
-    "value" : "36464894922",
-    "old" : "464894922"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/84/phoneNumbers/0/phoneCountryCode",
-    "value" : null,
-    "old" : "+36"
-  },
-  {
     "op" : "replace",
     "path" : "/individualCandidates/84/addresses/0/address/city",
     "value" : "Limassol",
@@ -935,7 +674,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/84/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -947,13 +686,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/85/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/86/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -965,7 +698,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/86/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "add",
@@ -986,12 +719,6 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/87/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
     "path" : "/individualCandidates/87/addresses/0/address/city",
     "value" : "Limassol",
     "old" : null
@@ -1000,7 +727,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/87/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -1018,7 +745,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/87/addresses/1/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Postal code is missing"
+    "old" : "City and postal code are missing"
   },
   {
     "op" : "replace",
@@ -1031,6 +758,12 @@
     "path" : "/individualCandidates/87/addresses/2/address/city",
     "value" : "Limassol",
     "old" : null
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/87/addresses/2/address/extractionNotes/0",
+    "value" : "Postal code is missing",
+    "old" : "City and postal code are missing"
   },
   {
     "op" : "add",
@@ -1050,23 +783,6 @@
     }
   },
   {
-    "op" : "add",
-    "path" : "/individualCandidates/88/extractionNotes/0",
-    "value" : "Phone country code could not be determined"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/88/phoneNumbers/0/phoneNationalNumber",
-    "value" : "58162685361",
-    "old" : "162685361"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/88/phoneNumbers/0/phoneCountryCode",
-    "value" : null,
-    "old" : "+58"
-  },
-  {
     "op" : "replace",
     "path" : "/individualCandidates/88/addresses/0/address/city",
     "value" : "Nicosia",
@@ -1076,7 +792,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/88/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "add",
@@ -1096,6 +812,16 @@
     }
   },
   {
+    "op" : "remove",
+    "path" : "/individualCandidates/89/addresses/0/address/extractionNotes/0",
+    "old" : "Two streets shown for this address"
+  },
+  {
+    "op" : "remove",
+    "path" : "/individualCandidates/89/addresses/1/address/extractionNotes/0",
+    "old" : "Two streets shown for this address"
+  },
+  {
     "op" : "replace",
     "path" : "/individualCandidates/91/addresses/0/address/city",
     "value" : "Limassol",
@@ -1105,7 +831,7 @@
     "op" : "replace",
     "path" : "/individualCandidates/91/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
@@ -1131,15 +857,9 @@
     }
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/92/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Phone country code could not be identified"
-  },
-  {
     "op" : "remove",
-    "path" : "/individualCandidates/92/extractionNotes/1",
-    "old" : "Empty address was left out"
+    "path" : "/individualCandidates/92/extractionNotes/0",
+    "old" : "Phone country code could not be determined"
   },
   {
     "op" : "replace",
@@ -1154,15 +874,9 @@
     "old" : null
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/92/addresses/0/address/extractionNotes/0",
-    "value" : "Street and city are missing",
-    "old" : "Address is incomplete"
-  },
-  {
     "op" : "remove",
     "path" : "/individualCandidates/93/extractionNotes/0",
-    "old" : "Phone country code could not be identified"
+    "old" : "Phone country code could not be determined"
   },
   {
     "op" : "replace",
@@ -1178,30 +892,6 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/94/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/94/extractionNotes/1",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/94/addresses/0/address/extractionNotes/0",
-    "value" : "Street and city are missing",
-    "old" : "Address is incomplete"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/97/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
     "path" : "/individualCandidates/97/addresses/0/address/city",
     "value" : "Limassol",
     "old" : null
@@ -1210,13 +900,19 @@
     "op" : "replace",
     "path" : "/individualCandidates/97/addresses/0/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
-    "old" : "Address is incomplete"
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/99/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
+    "path" : "/individualCandidates/99/addresses/1/address/city",
+    "value" : "Nicosia",
+    "old" : null
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/99/addresses/1/address/extractionNotes/0",
+    "value" : "Street and postal code are missing",
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "remove",
@@ -1229,22 +925,9 @@
     "old" : "Two streets shown for this address"
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/101/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/103/extractionNotes/0",
-    "value" : "Empty addresses were left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
+    "op" : "add",
     "path" : "/individualCandidates/105/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
+    "value" : "Phone country code could not be determined"
   },
   {
     "op" : "replace",
@@ -1254,27 +937,15 @@
   },
   {
     "op" : "replace",
+    "path" : "/individualCandidates/105/phoneNumbers/0/phoneCountryCode",
+    "value" : null,
+    "old" : "+674"
+  },
+  {
+    "op" : "replace",
     "path" : "/individualCandidates/107/addresses/0/addressType",
     "value" : "Shipping",
     "old" : "ShippingAndBilling"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/108/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/109/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/115/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
   },
   {
     "op" : "add",
@@ -1294,69 +965,9 @@
     }
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/119/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Phone country code could not be identified"
-  },
-  {
     "op" : "remove",
-    "path" : "/individualCandidates/119/extractionNotes/1",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/119/phoneNumbers/0/phoneNationalNumber",
-    "value" : "3187945159",
-    "old" : "83187945159"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/119/phoneNumbers/0/phoneCountryCode",
-    "value" : "+8",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/121/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/125/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/126/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/127/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/131/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
     "path" : "/individualCandidates/135/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/137/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
+    "old" : "Phone country code taken from the address"
   },
   {
     "op" : "replace",
@@ -1412,36 +1023,6 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/140/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/142/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/143/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/143/phoneNumbers/0/phoneNationalNumber",
-    "value" : "3094172560",
-    "old" : "83094172560"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/144/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
     "path" : "/individualCandidates/144/addresses/1/address/city",
     "value" : "Nicosia",
     "old" : null
@@ -1454,63 +1035,20 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/148/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
+    "path" : "/individualCandidates/151/addresses/0/addressType",
+    "value" : "Shipping",
+    "old" : "ShippingAndBilling"
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/149/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/150/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Phone country code could not be identified"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/150/extractionNotes/1",
-    "value" : "Phone country code could not be determined",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/151/extractionNotes/0",
-    "value" : "Empty addresses were left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/153/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
+    "op" : "remove",
     "path" : "/individualCandidates/156/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
+    "old" : "Phone country code taken from the address"
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/158/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/159/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/161/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
+    "path" : "/individualCandidates/161/addresses/0/addressType",
+    "value" : "Shipping",
+    "old" : "ShippingAndBilling"
   },
   {
     "op" : "remove",
@@ -1541,24 +1079,6 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/168/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/171/extractionNotes/0",
-    "value" : "Empty addresses were left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/172/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
     "path" : "/individualCandidates/172/addresses/1/address/city",
     "value" : "Nicosia",
     "old" : null
@@ -1568,90 +1088,6 @@
     "path" : "/individualCandidates/172/addresses/1/address/extractionNotes/0",
     "value" : "Street and postal code are missing",
     "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/174/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/176/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/177/extractionNotes/0",
-    "value" : "Empty addresses were left out",
-    "old" : "Phone country code could not be identified"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/177/extractionNotes/1",
-    "value" : "Phone country code could not be determined",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/180/extractionNotes/0",
-    "value" : "Empty addresses were left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/186/extractionNotes/0",
-    "value" : "Empty addresses were left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/187/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/189/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/190/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Phone country code could not be identified"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/190/extractionNotes/1",
-    "value" : "Phone country code could not be determined",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/191/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Phone country code could not be identified"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/191/extractionNotes/1",
-    "value" : "Phone country code could not be determined",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/192/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/195/extractionNotes/0",
-    "value" : "Empty addresses were left out",
-    "old" : "Empty address left out"
   },
   {
     "op" : "add",
@@ -1671,215 +1107,72 @@
     }
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/197/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address left out"
+    "op" : "remove",
+    "path" : "/individualCandidates/199/extractionNotes/0",
+    "old" : "Country code +1 guessed, the address is in Cyprus"
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/198/extractionNotes/0",
-    "value" : "Phone country code could not be determined",
-    "old" : "Phone country code could not be identified"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/199/extractionNotes/-",
-    "value" : "Country code +1 guessed, but the address is in Cyprus"
+    "path" : "/individualCandidates/199/phoneNumbers/0/phoneNationalNumber",
+    "value" : "13701339554",
+    "old" : "3701339554"
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/199/phoneNumbers/0/phoneCountryCodeInferred",
-    "value" : true,
-    "old" : false
+    "path" : "/individualCandidates/199/phoneNumbers/0/phoneCountryCode",
+    "value" : "+357",
+    "old" : "+1"
   },
   {
     "op" : "remove",
     "path" : "/individualCandidates/199/addresses/0/address/extractionNotes/0",
-    "old" : "Two streets are shown in this address"
+    "old" : "Two streets shown for this address"
   },
   {
     "op" : "remove",
     "path" : "/individualCandidates/199/addresses/1/address/extractionNotes/0",
-    "old" : "Two streets are shown in this address"
+    "old" : "Two streets shown for this address"
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/208/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
+    "path" : "/individualCandidates/246/addresses/0/addressType",
+    "value" : "Shipping",
+    "old" : "ShippingAndBilling"
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/216/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
+    "path" : "/individualCandidates/258/addresses/0/addressType",
+    "value" : "Shipping",
+    "old" : "ShippingAndBilling"
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/223/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/225/extractionNotes/0",
-    "value" : "First phone country code could not be determined",
-    "old" : "First phone's country code could not be determined"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/229/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/232/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/233/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/234/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/236/extractionNotes/1",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/238/extractionNotes/1",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/240/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/243/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/248/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Phone country code could not be determined"
-  },
-  {
-    "op" : "remove",
-    "path" : "/individualCandidates/248/extractionNotes/1",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/248/phoneNumbers/0/phoneNationalNumber",
-    "value" : "612775788",
-    "old" : "83612775788"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/248/phoneNumbers/0/phoneCountryCode",
-    "value" : "+83",
+    "path" : "/individualCandidates/275/addresses/1/address/city",
+    "value" : "Limassol",
     "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/254/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/256/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/257/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/261/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/262/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/264/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/265/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/275/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
   },
   {
     "op" : "replace",
     "path" : "/individualCandidates/275/addresses/1/address/extractionNotes/0",
-    "value" : "City and postal code are missing",
-    "old" : "Postal code is missing"
+    "value" : "Postal code is missing",
+    "old" : "City and postal code are missing"
+  },
+  {
+    "op" : "add",
+    "path" : "/individualCandidates/276/extractionNotes/-",
+    "value" : "Phone country code could not be determined"
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/277/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Phone country code could not be determined"
-  },
-  {
-    "op" : "remove",
-    "path" : "/individualCandidates/277/extractionNotes/1",
-    "old" : "Empty address was left out"
+    "path" : "/individualCandidates/276/phoneNumbers/0/phoneNationalNumber",
+    "value" : "82676185600",
+    "old" : "676185600"
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/277/phoneNumbers/0/phoneNationalNumber",
-    "value" : "43394482",
-    "old" : "3843394482"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/277/phoneNumbers/0/phoneCountryCode",
-    "value" : "+38",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/282/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
+    "path" : "/individualCandidates/276/phoneNumbers/0/phoneCountryCode",
+    "value" : null,
+    "old" : "+82"
   },
   {
     "op" : "remove",
@@ -1899,137 +1192,6 @@
     "old" : null
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/284/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/285/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/286/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/287/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/292/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/293/extractionNotes/1",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/295/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/297/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/298/extractionNotes/0",
-    "value" : "An empty address was left out",
-    "old" : "Empty address was left out"
-  },
-  {
-    "op" : "remove",
-    "path" : "/individualCandidates/299/extractionNotes/0",
-    "old" : "Phone country code could not be determined"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/299/phoneNumbers/0/phoneNationalNumber",
-    "value" : "1910677157",
-    "old" : "071910677157"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/299/phoneNumbers/0/phoneCountryCode",
-    "value" : "+7",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/299/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/299/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/309/addresses/0/address/city",
-    "value" : "Nicosia",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/309/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/310/phoneNumbers/0/phoneNationalNumber",
-    "value" : "765154067",
-    "old" : "65154067"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/310/phoneNumbers/0/phoneCountryCode",
-    "value" : "+87",
-    "old" : "+877"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/313/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/313/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/315/addresses/0/address/city",
-    "value" : "Larnaca",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/315/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
     "op" : "add",
     "path" : "/individualCandidates/315/addresses/-",
     "value" : {
@@ -2062,18 +1224,6 @@
       },
       "addressType" : "Billing"
     }
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/321/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/321/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "add",
@@ -2093,65 +1243,51 @@
     }
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/332/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/332/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/332/addresses/1/address/addressLine1",
-    "value" : null,
-    "old" : "79 Griva Digeni St"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/332/addresses/1/address/city",
-    "value" : "Nicosia",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/332/addresses/1/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "City and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/332/addresses/2/address/addressLine1",
-    "value" : "79 Griva Digeni St",
-    "old" : "57 Arch. Makariou Ave"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/332/addresses/2/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/332/addresses/2/address/extractionNotes/0",
-    "value" : "Postal code is missing",
-    "old" : "City and postal code are missing"
-  },
-  {
     "op" : "add",
-    "path" : "/individualCandidates/332/addresses/-",
+    "path" : "/individualCandidates/321/addresses/-",
     "value" : {
       "address" : {
-        "addressLine1" : "57 Arch. Makariou Ave",
+        "addressLine1" : null,
         "addressLine2" : null,
         "city" : "Limassol",
         "postalCode" : null,
         "country" : "Cyprus",
         "extractionNotes" : [
-          "Postal code is missing"
+          "Street and postal code are missing"
+        ]
+      },
+      "addressType" : "Billing"
+    }
+  },
+  {
+    "op" : "add",
+    "path" : "/individualCandidates/332/addresses/1",
+    "value" : {
+      "address" : {
+        "addressLine1" : null,
+        "addressLine2" : null,
+        "city" : "Nicosia",
+        "postalCode" : null,
+        "country" : "Cyprus",
+        "extractionNotes" : [
+          "Street and postal code are missing"
+        ]
+      },
+      "addressType" : "Billing"
+    }
+  },
+  {
+    "op" : "add",
+    "path" : "/individualCandidates/332/addresses/2",
+    "value" : {
+      "address" : {
+        "addressLine1" : null,
+        "addressLine2" : null,
+        "city" : "Limassol",
+        "postalCode" : null,
+        "country" : "Cyprus",
+        "extractionNotes" : [
+          "Street and postal code are missing"
         ]
       },
       "addressType" : "Billing"
@@ -2159,39 +1295,26 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/333/phoneNumbers/0/phoneNationalNumber",
-    "value" : "00418802",
-    "old" : "8802"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/333/phoneNumbers/0/phoneCountryCode",
-    "value" : "+357",
-    "old" : "+41"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/333/phoneNumbers/0/phoneCountryCodeInferred",
-    "value" : true,
-    "old" : false
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/333/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/333/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
     "path" : "/individualCandidates/333/addresses/0/addressType",
     "value" : "Shipping",
     "old" : "ShippingAndBilling"
+  },
+  {
+    "op" : "add",
+    "path" : "/individualCandidates/333/addresses/-",
+    "value" : {
+      "address" : {
+        "addressLine1" : null,
+        "addressLine2" : null,
+        "city" : "Limassol",
+        "postalCode" : null,
+        "country" : "Cyprus",
+        "extractionNotes" : [
+          "Street and postal code are missing"
+        ]
+      },
+      "addressType" : "Shipping"
+    }
   },
   {
     "op" : "add",
@@ -2212,99 +1335,32 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/338/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/338/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
     "path" : "/individualCandidates/339/phoneNumbers/0/phoneNationalNumber",
-    "value" : "2678683513",
+    "value" : "88678683513",
     "old" : "678683513"
   },
   {
     "op" : "replace",
     "path" : "/individualCandidates/339/phoneNumbers/0/phoneCountryCode",
-    "value" : "+88",
+    "value" : "+8",
     "old" : "+882"
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/339/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/339/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/339/addresses/2/address/city",
-    "value" : "Hessen",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/339/addresses/2/address/extractionNotes/0",
-    "value" : "Street is missing",
-    "old" : "Street and city are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/339/addresses/3/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/339/addresses/3/address/extractionNotes/0",
-    "value" : "Postal code is missing",
-    "old" : "City and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/341/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/341/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/342/phoneNumbers/1/phoneNationalNumber",
-    "value" : "77626766",
-    "old" : "7626766"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/342/phoneNumbers/1/phoneCountryCode",
-    "value" : "+87",
-    "old" : "+877"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/344/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/344/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
+    "op" : "add",
+    "path" : "/individualCandidates/339/addresses/3",
+    "value" : {
+      "address" : {
+        "addressLine1" : null,
+        "addressLine2" : null,
+        "city" : "Limassol",
+        "postalCode" : null,
+        "country" : "Cyprus",
+        "extractionNotes" : [
+          "Street and postal code are missing"
+        ]
+      },
+      "addressType" : "Billing"
+    }
   },
   {
     "op" : "add",
@@ -2324,57 +1380,36 @@
     }
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/345/addresses/0/address/city",
-    "value" : "Hessen",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/345/addresses/0/address/extractionNotes/0",
-    "value" : "Street is missing",
-    "old" : "Street and city are missing"
-  },
-  {
     "op" : "add",
-    "path" : "/extractionNotes/0",
-    "value" : "Address state or region columns were not used"
-  },
-  {
-    "op" : "remove",
-    "path" : "/extractionNotes/9",
-    "old" : "The Address 9 - State/Region column was not used"
-  },
-  {
-    "op" : "remove",
-    "path" : "/extractionNotes/8",
-    "old" : "The Address 8 - State/Region column was not used"
-  },
-  {
-    "op" : "remove",
-    "path" : "/extractionNotes/7",
-    "old" : "The Address 7 - State/Region column was not used"
-  },
-  {
-    "op" : "remove",
-    "path" : "/extractionNotes/6",
-    "old" : "The Address 6 - State/Region column was not used"
+    "path" : "/individualCandidates/344/addresses/-",
+    "value" : {
+      "address" : {
+        "addressLine1" : null,
+        "addressLine2" : null,
+        "city" : "Limassol",
+        "postalCode" : null,
+        "country" : "Cyprus",
+        "extractionNotes" : [
+          "Street and postal code are missing"
+        ]
+      },
+      "addressType" : "Billing"
+    }
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/15",
-    "value" : "Some phone country codes taken from the file's Cyprus addresses",
-    "old" : "Local eight-digit phone numbers use Cyprus's country code"
-  },
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/16",
-    "value" : "Unmarked phone country codes taken from Cyprus addresses",
-    "old" : "Country code +357 was based on the file's Cyprus addresses"
+    "path" : "/extractionNotes/18",
+    "value" : "Country code taken from the country used throughout",
+    "old" : "Phone country codes taken from the address"
   },
   {
     "op" : "add",
     "path" : "/extractionNotes/-",
-    "value" : "Some phone country codes were taken from Cyprus addresses"
+    "value" : "Country code taken from Cyprus used across the file"
+  },
+  {
+    "op" : "add",
+    "path" : "/extractionNotes/-",
+    "value" : "Country code taken from Cyprus addresses across the file"
   }
 ]

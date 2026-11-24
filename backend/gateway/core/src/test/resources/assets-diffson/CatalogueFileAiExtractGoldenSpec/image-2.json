@@ -2,310 +2,155 @@
   {
     "op" : "replace",
     "path" : "/extractionNotes/0",
-    "value" : "Left out supplier details \"AMALTHIA TRADING (LIMASSOL) LTD\"",
+    "value" : "Left out supplier \"AMALTHIA TRADING (LIMASSOL) LTD\", nothing beside it",
     "old" : "Unlabelled leading numbers are treated as product codes"
   },
   {
     "op" : "replace",
     "path" : "/extractionNotes/1",
-    "value" : "Left out supplier contact details",
+    "value" : "Left out contact \"Asomatos Tel.25-952011-Fax25-952321 / 25-952177\", nothing beside it",
     "old" : "Left out supplier name \"AMALTHIA TRADING (LIMASSOL) LTD\", nothing beside it"
   },
   {
-    "op" : "replace",
+    "op" : "remove",
     "path" : "/extractionNotes/2",
-    "value" : "Left out title \"ΣΤΕΓΑ ΓΙΑ ΠΑΡΑΓΓΕΛΙΑ\", nothing beside it",
     "old" : "Left out contact line \"Asomatos Tel.25-952011-Fax25-952321 / 25-952177\", nothing beside it"
   },
   {
     "op" : "replace",
     "path" : "/extractionNotes/3",
-    "value" : "Left out footer \"ΣΤΙΣ ΤΙΜΕΣ ΔΕΝ ΣΥΜΠΕΡΙΛΑΜΒΑΝΕΤΑΙ ΤΟ Φ.Π.Α\", nothing beside it",
-    "old" : "Left out title \"ΛΙΣΤΑ ΓΙΑ ΠΑΡΑΓΓΕΛΙΑ\", nothing beside it"
-  },
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/4",
-    "value" : "Left out title \"Amalthia by Papanikolis\", nothing beside it",
+    "value" : "Left out heading \"ΣΤΙΣ ΤΙΜΕΣ ΔΕΝ ΣΥΜΠΕΡΙΛΑΜΒΑΝΕΤΑΙ ΤΟ Φ.Π.Α\", nothing beside it",
     "old" : "Left out VAT notice \"ΣΤΙΣ ΤΙΜΕΣ ΔΕΝ ΣΥΜΠΕΡΙΛΑΜΒΑΝΕΤΑΙ ΤΟ Φ.Π.Α\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/5",
-    "value" : "Left out date \"ΤΕΤΑΡΤΗ 04.11.2026\", nothing beside it",
+    "path" : "/extractionNotes/4",
+    "value" : "Left out title \"Amalthia\", nothing beside it",
     "old" : "Left out logo \"Amalthia\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/6",
-    "value" : "Left out column labels \"ΚΑΣΤΑΝΑ ΕΛΛΑΔΑΣ\", nothing beside it",
+    "path" : "/extractionNotes/5",
+    "value" : "Left out supplier \"by Papanicolis\", nothing beside it",
     "old" : "Left out logo text \"by Papanikolis\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/7",
-    "value" : "Left out heading \"ΚΑΡΥΔΙΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
+    "path" : "/extractionNotes/6",
+    "value" : "Left out date \"ΤΕΤΑΡΤΗ 04.11.2026\", nothing beside it",
     "old" : "Left out date \"ΤΕΤΑΡΤΗ\", nothing beside it"
   },
   {
     "op" : "remove",
-    "path" : "/extractionNotes/10",
-    "old" : "Left out heading \"ΚΑΡΥΔΙΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
-  },
-  {
-    "op" : "remove",
-    "path" : "/extractionNotes/9",
-    "old" : "Left out heading \"ΚΑΣΤΑΝΑ ΕΛΛΑΔΑΣ, KG, €\", nothing beside it"
-  },
-  {
-    "op" : "remove",
-    "path" : "/extractionNotes/8",
+    "path" : "/extractionNotes/7",
     "old" : "Left out date \"04.11.2026\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/12",
-    "value" : "Left out heading \"KIWI HAYWARD ΕΛΛΑΔΑ/ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
-    "old" : "Left out heading \"KIWI HAYWARD ΕΛΛΑΔΑ (ΝΕΑΣ ΕΣΟΔΕΙΑΣ)\", nothing beside it"
+    "path" : "/extractionNotes/8",
+    "value" : "Left out heading \"ΚΑΡΥΔΙΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
+    "old" : "Left out heading \"ΚΑΡΥΔΙΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
     "path" : "/extractionNotes/13",
-    "value" : "Left out heading \"KIWI ΤΣΕΛΙΧΙΛΕ ΕΛΛΑΔΑΣ\", nothing beside it",
+    "value" : "Left out heading \"KIWI HAYWARD ΕΛΛΑΔΑ (ΝΕΑΣ ΣΟΔΕΙΑΣ)\", nothing beside it",
+    "old" : "Left out heading \"KIWI HAYWARD ΕΛΛΑΔΑ (ΝΕΑΣ ΕΣΟΔΕΙΑΣ)\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/14",
+    "value" : "Left out heading \"KIWI ΤΣΕΛΙΔΗΣ ΕΛΛΑΔΑΣ\", nothing beside it",
     "old" : "Left out heading \"KIWI ΤΣΙΧΕΛΙΔΗΣ ΕΛΛΑΔΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/15",
+    "path" : "/extractionNotes/16",
     "value" : "Left out heading \"ΠΟΡΤΟΚΑΛΙΑ ΜΕΡΛΙΝ S.AFRICA/ΕΛΛΑΔΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΠΟΡΤΟΚΑΛΙΑ ΜΕΡΛΙΝ S.AFRICA / ΕΛΛΑΔΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/21",
-    "value" : "Left out heading \"ΚΑΠΑΡΙ ΙΣΠΑΝΙΑΣ ΣΕ ΑΛΜΗ\", nothing beside it",
+    "path" : "/extractionNotes/22",
+    "value" : "Left out heading \"ΚΑΛΑΜΠΟΚΙ ΦΥΛΛΑ ΣΕ ΑΛΜΗ\", nothing beside it",
     "old" : "Left out heading \"ΚΛΗΜΑΤΟΦΥΛΛΑ ΣΕ ΑΛΜΗ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/22",
-    "value" : "Left out column labels \"ΕΞΩΤΙΚΑ ΦΡΟΥΤΑ\", nothing beside it",
-    "old" : "Left out heading \"ΕΞΩΤΙΚΑ ΦΡΟΥΤΑ, KG, €\", nothing beside it"
-  },
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/23",
-    "value" : "Left out heading \"MANGO ΠΕΡΟΥ(READY TO EAT S/ΑΕΡ)\", nothing beside it",
+    "path" : "/extractionNotes/24",
+    "value" : "Left out heading \"ΜΑΝΓΚΟ (ΕΤΟΙΜΟ/READY TO EAT BY AIR)\", nothing beside it",
     "old" : "Left out heading \"MANGO ΠΕΡΟΥ (READY TO EAT BY AIR)\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/26",
+    "path" : "/extractionNotes/27",
     "value" : "Left out heading \"ΑΧΛΑΔΙΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΑΧΛΑΔΙΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/27",
-    "value" : "Left out heading \"ΑΧΛΑΔΙΑ ΟΛΛΑΝΔΙΑΣ / BY TRACK\", nothing beside it",
+    "path" : "/extractionNotes/28",
+    "value" : "Left out heading \"ΑΧΛΑΔΙΑ ΟΛΛΑΝΔΙΑΣ / BY TRACK)\", nothing beside it",
     "old" : "Left out heading \"ΑΧΛΑΔΙΑ ΟΛΛΑΝΔΙΑΣ (BY TRACK)\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/32",
-    "value" : "Left out heading \"ΜΗΛΑ FOR (PINK) LADY ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
+    "path" : "/extractionNotes/33",
+    "value" : "Left out heading \"ΜΗΛΑ FOYJI (PINK) LADY ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΜΗΛΑ FOR (PINK) LADY ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/33",
+    "path" : "/extractionNotes/34",
     "value" : "Left out heading \"ΜΗΛΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΜΗΛΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/34",
-    "value" : "Left out heading \"ΜΗΛΑ RED CHIEF - ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
+    "path" : "/extractionNotes/35",
+    "value" : "Left out heading \"ΜΗΛΑ RED CHIEF ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΜΗΛΑ RED CHIEF ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/35",
+    "path" : "/extractionNotes/36",
     "value" : "Left out heading \"ΜΗΛΑ R.GALA ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΜΗΛΑ R.GALA ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/36",
+    "path" : "/extractionNotes/37",
     "value" : "Left out heading \"ΜΗΛΑ GRANNY ΕΛΛΑΔΑΣ ΝΕΑΣ ΣΟΔΕΙΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΜΗΛΑ GRANNY ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/37",
-    "value" : "Left out column labels \"ΣΤΑΦΥΛΙΑ ΛΕΥΚΑ ΕΛΛΑΔΑΣ\", nothing beside it",
-    "old" : "Left out heading \"ΣΤΑΦΥΛΙΑ ΛΕΥΚΑ ΕΛΛΑΔΑΣ, KG, €\", nothing beside it"
-  },
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/41",
-    "value" : "Left out heading \"ΣΙΤΑΡΟΠΟΥΛΑ ΚΥΠΡΙΑΚΑ\", nothing beside it",
+    "path" : "/extractionNotes/42",
+    "value" : "Left out heading \"ΤΣΙΑΤΟΠΟΥΛΑ ΚΥΠΡΙΑΚΗ\", nothing beside it",
     "old" : "Left out heading \"ΣΙΤΑΡΟΠΟΥΛΑ ΚΥΠΡΙΑΚΗ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/46",
+    "path" : "/extractionNotes/47",
     "value" : "Left out heading \"ΚΡΕΜΜΥΔΙΑ ΟΛΛΑΝΔΙΑΣ/ΕΛΛΑΔΑΣ\", nothing beside it",
     "old" : "Left out heading \"ΚΡΕΜΜΥΔΙΑ ΟΛΛΑΝΔΙΑΣ/ ΕΛΛΑΔΑΣ\", nothing beside it"
   },
   {
     "op" : "replace",
-    "path" : "/extractionNotes/48",
-    "value" : "Prices use euros from the column headings",
-    "old" : "Kilograms come from the KG column headings"
+    "path" : "/candidates/1/variants/0/sku",
+    "value" : "45601",
+    "old" : "45501"
   },
   {
     "op" : "remove",
-    "path" : "/extractionNotes/49",
-    "old" : "Currency comes from the € column headings"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/0/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/1/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/7/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/8/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/9/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/10/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/11/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/12/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/13/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/14/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/15/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/16/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/17/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/18/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
+    "path" : "/candidates/7/extractionNotes/0",
+    "old" : "Name may be misspelled in the source"
   },
   {
     "op" : "replace",
     "path" : "/candidates/19/name",
-    "value" : "KOKKINO 2L",
-    "old" : "ΚΟΚΚΙΝΟ 2L"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/19/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/20/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/21/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/22/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/23/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/24/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/25/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/26/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
+    "value" : "ΚΟΚΚΙΝΟ 2L",
+    "old" : "KOKKINO 2L"
   },
   {
     "op" : "replace",
@@ -315,50 +160,14 @@
   },
   {
     "op" : "replace",
-    "path" : "/candidates/27/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/28/name",
-    "value" : "ΒΑΖΑΚΙ (12X400g)",
-    "old" : "ΒΑΖΑΚΙ (12Χ400g)"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/29/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/30/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
     "path" : "/candidates/31/name",
     "value" : "ΠΑΠΟΥΤΣΟΣΥΚΑ ΙΤΑΛΙΑ",
     "old" : "ΠΑΠΟΥΤΣΟΣΥΚΑ IL ΙΤΑΛΙ"
   },
   {
-    "op" : "replace",
-    "path" : "/candidates/31/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
     "op" : "remove",
     "path" : "/candidates/31/extractionNotes/0",
     "old" : "Name partly unclear, please check"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/32/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
   },
   {
     "op" : "replace",
@@ -368,38 +177,14 @@
   },
   {
     "op" : "replace",
-    "path" : "/candidates/34/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
     "path" : "/candidates/35/name",
-    "value" : "PINEAPPLE ΣΕΡ COSTA RIKA",
+    "value" : "PINEAPPLE ΣΕΛ. COSTA RIKA",
     "old" : "PINEAPPLE 8τεμ COSTA RIKA"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/35/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
   },
   {
     "op" : "remove",
     "path" : "/candidates/35/extractionNotes/0",
     "old" : "Name partly unclear, please check"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/36/variants/0/sku",
-    "value" : "46167",
-    "old" : "46107"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/36/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
   },
   {
     "op" : "replace",
@@ -409,43 +194,9 @@
   },
   {
     "op" : "replace",
-    "path" : "/candidates/37/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "remove",
-    "path" : "/candidates/37/extractionNotes/0",
-    "old" : "Name partly unclear, please check"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/38/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "remove",
-    "path" : "/candidates/38/extractionNotes/0",
-    "old" : "Name partly unclear, please check"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/39/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/41/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/42/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
+    "path" : "/candidates/38/variants/0/sellingUnit/quantity/value",
+    "value" : 2.8,
+    "old" : 2
   },
   {
     "op" : "replace",
@@ -455,39 +206,21 @@
   },
   {
     "op" : "replace",
-    "path" : "/candidates/45/name",
-    "value" : "KIST",
-    "old" : "KENT"
+    "path" : "/candidates/46/variants/0/sellingUnit/quantity/value",
+    "value" : 6,
+    "old" : 5
   },
   {
     "op" : "replace",
-    "path" : "/candidates/45/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
+    "path" : "/candidates/48/name",
+    "value" : "ΚΡΥΣΤΑΛΛΙΑ 70/75 1L",
+    "old" : "KRISTALLIA 70/75 1L"
   },
   {
     "op" : "replace",
-    "path" : "/candidates/46/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/47/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/48/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/49/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
+    "path" : "/candidates/49/name",
+    "value" : "ΚΡΥΣΤΑΛΛΙΑ 58/60 2L",
+    "old" : "KRISTALLIA 58/60 2L"
   },
   {
     "op" : "replace",
@@ -497,247 +230,27 @@
   },
   {
     "op" : "replace",
-    "path" : "/candidates/50/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
+    "path" : "/candidates/58/variants/0/sku",
+    "value" : "13202",
+    "old" : "13102"
   },
   {
     "op" : "replace",
-    "path" : "/candidates/51/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
+    "path" : "/candidates/71/name",
+    "value" : "SIZE 75/80 LOOSE",
+    "old" : "SIZE 75/80 1L"
   },
   {
     "op" : "replace",
-    "path" : "/candidates/52/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
+    "path" : "/candidates/84/name",
+    "value" : "1Bx2τεμ (PACK)",
+    "old" : "18X2τεμ (PACK)"
   },
   {
     "op" : "replace",
-    "path" : "/candidates/53/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/54/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/55/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/56/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/57/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/58/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/59/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/60/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/61/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/62/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/63/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/64/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/65/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/66/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/67/variants/0/sku",
-    "value" : "17108",
-    "old" : "17109"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/67/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/68/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/69/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/70/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/71/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/72/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/73/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/74/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/75/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/76/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/77/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/78/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/79/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/80/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/81/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/82/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/83/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/86/name",
-    "value" : "ΑΓΡΕΛΙΑ ΠΡΑΣΙΝΑ(11X450gr) ΟΛΛ",
-    "old" : "ΑΓΡΕΛΙΑ ΠΡΑΣΙΝΑ(11Χ450gr) ΟΛΛ"
-  },
-  {
-    "op" : "remove",
-    "path" : "/candidates/86/extractionNotes/0",
-    "old" : "Name partly unclear, please check"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/87/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/88/variants/0/sku",
-    "value" : "131301",
-    "old" : "31301"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/88/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "remove",
-    "path" : "/candidates/89/extractionNotes/1",
-    "old" : "Name partly unclear, please check"
+    "path" : "/candidates/89/name",
+    "value" : "BRUSSEL SPROUTS (10X500gr) ΟΛΛΑ",
+    "old" : "BRUSSEL SPROUTS (10X500gr) ΟΛΛ"
   },
   {
     "op" : "remove",
@@ -747,7 +260,7 @@
   {
     "op" : "replace",
     "path" : "/candidates/90/name",
-    "value" : "MOULIΣ ΙΤΑΛΙΑΣ",
+    "value" : "ΜΟΥΣ ΙΤΑΛΙΑΣ",
     "old" : "MOOLY ΙΤΑΛΙΑΣ"
   },
   {
@@ -758,205 +271,26 @@
   },
   {
     "op" : "replace",
-    "path" : "/candidates/90/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/91/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/91/variants/0/sellingUnit/quantity/value",
-    "value" : 1,
-    "old" : 5
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/91/variants/0/sellingUnit/quantity/unit",
-    "value" : "Piece",
-    "old" : "Kilogram"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/93/name",
-    "value" : "BABY L.MIX (12x125g)",
-    "old" : "BABY MAIS (12x125g)"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/93/variants/0/sku",
-    "value" : "78306",
-    "old" : "78304"
-  },
-  {
-    "op" : "replace",
     "path" : "/candidates/96/name",
     "value" : "CHICCORY ΟΛΛΑΝΔΙΑΣ",
     "old" : "CHICORY ΟΛΛΑΝΔΙΑΣ"
   },
   {
     "op" : "replace",
-    "path" : "/candidates/96/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "add",
-    "path" : "/candidates/96/extractionNotes/-",
-    "value" : "Name may be misspelled in the source"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/97/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/99/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/100/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/102/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/105/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/106/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/107/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/108/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
+    "path" : "/candidates/103/variants/0/sku",
+    "value" : "61201",
+    "old" : "61203"
   },
   {
     "op" : "replace",
     "path" : "/candidates/109/name",
-    "value" : "Α/Α ΚΟΚΚΙΝΑ ΟΛΛΑΝΔΙΑΣ",
+    "value" : "ΛΥΡΑ ΚΟΚΚΙΝΑ ΟΛΛΑΝΔΙΑΣ",
     "old" : "ΑΨΑ ΚΟΚΚΙΝΑ ΟΛΛΑΝΔΙΑΣ"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/109/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/110/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/111/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/112/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
   },
   {
     "op" : "replace",
     "path" : "/candidates/113/name",
     "value" : "ΠΑΝΤΖΑΡΙΑ 12x500g ΟΛΛΑΝΔΙΑ",
     "old" : "ΠΑΝΤΖΑΡΙΑ 12x500g ΛΙΘΟΥΑΝΙΑ"
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/114/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/115/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/116/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/117/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/118/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/119/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/120/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/121/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/122/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/123/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
-    "op" : "replace",
-    "path" : "/candidates/124/variants/0/sellingUnitInferred",
-    "value" : false,
-    "old" : true
   }
 ]

@@ -55,7 +55,7 @@ object AIInstructions {
       |            "city": "Nicosia",
       |            "postalCode": null,
       |            "country": "Cyprus",
-      |            "extractionNotes": ["Postal code could not be read"]
+      |            "extractionNotes": ["Postal code is missing"]
       |          },
       |          "addressType": "ShippingAndBilling"
       |        }
@@ -69,7 +69,9 @@ object AIInstructions {
       |      "businessName": "Acme Tools",
       |      "emails": ["orders@acme-tools.com"],
       |      "taxID": null,
-      |      "phoneNumbers": [],
+      |      "phoneNumbers": [
+      |        {"phoneNationalNumber": "4155550100", "phoneCountryCode": "+1", "phoneCountryCodeInferred": false}
+      |      ],
       |      "addresses": [],
       |      "customerBusinessContacts": [
       |        {
@@ -78,15 +80,15 @@ object AIInstructions {
       |          "email": "john.smith@acme-tools.com",
       |          "phoneNumber": {
       |            "phoneNationalNumber": "4155550123",
-      |            "phoneCountryCode": null,
-      |            "phoneCountryCodeInferred": false
+      |            "phoneCountryCode": "+1",
+      |            "phoneCountryCodeInferred": true
       |          },
       |          "fullNameInferred": false,
-      |          "extractionNotes": ["Phone country code is not shown"]
+      |          "extractionNotes": ["Phone country code taken from the other numbers"]
       |        }
       |      ],
       |      "businessNameInferred": true,
-      |      "extractionNotes": ["Business name taken from the company email"]
+      |      "extractionNotes": ["Business name taken from the email"]
       |    }
       |  ],
       |  "emptyEntryRowIndexes": [4],
@@ -180,7 +182,11 @@ object AIInstructions {
       |  abbreviations "г.", "пр.", "Λεωφ.", "Τ.Θ.", and "St.", but "закупки." gives "закупки" and "UK." gives "UK".
       |  Never add punctuation that is not printed, so "Evia Flowers Ltd" stays "Evia Flowers Ltd". Never correct,
       |  complete, expand, translate, re-case, or re-punctuate a value, and never replace it with a more likely word
-      |  or code. One exception is a name printed in separate first-name and last-name columns, which is joined into
+      |  or code. Copy each value character by character: never change it to a known word, name, or place, and never
+      |  add or remove an accent. Keep each character in its printed alphabet, and read a look-alike letter in the
+      |  alphabet of the letters around it. Copy codes, such as tax IDs and postal codes, digit by digit, never adding
+      |  a digit or dropping one you can read. One exception is a name printed in separate first-name and last-name
+      |  columns, which is joined into
       |  one name with one space, each part copied exactly. The other is address text, split into its fields by the
       |  address parts rule below. A name worked out from an email, or completed from it at the processing message's
       |  request, follows the name rules below. A value longer than 255 characters keeps its first 255 characters
@@ -190,7 +196,8 @@ object AIInstructions {
       |  person's name, infer the name from it and set fullNameInferred to true. Be lenient: john.smith@example.com,
       |  john@example.com, and jsmith@example.com (read as "J Smith") all qualify. Never do this for a role or
       |  department mailbox (info@, sales@, support@, noreply@, admin@, contact@ and the like) or a meaningless local
-      |  part (xk29fj3@...). This applies to an individual's name and a business contact's name.
+      |  part (xk29fj3@...). Infer a name only when the part before the @ splits into plausible name parts, so
+      |  ap.dse@example.com gives no name. This applies to an individual's name and a business contact's name.
       |- A business's own name may instead be inferred from the domain of one of its own company emails, such as
       |  orders@acme-tools.com read as "Acme Tools"; set businessNameInferred to true. Never use a free-mail domain
       |  (gmail, outlook, yahoo, hotmail, icloud and the like), a meaningless domain, or a contact's email.
@@ -236,7 +243,8 @@ object AIInstructions {
       |- When part of a free-text value other than a tax ID cannot be made out, return only the characters you can
       |  see, never a different or more likely word or code. Add one note at its narrowest scope, the candidate,
       |  contact, or address, naming the detail, such as "Address partly unclear, please check", and never suggest a
-      |  reading. When none of it can be seen, follow the unreadable-detail rules.
+      |  reading. When you are unsure of a character, treat it as one you cannot make out. Text cut off at an edge
+      |  always gets this note. When none of it can be seen, follow the unreadable-detail rules.
       |- A clearly printed free-text value that looks like an ordinary word or known name with a typing slip is kept
       |  exactly as printed. Add one note at its narrowest scope, such as "Name may be misspelled in the source", and
       |  never suggest a correction. Abbreviations, letter case, punctuation, code formats, and foreign words never
@@ -244,30 +252,36 @@ object AIInstructions {
       |- Phones. phoneNationalNumber holds only the national number, without the country code; phoneCountryCode holds
       |  the dialling code. Make a best-effort attempt at a valid pair for the country. A code written with the number,
       |  such as "+357 99123456" or "00357 99123456", or in its own dialling-code column, is read, not inferred: split
-      |  it out. When no code is written, apply this interpretation sequence internally:
+      |  it out. A "+" or "00" prefix that is not a real country code, such as +808, +877, or +87, is not split: keep
+      |  every digit in phoneNationalNumber, with phoneCountryCode: null and phoneCountryCodeInferred: false, and add
+      |  the note "Phone country code could not be determined" on the phone's owner. When no code is written, apply
+      |  this interpretation sequence internally:
       |  1. Read the phone in its context: the entry's own address, one country used across the file, or the processing
       |     message.
       |  2. Compare that context with real international dialling codes and with the length and format of the national
       |     number for that country.
-      |  3. If the clues agree, return the code with phoneCountryCodeInferred: true and one note giving its basis on
-      |     the phone's owner, the candidate or the contact. When the basis is shared by the whole source, such as one
+      |  3. If the clues agree, return the code with phoneCountryCodeInferred: true and one note on the phone's owner,
+      |     the candidate or the contact, giving its basis as "<Field> taken from <source>", such as
+      |     "Country code taken from the address". When the basis is shared by the whole source, such as one
       |     country used throughout, write that note once at top level instead. A code taken from the processing
       |     message gets no basis note, but a conflict with the address still gets the note in step 4.
       |  4. If the clues conflict, such as an address in one country and a number whose length and format fit another,
       |     still make the best guess. Prefer the country whose length and format fit the national number, together
       |     with the country used across the rest of the file or the processing message. The address's city or
       |     country is weaker evidence and never rules the guess out. Return that code with phoneCountryCodeInferred:
-      |     true and one note on the phone's owner saying the code is a guess that does not match the address, such as
-      |     "Country code +357 guessed, but the city is in Greece". A guess is not an error: the phone stays a normal
+      |     true and the note "Country code <code> guessed, the address is in <country>" on the phone's owner, such as
+      |     "Country code +357 guessed, the address is in Greece". A guess is not an error: the phone stays a normal
       |     returned phone.
-      |  5. Only when no country at all is plausible, keep the phone with phoneCountryCode: null,
-      |     phoneCountryCodeInferred: false, and one short note on the phone's owner saying why. Never leave out a
-      |     phone only because its country code is missing.
+      |  5. A number written with no "+" or "00" always gets a code from step 3 or step 4, never phoneCountryCode:
+      |     null. Never leave out a phone only because its country code is missing.
       |- When the source clearly marks one email or phone as the main one, list it first; otherwise keep source order.
       |- Addresses. Missing, null, empty, and whitespace-only address text is empty. Keep an address when at least one
-      |  of its five text fields has content, even when partial, and note missing or unclear fields in that address's
-      |  extractionNotes. Leave out an address whose five fields are all empty and note on the candidate that an empty
-      |  address was left out. Merge repeated addresses of one candidate first, when all five fields match after
+      |  of its five text fields has content, even when partial. Note its missing parts in that address's
+      |  extractionNotes as "<Parts> is missing" or "<Parts> are missing", with the parts in the order street, city,
+      |  postal code, country, such as "Street, city and postal code are missing", and an unclear part as
+      |  "<Detail> partly unclear, please check". Leave out an address whose five fields are all empty and note it on
+      |  the candidate as "Empty address was left out", or "Empty addresses were left out" for more than one. Merge
+      |  repeated addresses of one candidate first, when all five fields match after
       |  trimming, ignoring type; never merge addresses of different candidates. Return every remaining address. Try
       |  to identify from the source which address is the billing address and which is the shipping address, and mark
       |  each addressType accordingly as best you can. Use ShippingAndBilling only when the source shows one address
@@ -291,7 +305,8 @@ object AIInstructions {
       |  city "Nicosia"; "London E8 3RT, UK." gives city "London", postalCode "E8 3RT", and country "UK";
       |  "Лиговский пр., 52, офис 14," gives addressLine1 "Лиговский пр., 52" and addressLine2 "офис 14"; and
       |  "г. Казань," gives city "г. Казань". Everything else stays exactly as printed, including accents, marks such
-      |  as "΄", and the alphabet.
+      |  as "΄", and the alphabet. A State, Region, Province, or County column is never the city: leave city empty
+      |  and treat that column as one that maps to no field.
       |- entriesProcessed is the number of original rows returned as at least one candidate. A row split into several
       |  candidates counts once, so the candidate lists may hold more than entriesProcessed. entriesIdentified is the
       |  total: entriesProcessed plus the number of emptyEntryRowIndexes plus the number of
@@ -317,13 +332,25 @@ object AIInstructions {
       |  instead. Use plain everyday words a customer would understand, and avoid technical words such as infer,
       |  context, schema, or format codes. Summarise a long list of names as a count, for example
       |  "Eight marketing columns were not used". For example,
-      |  use ["Name taken from the email address", "Second phone's country code taken from the address"] instead of
+      |  use ["Name taken from the email", "Second phone's country code taken from the address"] instead of
       |  one long sentence about both.
+      |- These notes are fixed sentences; write them exactly, never reworded:
+      |  - "<Detail> could not be fully read"
+      |  - "<Detail> partly unclear, please check"
+      |  - "<Detail> may be misspelled in the source"
+      |  - "<Field> taken from <source>", where <source> is one of the address, the other numbers, the email; use
+      |    your own words only when none fits
+      |  - "Country code <code> guessed, the address is in <country>"
+      |  - "<Parts> is missing" or "<Parts> are missing", with the parts in the order street, city, postal code,
+      |    country
+      |  - "Empty address was left out" or "Empty addresses were left out"
+      |  - "Phone country code could not be determined"
+      |  - "AI could not detect relevant customer data in this file."
       |- Candidate, address, and contact extractionNotes are required arrays of comments about their own extraction.
       |  Put one plain comment in each entry, with no bullet prefix, numbering, or position prefix. Use [] when there
-      |  is no comment. Candidate examples: ["An email address could not be read"] and
-      |  ["Name may be misspelled in the source"]. Address examples: ["Postal code could not be read"] and
-      |  ["Address partly unclear, please check"]. Contact examples: ["Phone number could not be read"] and
+      |  is no comment. Candidate examples: ["Email could not be fully read"] and
+      |  ["Name may be misspelled in the source"]. Address examples: ["Postal code could not be fully read"] and
+      |  ["Address partly unclear, please check"]. Contact examples: ["Phone number could not be fully read"] and
       |  ["Role partly unclear, please check"].
       |- The server writes no notes. Missing and inferred fields reach the user as structured data, so never write a
       |  note that only says a name is missing or a contact has no name. Do write
@@ -345,9 +372,11 @@ object AIInstructions {
       |     6. the nothing-detected note.
       |     7. the fixed ignored-message note.
       |     Word a left-out row note "Left out row <n>, <kind> "<text>", <beside>". <kind> is heading, title, column
-      |     labels, total, date, page number, footer, or letterhead. <beside> is "nothing beside it" or what was seen
-      |     beside it, such as "contact details beside it". Use your own words after "Left out" only when no kind
-      |     fits. For column labels, quote only the first label, for example
+      |     labels, total, date, page number, footer, or letterhead. A row whose other cells name columns, such as
+      |     "Email" or "Phone", is column labels, not a heading. <beside> is "nothing beside it" or the other printed
+      |     content on the same row, outside the quoted line, such as "contact details beside it". The line's own
+      |     cells, including the other column labels, are never beside it. Use your own words after "Left out" only
+      |     when no kind fits. For column labels, quote only the first label, for example
       |     "Left out row 17, column labels "Product", nothing beside it". For every other kind, quote the whole line
       |     exactly as printed, with its cells joined by ", ", for example
       |     "Left out row 7, heading "WHOLESALE CLIENTS", nothing beside it". Rows that could not be returned are
@@ -417,7 +446,7 @@ object AIInstructions {
       |}
       |That is the result for the supplied notes ["Left out row 58, heading "RETAIL", nothing beside it",
       |"The Balance column was not used", "Left out row 7, heading "WHOLESALE CLIENTS", nothing beside it",
-      |"The Balance column is not used"]. The two notes about the Balance column say the same thing, so they become
+      |"The Balance column was not used"]. The two notes about the Balance column say the same thing, so they become
       |one. The notes about rows 7 and 58 differ in detail, so both stay exactly as supplied. The kept notes are then
       |ordered by kind and by row.
       |The notes array is required and never empty. Return only this shape.
@@ -454,11 +483,12 @@ object AIInstructions {
       |Return one JSON object with this shape:
       |{
       |  "notes": ["Left out row 7, heading \"FRUITS\", nothing beside it",
-      |    "Left out row 58, heading \"VEGETABLES\", nothing beside it", "Prices are in euros, as the header says"]
+      |    "Left out row 58, heading \"VEGETABLES\", nothing beside it", "Currency taken from the price list header"]
       |}
       |That is the result for the supplied notes ["Left out row 58, heading "VEGETABLES", nothing beside it",
-      |"Prices are in euros, as the header says", "Left out row 7, heading "FRUITS", nothing beside it",
-      |"Prices are given in euros, per the header"]. The two notes about euros say the same thing, so they become one.
+      |"Currency taken from the price list header", "Left out row 7, heading "FRUITS", nothing beside it",
+      |"Currency taken from the price list header"]. The two notes about the currency say the same thing, so they
+      |become one.
       |The notes about rows 7 and 58 differ in detail, so both stay exactly as supplied. The kept notes are then
       |ordered by kind and by row.
       |The notes array is required and never empty. Return only this shape.
@@ -525,12 +555,12 @@ object AIInstructions {
       |  "entriesProcessed": 2,
       |  "candidates": [
       |    {
-      |      "name": "Olive Oil",
+      |      "name": "Olive Oil 500 ml bottle",
       |      "description": null,
       |      "variants": [
       |        {
       |          "sku": "OIL-500",
-      |          "label": "500 ml bottle",
+      |          "label": null,
       |          "description": null,
       |          "attributes": [{"name": "Origin", "value": "Crete"}],
       |          "price": {"amount": 12.50, "currency": "EUR", "currencyInferred": true},
@@ -540,7 +570,7 @@ object AIInstructions {
       |            "unitSize": {"value": 500, "unit": "Millilitre"}
       |          },
       |          "sellingUnitInferred": true,
-      |          "extractionNotes": ["Unit taken from the label"]
+      |          "extractionNotes": ["Selling unit taken from the product name"]
       |        }
       |      ],
       |      "extractionNotes": []
@@ -565,7 +595,7 @@ object AIInstructions {
       |  ],
       |  "emptyEntryRows": [4],
       |  "unidentifiedEntryRows": [7],
-      |  "extractionNotes": ["Prices are in euros, as the price header says"]
+      |  "extractionNotes": ["Currency taken from the price list header"]
       |}
       |All arrays, including attributes, are required, including when empty. Use null for an absent optional value,
       |never "" or whitespace. Keep attribute entries in source order, including repeated names and conflicting values.
@@ -648,7 +678,11 @@ object AIInstructions {
       |  gives "Olive oil" and "Red, Blue;" gives "Red, Blue". Never add punctuation that is not printed, so
       |  "Olive oil 1L" stays "Olive oil 1L". Prices, quantities, and units are not free text and are unaffected.
       |  Never correct, complete, expand, translate, re-case, or re-punctuate a value, and never replace it with a
-      |  more likely word or code. The only exception is an attribute whose column has no usable printed label, which
+      |  more likely word or code. Copy each value character by character: never change it to a known word, place,
+      |  or brand, and never add or remove an accent. Keep each character in its printed alphabet, and read a
+      |  look-alike letter in the alphabet of the letters around it. Copy codes, such as SKUs, digit by digit, never
+      |  adding a digit or dropping one you can read. The only exception is an attribute whose column has no usable
+      |  printed label, which
       |  is still named from its values. A value longer than 255 characters keeps its first 255 characters exactly as
       |  printed, without a trailing space. Add one note at its narrowest scope naming the field, such as
       |  "Description was too long and was cut".
@@ -686,9 +720,12 @@ object AIInstructions {
       |  3. Check whether the interpretation is confidently defensible from the source and context. An implied
       |     quantity of one for a recognized unit is allowed and is not an uncertainty by itself.
       |  4. If nothing supported is a correct, confident match, leave that value null instead of forcing one, and add
-      |     a short note saying what could not be matched. Keep the rest of the variant.
+      |     the note "Selling unit <x> is not supported" or "Currency <code> is not supported", with the value as
+      |     printed. Keep the rest of the variant.
       |- Selling unit. Read each variant's selling unit from its own unit value first: its unit cell, or a unit written
-      |  beside its quantity or price. Recognize unit expressions in any language or script, including regional
+      |  beside its quantity or price. A unit written in a notes or comments column, such as "sold per bundle of 10",
+      |  is never the selling unit unless the processing message asks for it. Recognize unit expressions in any
+      |  language or script, including regional
       |  shorthand, translations, transliterations, inflections, symbols, and combined number-unit text. Use semantic
       |  and contextual reasoning to select the closest supported English unit; source labels are not restricted to a
       |  predefined alias list. Preserve the physical dimension and numeric meaning. When the sale basis is
@@ -707,7 +744,9 @@ object AIInstructions {
       |- sellingUnitInferred is true only when the selling unit came from the product wording, a shared header or
       |  group, or the processing message, rather than the variant's own unit value. A bare unit that implies a
       |  quantity of one, a routine unit translation, and a common alias all count as read, so the flag stays false.
-      |  It is always false when sellingUnit is null. Each true flag gets one short note giving its basis, on the
+      |  A unit printed only in a column header, such as "KG", with the number in the row, comes from a shared header,
+      |  so the flag is true. It is always false when sellingUnit is null. Each true flag gets one note giving its
+      |  basis as "<Field> taken from <source>", such as "Selling unit taken from the column header", on the
       |  variant, or once at top level when the basis is shared by the whole batch. A unit taken
       |  from the processing message gets no note.
       |- A sellingUnit has required quantity and optional perUnit and unitSize parts. Each part has a numeric value
@@ -727,15 +766,19 @@ object AIInstructions {
       |  digits, decimal separators, and grouping separators using the source locale and surrounding values,
       |  preserving numeric meaning. Recognize price columns from the price-list context and values even when their
       |  heading is unfamiliar or misleading; describe a tentative column interpretation once in top-level
-      |  extractionNotes. Never convert monetary values or invent a missing amount.
+      |  extractionNotes. Never convert monetary values or invent a missing amount. An amount with more than 12 integer
+      |  digits is left out with price: null and the note "Price exceeds the supported limit".
       |- Currency. Normalize currency symbols and names to supported codes by meaning in any language, rather than
       |  requiring an exact English name or ISO-code spelling. Respect a currency written with the amount. When none is
       |  written with it, choose the most likely supported currency from the file, such as a price header, the
       |  supplier, or the processing message, and use the same choice throughout the batch. When no supported currency
-      |  can be settled, keep the readable amount with currency: null and add a short note saying why.
+      |  can be settled, keep the readable amount with currency: null, and add the note
+      |  "Currency <code> is not supported" when an unsupported currency is printed, or a short note saying why
+      |  otherwise.
       |- currencyInferred is true only when the currency came from the file, the supplier, or the processing message,
       |  rather than being written with the amount. It is always false when currency is null. Each true flag gets one
-      |  short note giving its basis. Write a shared basis, such as one currency given in a price header, once at top
+      |  note giving its basis as "<Field> taken from <source>", such as "Currency taken from the price list header".
+      |  Write a shared basis, such as one currency given in a price header, once at top
       |  level instead of on each variant. A currency taken from the processing message gets no
       |  note.
       |- A price amount must pass a validity check later, so return it only when every digit is clearly readable. A
@@ -747,7 +790,9 @@ object AIInstructions {
       |- SKU, label, description, and price are optional; attributes is a required list that may be empty. When part
       |  of a free-text value cannot be made out, return only the characters you can see, never a different or more
       |  likely word or code. Add one note at its narrowest scope naming the detail, such as "SKU partly unclear,
-      |  please check", and never suggest a reading. When none of it can be seen, follow the unreadable-value rules.
+      |  please check", and never suggest a reading. When you are unsure of a character, treat it as one you cannot
+      |  make out. Text cut off at an edge always gets this note. When none of it can be seen, follow the
+      |  unreadable-value rules.
       |  An attribute whose name or value cannot be seen at all is left out, with one note on the variant.
       |- A clearly printed free-text value that looks like an ordinary word or known name with a typing slip is kept
       |  exactly as printed. Add one note at its narrowest scope, such as "Name may be misspelled in the source", and
@@ -783,8 +828,18 @@ object AIInstructions {
       |  instead. Use plain everyday words a customer would understand, and avoid technical words such as infer,
       |  context, schema, or format codes. Summarise a long list of names as a count, for example
       |  "Eight marketing columns were not used".
-      |  For example, use ["Two prices could not be read", "Box size comes from the shared header"]
+      |  For example, use ["Price could not be fully read", "Selling unit taken from the column header"]
       |  instead of one long explanation combining both points.
+      |- These notes are fixed sentences; write them exactly, never reworded:
+      |  - "<Detail> could not be fully read"
+      |  - "<Detail> partly unclear, please check"
+      |  - "<Detail> may be misspelled in the source"
+      |  - "Selling unit <x> is not supported"
+      |  - "Currency <code> is not supported"
+      |  - "Price exceeds the supported limit"
+      |  - "<Field> taken from <source>", where <source> is one of the column header, the price list header, the
+      |    product name, the group heading, the document, the supplier; use your own words only when none fits
+      |  - "AI could not detect relevant catalogue data in this file."
       |- Item and variant extractionNotes are required arrays of comments about their own extraction. Put one plain
       |  comment in each entry, with no bullet prefix, numbering, or variant-position prefix. Use [] when there is no
       |  comment. Item examples: ["Item description partly unclear, please check"] and
@@ -810,9 +865,11 @@ object AIInstructions {
       |     6. the nothing-detected note.
       |     7. the fixed ignored-message note.
       |     Word a left-out row note "Left out row <n>, <kind> "<text>", <beside>". <kind> is heading, title, column
-      |     labels, total, date, page number, or footer. <beside> is "nothing beside it" or what was seen beside it,
-      |     such as "prices beside it". Use your own words after "Left out" only when no kind fits. For column labels,
-      |     quote only the first label, for example
+      |     labels, total, date, page number, or footer. A row whose other cells name columns, such as "KG", "€", or
+      |     "Price", is column labels, not a heading. <beside> is "nothing beside it" or the other printed content on
+      |     the same row, outside the quoted line, such as "prices beside it". The line's own cells, including the
+      |     other column labels, are never beside it. Use your own words after "Left out" only when no kind fits. For
+      |     column labels, quote only the first label, for example
       |     "Left out row 17, column labels "Product", nothing beside it". For every other kind, quote the whole line
       |     exactly as printed, with its cells joined by ", ", for example
       |     "Left out row 7, heading "FRUITS", nothing beside it". Rows that could not be returned are reported only
@@ -864,8 +921,9 @@ object AIInstructions {
       |
       |If this batch has no recognizable catalogue information, do not invent any. Return entriesProcessed 0, empty
       |candidates and unidentifiedEntryRows, keep any real blank Row Numbers in emptyEntryRows with entriesIdentified
-      |equal to their number, and a short top-level extractionNotes entry explaining that no relevant catalogue data was
-      |detected, plus the fixed ignored-message note when it applies. This is a successful empty extraction result, not
+      |equal to their number, and the top-level extractionNotes
+      |["AI could not detect relevant catalogue data in this file."], plus the fixed ignored-message note when it
+      |applies. This is a successful empty extraction result, not
       |an error.""".stripMargin
 
   private def extractCatalogueItemsFromVisualSourceInstructions(
@@ -881,12 +939,12 @@ object AIInstructions {
       |  "entriesProcessed": 2,
       |  "candidates": [
       |    {
-      |      "name": "Olive Oil",
+      |      "name": "Olive Oil 500 ml bottle",
       |      "description": null,
       |      "variants": [
       |        {
       |          "sku": "OIL-500",
-      |          "label": "500 ml bottle",
+      |          "label": null,
       |          "description": null,
       |          "attributes": [{"name": "Origin", "value": "Crete"}],
       |          "price": {"amount": 12.50, "currency": "EUR", "currencyInferred": false},
@@ -896,7 +954,7 @@ object AIInstructions {
       |            "unitSize": {"value": 500, "unit": "Millilitre"}
       |          },
       |          "sellingUnitInferred": true,
-      |          "extractionNotes": ["Unit taken from the label"]
+      |          "extractionNotes": ["Selling unit taken from the product name"]
       |        }
       |      ],
       |      "extractionNotes": []
@@ -913,7 +971,7 @@ object AIInstructions {
       |          "price": {"amount": 0.40, "currency": null, "currencyInferred": false},
       |          "sellingUnit": null,
       |          "sellingUnitInferred": false,
-      |          "extractionNotes": ["Currency symbol could not be read"]
+      |          "extractionNotes": ["Currency symbol could not be fully read"]
       |        }
       |      ],
       |      "extractionNotes": []
@@ -998,7 +1056,11 @@ object AIInstructions {
       |  gives "Olive oil" and "Red, Blue;" gives "Red, Blue". Never add punctuation that is not printed, so
       |  "Olive oil 1L" stays "Olive oil 1L". Prices, quantities, and units are not free text and are unaffected.
       |  Never correct, complete, expand, translate, re-case, or re-punctuate a value, and never replace it with a
-      |  more likely word or code. The only exception is an attribute whose column has no usable printed label, which
+      |  more likely word or code. Copy each value character by character: never change it to a known word, place,
+      |  or brand, and never add or remove an accent. Keep each character in its printed alphabet, and read a
+      |  look-alike letter in the alphabet of the letters around it. Copy codes, such as SKUs, digit by digit, never
+      |  adding a digit or dropping one you can read. The only exception is an attribute whose column has no usable
+      |  printed label, which
       |  is still named from its values. A value longer than 255 characters keeps its first 255 characters exactly as
       |  printed, without a trailing space. Add one note at its narrowest scope naming the field, such as
       |  "Description was too long and was cut".
@@ -1029,9 +1091,12 @@ object AIInstructions {
       |  3. Check whether the interpretation is confidently defensible from the source and context. An implied
       |     quantity of one for a recognized unit is allowed and is not an uncertainty by itself.
       |  4. If nothing supported is a correct, confident match, leave that value null instead of forcing one, and add
-      |     a short note saying what could not be matched. Keep the rest of the variant.
+      |     the note "Selling unit <x> is not supported" or "Currency <code> is not supported", with the value as
+      |     printed. Keep the rest of the variant.
       |- Selling unit. Read each variant's selling unit from its own unit value first: its unit cell, or a unit written
-      |  beside its quantity or price. Recognize unit expressions in any language or script, including regional
+      |  beside its quantity or price. A unit written in a notes or comments column, such as "sold per bundle of 10",
+      |  is never the selling unit unless the processing message asks for it. Recognize unit expressions in any
+      |  language or script, including regional
       |  shorthand, translations, transliterations, inflections, symbols, and combined number-unit text. Use semantic
       |  and contextual reasoning to select the closest supported English unit; source labels are not restricted to a
       |  predefined alias list. Preserve the physical dimension and numeric meaning. When the sale basis is
@@ -1050,7 +1115,9 @@ object AIInstructions {
       |- sellingUnitInferred is true only when the selling unit came from the product wording, a shared header or
       |  group, or the processing message, rather than the variant's own unit value. A bare unit that implies a
       |  quantity of one, a routine unit translation, and a common alias all count as read, so the flag stays false.
-      |  It is always false when sellingUnit is null. Each true flag gets one short note giving its basis, on the
+      |  A unit printed only in a column header, such as "KG", with the number in the row, comes from a shared header,
+      |  so the flag is true. It is always false when sellingUnit is null. Each true flag gets one note giving its
+      |  basis as "<Field> taken from <source>", such as "Selling unit taken from the column header", on the
       |  variant, or once at top level when the basis is shared by the whole $sourceName. A unit taken
       |  from the processing message gets no note.
       |- A sellingUnit has required quantity and optional perUnit and unitSize parts. Each part has a numeric value
@@ -1070,15 +1137,19 @@ object AIInstructions {
       |  digits, decimal separators, and grouping separators using the source locale and surrounding values,
       |  preserving numeric meaning. Recognize price columns from the price-list context and values even when their
       |  heading is unfamiliar or misleading; describe a tentative column interpretation once in top-level
-      |  extractionNotes. Never convert monetary values or invent a missing amount.
+      |  extractionNotes. Never convert monetary values or invent a missing amount. An amount with more than 12 integer
+      |  digits is left out with price: null and the note "Price exceeds the supported limit".
       |- Currency. Normalize currency symbols and names to supported codes by meaning in any language, rather than
       |  requiring an exact English name or ISO-code spelling. Respect a currency written with the amount. When none is
       |  written with it, choose the most likely supported currency from the document, the supplier, or the processing
       |  message, and use the same choice throughout the document. When no supported currency can be settled, keep the
-      |  readable amount with currency: null and add a short note saying why.
+      |  readable amount with currency: null, and add the note "Currency <code> is not supported" when an unsupported
+      |  currency is printed, or a short note saying why otherwise.
       |- currencyInferred is true only when the currency came from the document, the supplier, or the processing
       |  message, rather than being written with the amount. It is always false when currency is null. Each true flag
-      |  gets one short note giving its basis. Write a shared basis, such as one currency used across the $sourceName, once
+      |  gets one note giving its basis as "<Field> taken from <source>", such as
+      |  "Currency taken from the price list header". Write a shared basis, such as one currency used across the
+      |  $sourceName, once
       |  at top level instead of on each variant. A currency taken from the processing message gets no
       |  note.
       |- A price amount must pass a validity check later, so return it only when every digit is clearly readable. A
@@ -1090,7 +1161,9 @@ object AIInstructions {
       |- SKU, label, description, and price are optional; attributes is a required list that may be empty. When part
       |  of a free-text value cannot be made out, return only the characters you can see, never a different or more
       |  likely word or code. Add one note at its narrowest scope naming the detail, such as "SKU partly unclear,
-      |  please check", and never suggest a reading. When none of it can be seen, follow the unreadable-value rules.
+      |  please check", and never suggest a reading. When you are unsure of a character, treat it as one you cannot
+      |  make out. Text cut off at an edge always gets this note. When none of it can be seen, follow the
+      |  unreadable-value rules.
       |  An attribute whose name or value cannot be seen at all is left out, with one note on the variant.
       |- A clearly printed free-text value that looks like an ordinary word or known name with a typing slip is kept
       |  exactly as printed. Add one note at its narrowest scope, such as "Name may be misspelled in the source", and
@@ -1125,8 +1198,18 @@ object AIInstructions {
       |  instead. Use plain everyday words a customer would understand, and avoid technical words such as infer,
       |  context, schema, or format codes. Summarise a long list of names as a count, for example
       |  "Eight marketing columns were not used".
-      |  For example, use ["Two prices could not be read", "Box size comes from the shared header"]
+      |  For example, use ["Price could not be fully read", "Selling unit taken from the column header"]
       |  instead of one long explanation combining both points.
+      |- These notes are fixed sentences; write them exactly, never reworded:
+      |  - "<Detail> could not be fully read"
+      |  - "<Detail> partly unclear, please check"
+      |  - "<Detail> may be misspelled in the source"
+      |  - "Selling unit <x> is not supported"
+      |  - "Currency <code> is not supported"
+      |  - "Price exceeds the supported limit"
+      |  - "<Field> taken from <source>", where <source> is one of the column header, the price list header, the
+      |    product name, the group heading, the document, the supplier; use your own words only when none fits
+      |  - "AI could not detect relevant catalogue data in this $sourceName."
       |- Item and variant extractionNotes are required arrays of comments about their own extraction. Put one plain
       |  comment in each entry, with no bullet prefix, numbering, or variant-position prefix. Use [] when there is no
       |  comment. Item examples: ["Item description partly unclear, please check"] and
@@ -1152,9 +1235,13 @@ object AIInstructions {
       |     5. the nothing-detected note.
       |     6. the fixed ignored-message note.
       |     Word a left-out line note "Left out <kind> "<text>", <beside>". <kind> is heading, title, column labels,
-      |     total, date, page number, or footer. <beside> is "nothing beside it" or what was seen beside it, such as
-      |     "prices beside it". Use your own words after "Left out" only when no kind fits. For column labels, quote
-      |     only the first label, for example "Left out column labels "Product", nothing beside it". For every other
+      |     total, date, page number, or footer. A row whose other cells name columns, such as "KG", "€", or "Price",
+      |     is column labels, not a heading, so a row "ΚΑΣΤΑΝΑ ΕΛΛΑΔΑΣ", "KG", "€" gives
+      |     "Left out column labels "ΚΑΣΤΑΝΑ ΕΛΛΑΔΑΣ", nothing beside it". <beside> is "nothing beside it" or the
+      |     other printed content on the same row, outside the quoted line, such as "prices beside it". The line's own
+      |     cells, including the other column labels, are never beside it. Use your own words after "Left out" only
+      |     when no kind fits. For column labels, quote only the first label, for example
+      |     "Left out column labels "Product", nothing beside it". For every other
       |     kind, quote the whole line exactly as printed, for example
       |     "Left out heading "FRUITS", nothing beside it". When tables sit side by side, each table's row is its own
       |     line and is never joined with the row of the table beside it, the left table comes before the right at the
@@ -1208,8 +1295,9 @@ object AIInstructions {
       |fixed note. A value worked out from the message is still marked inferred, with no note.
       |
       |If the $sourceName has no recognizable catalogue information, do not invent any. Return entriesIdentified 0,
-      |entriesProcessed 0, empty candidates and row lists, and a short top-level extractionNotes entry explaining
-      |that no relevant catalogue data was detected, plus the fixed ignored-message note when it applies. This is a
+      |entriesProcessed 0, empty candidates and row lists, and the top-level extractionNotes
+      |["AI could not detect relevant catalogue data in this $sourceName."], plus the fixed ignored-message note when
+      |it applies. This is a
       |successful empty extraction result, not an error.""".stripMargin
 
   private def extractCustomersFromVisualSourceInstructions(
@@ -1239,7 +1327,7 @@ object AIInstructions {
       |            "city": "Nicosia",
       |            "postalCode": null,
       |            "country": "Cyprus",
-      |            "extractionNotes": ["Postal code could not be read"]
+      |            "extractionNotes": ["Postal code is missing"]
       |          },
       |          "addressType": "ShippingAndBilling"
       |        }
@@ -1253,7 +1341,9 @@ object AIInstructions {
       |      "businessName": "Acme Tools",
       |      "emails": ["orders@acme-tools.com"],
       |      "taxID": null,
-      |      "phoneNumbers": [],
+      |      "phoneNumbers": [
+      |        {"phoneNationalNumber": "4155550100", "phoneCountryCode": "+1", "phoneCountryCodeInferred": false}
+      |      ],
       |      "addresses": [],
       |      "customerBusinessContacts": [
       |        {
@@ -1262,15 +1352,15 @@ object AIInstructions {
       |          "email": "john.smith@acme-tools.com",
       |          "phoneNumber": {
       |            "phoneNationalNumber": "4155550123",
-      |            "phoneCountryCode": null,
-      |            "phoneCountryCodeInferred": false
+      |            "phoneCountryCode": "+1",
+      |            "phoneCountryCodeInferred": true
       |          },
       |          "fullNameInferred": false,
-      |          "extractionNotes": ["Phone country code is not shown"]
+      |          "extractionNotes": ["Phone country code taken from the other numbers"]
       |        }
       |      ],
       |      "businessNameInferred": true,
-      |      "extractionNotes": ["Business name taken from the company email"]
+      |      "extractionNotes": ["Business name taken from the email"]
       |    }
       |  ],
       |  "emptyEntryRowIndexes": [],
@@ -1356,7 +1446,11 @@ object AIInstructions {
       |  abbreviations "г.", "пр.", "Λεωφ.", "Τ.Θ.", and "St.", but "закупки." gives "закупки" and "UK." gives "UK".
       |  Never add punctuation that is not printed, so "Evia Flowers Ltd" stays "Evia Flowers Ltd". Never correct,
       |  complete, expand, translate, re-case, or re-punctuate a value, and never replace it with a more likely word
-      |  or code. One exception is a name printed in separate first-name and last-name columns, which is joined into
+      |  or code. Copy each value character by character: never change it to a known word, name, or place, and never
+      |  add or remove an accent. Keep each character in its printed alphabet, and read a look-alike letter in the
+      |  alphabet of the letters around it. Copy codes, such as tax IDs and postal codes, digit by digit, never adding
+      |  a digit or dropping one you can read. One exception is a name printed in separate first-name and last-name
+      |  columns, which is joined into
       |  one name with one space, each part copied exactly. The other is address text, split into its fields by the
       |  address parts rule below. A name worked out from an email, or completed from it at the processing message's
       |  request, follows the name rules below. A value longer than 255 characters keeps its first 255 characters
@@ -1366,7 +1460,8 @@ object AIInstructions {
       |  person's name, infer the name from it and set fullNameInferred to true. Be lenient: john.smith@example.com,
       |  john@example.com, and jsmith@example.com (read as "J Smith") all qualify. Never do this for a role or
       |  department mailbox (info@, sales@, support@, noreply@, admin@, contact@ and the like) or a meaningless local
-      |  part (xk29fj3@...). This applies to an individual's name and a business contact's name.
+      |  part (xk29fj3@...). Infer a name only when the part before the @ splits into plausible name parts, so
+      |  ap.dse@example.com gives no name. This applies to an individual's name and a business contact's name.
       |- A business's own name may instead be inferred from the domain of one of its own company emails, such as
       |  orders@acme-tools.com read as "Acme Tools"; set businessNameInferred to true. Never use a free-mail domain
       |  (gmail, outlook, yahoo, hotmail, icloud and the like), a meaningless domain, or a contact's email.
@@ -1409,7 +1504,8 @@ object AIInstructions {
       |- When part of a free-text value other than a tax ID cannot be made out, return only the characters you can
       |  see, never a different or more likely word or code. Add one note at its narrowest scope, the candidate,
       |  contact, or address, naming the detail, such as "Address partly unclear, please check", and never suggest a
-      |  reading. When none of it can be seen, follow the unreadable-detail rules.
+      |  reading. When you are unsure of a character, treat it as one you cannot make out. Text cut off at an edge
+      |  always gets this note. When none of it can be seen, follow the unreadable-detail rules.
       |- A clearly printed free-text value that looks like an ordinary word or known name with a typing slip is kept
       |  exactly as printed. Add one note at its narrowest scope, such as "Name may be misspelled in the source", and
       |  never suggest a correction. Abbreviations, letter case, punctuation, code formats, and foreign words never
@@ -1417,30 +1513,36 @@ object AIInstructions {
       |- Phones. phoneNationalNumber holds only the national number, without the country code; phoneCountryCode holds
       |  the dialling code. Make a best-effort attempt at a valid pair for the country. A code written with the number,
       |  such as "+357 99123456" or "00357 99123456", or in its own dialling-code column, is read, not inferred: split
-      |  it out. When no code is written, apply this interpretation sequence internally:
+      |  it out. A "+" or "00" prefix that is not a real country code, such as +808, +877, or +87, is not split: keep
+      |  every digit in phoneNationalNumber, with phoneCountryCode: null and phoneCountryCodeInferred: false, and add
+      |  the note "Phone country code could not be determined" on the phone's owner. When no code is written, apply
+      |  this interpretation sequence internally:
       |  1. Read the phone in its context: the entry's own address, one country used across the source, or the
       |     processing message.
       |  2. Compare that context with real international dialling codes and with the length and format of the national
       |     number for that country.
-      |  3. If the clues agree, return the code with phoneCountryCodeInferred: true and one note giving its basis on
-      |     the phone's owner, the candidate or the contact. When the basis is shared by the whole source, such as one
+      |  3. If the clues agree, return the code with phoneCountryCodeInferred: true and one note on the phone's owner,
+      |     the candidate or the contact, giving its basis as "<Field> taken from <source>", such as
+      |     "Country code taken from the address". When the basis is shared by the whole source, such as one
       |     country used throughout, write that note once at top level instead. A code taken from the processing
       |     message gets no basis note, but a conflict with the address still gets the note in step 4.
       |  4. If the clues conflict, such as an address in one country and a number whose length and format fit another,
       |     still make the best guess. Prefer the country whose length and format fit the national number, together
       |     with the country used across the rest of the source or the processing message. The address's city or
       |     country is weaker evidence and never rules the guess out. Return that code with phoneCountryCodeInferred:
-      |     true and one note on the phone's owner saying the code is a guess that does not match the address, such as
-      |     "Country code +357 guessed, but the city is in Greece". A guess is not an error: the phone stays a normal
+      |     true and the note "Country code <code> guessed, the address is in <country>" on the phone's owner, such as
+      |     "Country code +357 guessed, the address is in Greece". A guess is not an error: the phone stays a normal
       |     returned phone.
-      |  5. Only when no country at all is plausible, keep the phone with phoneCountryCode: null,
-      |     phoneCountryCodeInferred: false, and one short note on the phone's owner saying why. Never leave out a
-      |     phone only because its country code is missing.
+      |  5. A number written with no "+" or "00" always gets a code from step 3 or step 4, never phoneCountryCode:
+      |     null. Never leave out a phone only because its country code is missing.
       |- When the source clearly marks one email or phone as the main one, list it first; otherwise keep source order.
       |- Addresses. Missing, null, empty, and whitespace-only address text is empty. Keep an address when at least one
-      |  of its five text fields has content, even when partial, and note missing or unclear fields in that address's
-      |  extractionNotes. Leave out an address whose five fields are all empty and note on the candidate that an empty
-      |  address was left out. Merge repeated addresses of one candidate first, when all five fields match after
+      |  of its five text fields has content, even when partial. Note its missing parts in that address's
+      |  extractionNotes as "<Parts> is missing" or "<Parts> are missing", with the parts in the order street, city,
+      |  postal code, country, such as "Street, city and postal code are missing", and an unclear part as
+      |  "<Detail> partly unclear, please check". Leave out an address whose five fields are all empty and note it on
+      |  the candidate as "Empty address was left out", or "Empty addresses were left out" for more than one. Merge
+      |  repeated addresses of one candidate first, when all five fields match after
       |  trimming, ignoring type; never merge addresses of different candidates. Return every remaining address. Try
       |  to identify from the source which address is the billing address and which is the shipping address, and mark
       |  each addressType accordingly as best you can. Use ShippingAndBilling only when the source shows one address
@@ -1464,7 +1566,8 @@ object AIInstructions {
       |  "1087", and city "Nicosia"; "London E8 3RT, UK." gives city "London", postalCode "E8 3RT", and country "UK";
       |  "Лиговский пр., 52, офис 14," gives addressLine1 "Лиговский пр., 52" and addressLine2 "офис 14"; and
       |  "г. Казань," gives city "г. Казань". Everything else stays exactly as printed, including accents, marks such
-      |  as "΄", and the alphabet.
+      |  as "΄", and the alphabet. A State, Region, Province, or County column is never the city: leave city empty
+      |  and treat that column as one that maps to no field.
       |- entriesProcessed is the number of original visible entries returned as at least one candidate. An entry split
       |  into several candidates counts once, so the candidate lists may hold more than entriesProcessed.
       |  entriesIdentified is the total: entriesProcessed plus the number of emptyEntryRowIndexes plus the number of
@@ -1489,13 +1592,25 @@ object AIInstructions {
       |  instead. Use plain everyday words a customer would understand, and avoid technical words such as infer,
       |  context, schema, or format codes. Summarise a long list of names as a count, for example
       |  "Eight marketing columns were not used". For example,
-      |  use ["Name taken from the email address", "Second phone's country code taken from the address"] instead of
+      |  use ["Name taken from the email", "Second phone's country code taken from the address"] instead of
       |  one long sentence about both.
+      |- These notes are fixed sentences; write them exactly, never reworded:
+      |  - "<Detail> could not be fully read"
+      |  - "<Detail> partly unclear, please check"
+      |  - "<Detail> may be misspelled in the source"
+      |  - "<Field> taken from <source>", where <source> is one of the address, the other numbers, the email; use
+      |    your own words only when none fits
+      |  - "Country code <code> guessed, the address is in <country>"
+      |  - "<Parts> is missing" or "<Parts> are missing", with the parts in the order street, city, postal code,
+      |    country
+      |  - "Empty address was left out" or "Empty addresses were left out"
+      |  - "Phone country code could not be determined"
+      |  - "AI could not detect relevant customer data in this $sourceName."
       |- Candidate, address, and contact extractionNotes are required arrays of comments about their own extraction.
       |  Put one plain comment in each entry, with no bullet prefix, numbering, or position prefix. Use [] when there
-      |  is no comment. Candidate examples: ["An email address could not be read"] and
-      |  ["Name may be misspelled in the source"]. Address examples: ["Postal code could not be read"] and
-      |  ["Address partly unclear, please check"]. Contact examples: ["Phone number could not be read"] and
+      |  is no comment. Candidate examples: ["Email could not be fully read"] and
+      |  ["Name may be misspelled in the source"]. Address examples: ["Postal code could not be fully read"] and
+      |  ["Address partly unclear, please check"]. Contact examples: ["Phone number could not be fully read"] and
       |  ["Role partly unclear, please check"].
       |- The server writes no notes. Missing and inferred fields reach the user as structured data, so never write a
       |  note that only says a name is missing or a contact has no name. Do write
@@ -1517,9 +1632,12 @@ object AIInstructions {
       |     5. the nothing-detected note.
       |     6. the fixed ignored-message note.
       |     Word a left-out line note "Left out <kind> "<text>", <beside>". <kind> is heading, title, column labels,
-      |     total, date, page number, footer, or letterhead. <beside> is "nothing beside it" or what was seen beside
-      |     it, such as "contact details beside it". Use your own words after "Left out" only when no kind fits. For
-      |     column labels, quote only the first label, for example "Left out column labels "Name", nothing beside it".
+      |     total, date, page number, footer, or letterhead. A row whose other cells name columns, such as "Email" or
+      |     "Phone", is column labels, not a heading. <beside> is "nothing beside it" or the other printed content on
+      |     the same row, outside the quoted line, such as "contact details beside it". The line's own cells,
+      |     including the other column labels, are never beside it. Use your own words after "Left out" only when no
+      |     kind fits. For column labels, quote only the first label, for example
+      |     "Left out column labels "Name", nothing beside it".
       |     For every other kind, quote the whole line exactly as printed, for example
       |     "Left out heading "WHOLESALE CLIENTS", nothing beside it". When tables sit side by side, each table's row
       |     is its own line and is never joined with the row of the table beside it, the left table comes before the

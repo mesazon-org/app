@@ -281,7 +281,7 @@
           },
           "sellingUnitInferred": true,
           "extractionNotes": [
-            "Bottle size comes from the product name"
+            "Selling unit taken from the product name"
           ]
         }
       ],
@@ -450,7 +450,7 @@
           "sellingUnit": null,
           "sellingUnitInferred": false,
           "extractionNotes": [
-            "Pallet could not be matched to a supported unit"
+            "Selling unit pallet is not supported"
           ]
         }
       ],
@@ -520,7 +520,7 @@
           },
           "sellingUnitInferred": false,
           "extractionNotes": [
-            "CHF is not a supported currency"
+            "Currency CHF is not supported"
           ]
         }
       ],
@@ -646,19 +646,10 @@
             "currency": "EUR",
             "currencyInferred": true
           },
-          "sellingUnit": {
-            "quantity": {
-              "value": 1,
-              "unit": "Pack"
-            },
-            "perUnit": {
-              "value": 10,
-              "unit": "Piece"
-            }
-          },
-          "sellingUnitInferred": true,
+          "sellingUnit": null,
+          "sellingUnitInferred": false,
           "extractionNotes": [
-            "Selling unit comes from the supplier's note"
+            
           ]
         }
       ],
@@ -683,6 +674,6 @@
     "Left out row 17, column labels \"Product\", nothing beside it",
     "Left out row 18, heading \"TOOLS\", nothing beside it",
     "Left out row 29, total \"Total, 1.250.000.000.295,94\", nothing beside it",
-    "Prices without a currency use the euro price heading"
+    "Currency taken from the column header"
   ]
 }

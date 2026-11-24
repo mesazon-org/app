@@ -11,12 +11,6 @@
     "old" : "Марина Вочкова"
   },
   {
-    "op" : "replace",
-    "path" : "/businessCandidates/0/addresses/0/address/extractionNotes/0",
-    "value" : "Postal code is not shown",
-    "old" : "Postal code not shown"
-  },
-  {
     "op" : "add",
     "path" : "/extractionNotes/-",
     "value" : "Comments were not used"

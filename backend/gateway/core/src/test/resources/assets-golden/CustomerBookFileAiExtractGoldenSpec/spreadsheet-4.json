@@ -146,7 +146,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -204,7 +204,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Shipping"
@@ -225,7 +225,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        "Phone country code could not be determined"
       ]
     },
     {
@@ -236,8 +236,8 @@
       "phoneNumbers": [
         {
           "phoneNationalNumber": "3207328976",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": true
         }
       ],
       "addresses": [
@@ -245,7 +245,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        
       ]
     },
     {
@@ -295,7 +295,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -303,7 +303,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified",
+        "Phone country code could not be determined",
         "Empty address was left out"
       ]
     },
@@ -320,7 +320,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -344,7 +344,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Shipping"
@@ -421,7 +421,7 @@
             "postalCode": null,
             "country": "United Kingdom",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -445,7 +445,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -469,7 +469,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Shipping"
@@ -517,7 +517,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        "Phone country code could not be determined"
       ]
     },
     {
@@ -593,7 +593,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Shipping"
@@ -638,7 +638,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -670,7 +670,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -710,7 +710,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -742,7 +742,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -937,8 +937,8 @@
         },
         {
           "phoneNationalNumber": "2517813849394",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": true
         }
       ],
       "addresses": [
@@ -1036,7 +1036,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Third phone's country code could not be identified"
+        "Phone country code taken from the address"
       ]
     },
     {
@@ -1060,7 +1060,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -1124,7 +1124,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "ShippingAndBilling"
@@ -1156,7 +1156,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -1169,7 +1169,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Postal code is missing"
+              "City and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -1182,7 +1182,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Postal code is missing"
+              "City and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -1246,7 +1246,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -1277,8 +1277,8 @@
       "phoneNumbers": [
         {
           "phoneNationalNumber": "7355160706",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": true
         }
       ],
       "addresses": [
@@ -1286,7 +1286,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        
       ]
     },
     {
@@ -1343,7 +1343,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "ShippingAndBilling"
@@ -1427,7 +1427,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "ShippingAndBilling"
@@ -1459,7 +1459,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -1467,7 +1467,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified",
+        "Phone country code could not be determined",
         "Empty addresses were left out"
       ]
     },
@@ -1569,7 +1569,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -1646,7 +1646,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "ShippingAndBilling"
@@ -1678,7 +1678,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Shipping"
@@ -1775,7 +1775,7 @@
             "postalCode": null,
             "country": "United Kingdom",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -1807,7 +1807,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -1846,8 +1846,8 @@
       "phoneNumbers": [
         {
           "phoneNationalNumber": "6633009202890026",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": true
         }
       ],
       "addresses": [
@@ -1872,7 +1872,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -1880,7 +1880,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        "Phone country code taken from the address"
       ]
     },
     {
@@ -1941,7 +1941,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -1965,7 +1965,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "ShippingAndBilling"
@@ -1997,7 +1997,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Shipping"
@@ -2054,7 +2054,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -2123,7 +2123,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -2228,7 +2228,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -2248,7 +2248,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        "Phone country code could not be determined"
       ]
     },
     {
@@ -2277,7 +2277,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -2290,7 +2290,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Postal code is missing"
+              "City and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -2322,7 +2322,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -2436,7 +2436,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -2460,7 +2460,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -2480,7 +2480,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        "Phone country code could not be determined"
       ]
     },
     {
@@ -2500,7 +2500,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -2545,7 +2545,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -2566,7 +2566,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified",
+        "Phone country code could not be determined",
         "Empty addresses were left out"
       ]
     },
@@ -2603,7 +2603,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -2667,7 +2667,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -2695,7 +2695,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -2727,7 +2727,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -2735,7 +2735,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified",
+        "Phone country code could not be determined",
         "Empty addresses were left out"
       ]
     },
@@ -2760,7 +2760,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -2773,7 +2773,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Postal code is missing"
+              "City and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -2786,7 +2786,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Postal code is missing"
+              "City and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -2818,7 +2818,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -2850,7 +2850,7 @@
             "postalCode": "3042",
             "country": "Cyprus",
             "extractionNotes": [
-              
+              "Two streets shown for this address"
             ]
           },
           "addressType": "Shipping"
@@ -2863,7 +2863,7 @@
             "postalCode": "3042",
             "country": "Cyprus",
             "extractionNotes": [
-              
+              "Two streets shown for this address"
             ]
           },
           "addressType": "Billing"
@@ -2887,7 +2887,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -2911,7 +2911,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "ShippingAndBilling"
@@ -2943,7 +2943,7 @@
             "postalCode": "00-685",
             "country": "Poland",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street and city are missing"
             ]
           },
           "addressType": "Billing"
@@ -2951,7 +2951,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified",
+        "Phone country code could not be determined",
         "Empty address was left out"
       ]
     },
@@ -2972,7 +2972,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        "Phone country code could not be determined"
       ]
     },
     {
@@ -2996,7 +2996,7 @@
             "postalCode": "80116",
             "country": "Indonesia",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street and city are missing"
             ]
           },
           "addressType": "Billing"
@@ -3004,7 +3004,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified",
+        "Phone country code could not be determined",
         "Empty address was left out"
       ]
     },
@@ -3066,7 +3066,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -3090,7 +3090,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Address is incomplete"
+              "Street, city and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -3214,7 +3214,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -3291,7 +3291,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -3331,7 +3331,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty addresses were left out"
       ]
     },
     {
@@ -3383,7 +3383,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -3460,7 +3460,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -3492,7 +3492,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -3528,7 +3528,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -3641,7 +3641,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -3657,7 +3657,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -3673,7 +3673,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -3742,8 +3742,8 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified",
-        "Empty address left out"
+        "Phone country code could not be determined",
+        "Empty address was left out"
       ]
     },
     {
@@ -3807,7 +3807,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -3891,7 +3891,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -3923,7 +3923,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -3955,7 +3955,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -4019,7 +4019,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -4056,7 +4056,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -4088,7 +4088,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -4144,8 +4144,8 @@
       "phoneNumbers": [
         {
           "phoneNationalNumber": "5620267641249",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": true
         }
       ],
       "addresses": [
@@ -4178,7 +4178,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        "Phone country code taken from the address"
       ]
     },
     {
@@ -4239,7 +4239,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -4354,7 +4354,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -4411,7 +4411,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -4456,7 +4456,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        "Phone country code could not be determined"
       ]
     },
     {
@@ -4519,7 +4519,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -4555,7 +4555,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -4620,7 +4620,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        "Phone country code could not be determined"
       ]
     },
     {
@@ -4652,7 +4652,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -4684,8 +4684,8 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified",
-        "Empty address left out"
+        "Phone country code could not be determined",
+        "Empty address was left out"
       ]
     },
     {
@@ -4735,7 +4735,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty addresses were left out"
       ]
     },
     {
@@ -4787,7 +4787,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -4846,8 +4846,8 @@
       "phoneNumbers": [
         {
           "phoneNationalNumber": "7246269440674",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": true
         }
       ],
       "addresses": [
@@ -4880,7 +4880,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        "Phone country code taken from the address"
       ]
     },
     {
@@ -4928,7 +4928,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -4978,7 +4978,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        "Phone country code could not be determined"
       ]
     },
     {
@@ -5055,7 +5055,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        "Phone country code could not be determined"
       ]
     },
     {
@@ -5091,7 +5091,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -5107,7 +5107,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -5200,7 +5200,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -5232,7 +5232,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -5248,7 +5248,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -5313,7 +5313,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty addresses were left out"
       ]
     },
     {
@@ -5358,7 +5358,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -5374,7 +5374,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -5406,7 +5406,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -5422,7 +5422,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -5480,7 +5480,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -5500,8 +5500,8 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified",
-        "Empty address left out"
+        "Phone country code could not be determined",
+        "Empty addresses were left out"
       ]
     },
     {
@@ -5517,7 +5517,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -5533,7 +5533,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -5553,7 +5553,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty addresses were left out"
       ]
     },
     {
@@ -5614,7 +5614,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -5646,7 +5646,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -5662,7 +5662,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -5682,7 +5682,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty addresses were left out"
       ]
     },
     {
@@ -5714,7 +5714,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -5805,7 +5805,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -5837,8 +5837,8 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified",
-        "Empty address left out"
+        "Phone country code could not be determined",
+        "Empty address was left out"
       ]
     },
     {
@@ -5870,8 +5870,8 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified",
-        "Empty address left out"
+        "Phone country code could not be determined",
+        "Empty address was left out"
       ]
     },
     {
@@ -5903,7 +5903,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -5984,7 +5984,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty addresses were left out"
       ]
     },
     {
@@ -6048,7 +6048,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -6093,7 +6093,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be identified"
+        "Phone country code could not be determined"
       ]
     },
     {
@@ -6105,7 +6105,7 @@
         {
           "phoneNationalNumber": "3701339554",
           "phoneCountryCode": "+1",
-          "phoneCountryCodeInferred": false
+          "phoneCountryCodeInferred": true
         }
       ],
       "addresses": [
@@ -6117,7 +6117,7 @@
             "postalCode": "4532",
             "country": "Cyprus",
             "extractionNotes": [
-              "Two streets are shown in this address"
+              "Two streets shown for this address"
             ]
           },
           "addressType": "Shipping"
@@ -6130,7 +6130,7 @@
             "postalCode": "4532",
             "country": "Cyprus",
             "extractionNotes": [
-              "Two streets are shown in this address"
+              "Two streets shown for this address"
             ]
           },
           "addressType": "Billing"
@@ -6138,7 +6138,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Country code +1 guessed, the address is in Cyprus"
       ]
     },
     {
@@ -6199,7 +6199,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -6425,7 +6425,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -6441,7 +6441,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -6457,7 +6457,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -6473,7 +6473,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -6484,8 +6484,8 @@
       "phoneNumbers": [
         {
           "phoneNationalNumber": "8529294983",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": true
         }
       ],
       "addresses": [
@@ -6493,7 +6493,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        
       ]
     },
     {
@@ -6509,7 +6509,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -6525,7 +6525,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -6618,7 +6618,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -6629,8 +6629,8 @@
       "phoneNumbers": [
         {
           "phoneNationalNumber": "2880395005007801",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": true
         }
       ],
       "addresses": [
@@ -6638,7 +6638,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        
       ]
     },
     {
@@ -6649,8 +6649,8 @@
       "phoneNumbers": [
         {
           "phoneNationalNumber": "9627440034",
-          "phoneCountryCode": null,
-          "phoneCountryCodeInferred": false
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": true
         }
       ],
       "addresses": [
@@ -6658,7 +6658,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone country code could not be determined"
+        
       ]
     },
     {
@@ -6674,7 +6674,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -6788,7 +6788,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "First phone's country code could not be determined",
+        "Phone country code could not be determined",
         "Empty addresses were left out"
       ]
     },
@@ -6825,7 +6825,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -7033,7 +7033,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -7135,7 +7135,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -7292,7 +7292,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -7469,7 +7469,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -8017,7 +8017,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -8033,7 +8033,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -8065,7 +8065,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -8154,7 +8154,7 @@
             "postalCode": null,
             "country": "Cyprus",
             "extractionNotes": [
-              "Postal code is missing"
+              "City and postal code are missing"
             ]
           },
           "addressType": "Billing"
@@ -8247,7 +8247,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -8802,7 +8802,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address",
+        "Name taken from the email",
         "Empty address was left out"
       ]
     },
@@ -8819,7 +8819,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -9025,7 +9025,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "An empty address was left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -9041,7 +9041,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -9138,7 +9138,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -9174,7 +9174,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -9226,7 +9226,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "An empty address was left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -9236,8 +9236,8 @@
       ],
       "phoneNumbers": [
         {
-          "phoneNationalNumber": "65154067",
-          "phoneCountryCode": "+877",
+          "phoneNationalNumber": "87765154067",
+          "phoneCountryCode": null,
           "phoneCountryCodeInferred": false
         }
       ],
@@ -9271,7 +9271,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Phone country code could not be determined"
       ]
     },
     {
@@ -9485,7 +9485,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "An empty address was left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -9501,7 +9501,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -9537,7 +9537,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -9606,7 +9606,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -9638,7 +9638,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "An empty address was left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -9671,7 +9671,7 @@
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone country code could not be determined",
-        "An empty address was left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -9703,7 +9703,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "An empty address was left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -9775,7 +9775,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -9992,7 +9992,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "An empty address was left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -10050,7 +10050,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "An empty address was left out"
+        "Empty address was left out"
       ]
     },
     {
@@ -10268,8 +10268,8 @@
           "phoneCountryCodeInferred": false
         },
         {
-          "phoneNationalNumber": "7626766",
-          "phoneCountryCode": "+877",
+          "phoneNationalNumber": "8777626766",
+          "phoneCountryCode": null,
           "phoneCountryCodeInferred": false
         }
       ],
@@ -10290,7 +10290,8 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "An empty address was left out"
+        "Phone country code could not be determined",
+        "Empty address was left out"
       ]
     },
     {
@@ -10306,7 +10307,7 @@
       ],
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email address"
+        "Name taken from the email"
       ]
     },
     {
@@ -10371,7 +10372,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "An empty address was left out"
+        "Empty address was left out"
       ]
     }
   ],
@@ -10403,7 +10404,6 @@
     "The Source column was not used",
     "The Language column was not used",
     "The Linked Locations column was not used",
-    "Local eight-digit phone numbers use Cyprus's country code",
-    "Country code +357 was based on the file's Cyprus addresses"
+    "Phone country codes taken from the address"
   ]
 }

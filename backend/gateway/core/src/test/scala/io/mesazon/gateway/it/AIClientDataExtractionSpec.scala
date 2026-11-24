@@ -208,7 +208,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           "content" -> Json.arr(
             Json.obj(
               "type"      -> Json.fromString("input_image"),
-              "detail"    -> Json.fromString("auto"),
+              "detail"    -> Json.fromString("high"),
               "image_url" -> Json.fromString(
                 s"data:${SupportedMediaType.JPEG.mimes.head};base64,${Base64.getEncoder.encodeToString(imageBytes)}"
               ),
@@ -532,7 +532,7 @@ class AIClientDataExtractionSpec extends ZWordSpecBase, DockerComposeBase {
           "content" -> Json.arr(
             Json.obj(
               "type"      -> Json.fromString("input_image"),
-              "detail"    -> Json.fromString("auto"),
+              "detail"    -> Json.fromString("high"),
               "image_url" -> Json.fromString(
                 s"data:${SupportedMediaType.JPEG.mimes.head};base64,${Base64.getEncoder.encodeToString(imageBytes)}"
               ),

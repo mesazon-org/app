@@ -1,8 +1,2 @@
 [
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/0",
-    "value" : "No relevant catalogue data was detected",
-    "old" : "No catalogue items were found in the document"
-  }
 ]

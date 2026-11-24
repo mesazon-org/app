@@ -78,7 +78,7 @@
             "postalCode": null,
             "country": "Россия",
             "extractionNotes": [
-              "Postal code not shown"
+              "Postal code is missing"
             ]
           },
           "addressType": "Billing"

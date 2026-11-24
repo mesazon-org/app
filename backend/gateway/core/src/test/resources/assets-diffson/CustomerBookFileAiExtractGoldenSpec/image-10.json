@@ -1,8 +1,2 @@
 [
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/2",
-    "value" : "Customer relationship labels were not used",
-    "old" : "Individual customer roles were not used"
-  }
 ]

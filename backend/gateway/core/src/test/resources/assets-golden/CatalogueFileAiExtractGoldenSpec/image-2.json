@@ -611,7 +611,7 @@
       ]
     },
     {
-      "name": "ΚΟΚΚΙΝΟ 2L",
+      "name": "KOKKINO 2L",
       "description": null,
       "variants": [
         {
@@ -899,7 +899,7 @@
       ]
     },
     {
-      "name": "ΒΑΖΑΚΙ (12Χ400g)",
+      "name": "ΒΑΖΑΚΙ (12X400g)",
       "description": null,
       "variants": [
         {
@@ -2755,7 +2755,7 @@
       ]
     },
     {
-      "name": "ΑΓΡΕΛΙΑ ΠΡΑΣΙΝΑ(11Χ450gr) ΟΛΛ",
+      "name": "ΑΓΡΕΛΙΑ ΠΡΑΣΙΝΑ(11X450gr) ΟΛΛ",
       "description": null,
       "variants": [
         {
@@ -4020,7 +4020,7 @@
     "Left out logo text \"by Papanikolis\", nothing beside it",
     "Left out date \"ΤΕΤΑΡΤΗ\", nothing beside it",
     "Left out date \"04.11.2026\", nothing beside it",
-    "Left out heading \"ΚΑΣΤΑΝΑ ΕΛΛΑΔΑΣ, KG, €\", nothing beside it",
+    "Left out column labels \"ΚΑΣΤΑΝΑ ΕΛΛΑΔΑΣ\", nothing beside it",
     "Left out heading \"ΚΑΡΥΔΙΑ ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it",
     "Left out heading \"BERRIES U.S.A / ΟΛΛΑΝΔΙΑΣ\", nothing beside it",
     "Left out heading \"ΡΟΔΙΑ ΚΟΚΚΙΝΑ ΚΥΠΡΙΑΚΑ\", nothing beside it",
@@ -4036,7 +4036,7 @@
     "Left out heading \"ΦΟΙΝΙΚΙΑ ΙΣΡΑΗΛ\", nothing beside it",
     "Left out heading \"ΕΛΙΕΣ ΕΛΛΗΝΙΚΕΣ\", nothing beside it",
     "Left out heading \"ΚΛΗΜΑΤΟΦΥΛΛΑ ΣΕ ΑΛΜΗ\", nothing beside it",
-    "Left out heading \"ΕΞΩΤΙΚΑ ΦΡΟΥΤΑ, KG, €\", nothing beside it",
+    "Left out column labels \"ΕΞΩΤΙΚΑ ΦΡΟΥΤΑ\", nothing beside it",
     "Left out heading \"MANGO ΠΕΡΟΥ (READY TO EAT BY AIR)\", nothing beside it",
     "Left out heading \"ΚΥΔΩΝΙΑ ΕΛΛΑΔΑΣ\", nothing beside it",
     "Left out heading \"ΑΧΛΑΔΟΜΗΛΑ ΕΛΛΑΔΑΣ\", nothing beside it",
@@ -4051,7 +4051,7 @@
     "Left out heading \"ΜΗΛΑ RED CHIEF ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it",
     "Left out heading \"ΜΗΛΑ R.GALA ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it",
     "Left out heading \"ΜΗΛΑ GRANNY ΕΛΛΑΔΑΣ ΝΕΑΣ ΕΣΟΔΕΙΑΣ\", nothing beside it",
-    "Left out heading \"ΣΤΑΦΥΛΙΑ ΛΕΥΚΑ ΕΛΛΑΔΑΣ, KG, €\", nothing beside it",
+    "Left out column labels \"ΣΤΑΦΥΛΙΑ ΛΕΥΚΑ ΕΛΛΑΔΑΣ\", nothing beside it",
     "Left out heading \"ΣΤΑΦΥΛΙΑ ΚΟΚΚΙΝΑ ΕΛΛΑΔΑΣ\", nothing beside it",
     "Left out heading \"ΑΡΩΜΑΤΙΚΑ ΚΥΠΡΙΑΚΑ\", nothing beside it",
     "Left out heading \"ΝΤΟΜΑΤΕΣ ΕΛΛΑΔΑΣ\", nothing beside it",
@@ -4062,7 +4062,7 @@
     "Left out heading \"ΚΑΡΟΤΑ ΕΙΣΑΓΟΜΕΝΑ\", nothing beside it",
     "Left out heading \"ΚΡΕΜΜΥΔΙΑ ΟΛΛΑΝΔΙΑΣ/ ΕΛΛΑΔΑΣ\", nothing beside it",
     "Left out heading \"ΣΚΟΡΔΑ ΚΙΝΑΣ\", nothing beside it",
-    "Kilograms come from the KG column headings",
-    "Currency comes from the € column headings"
+    "Selling unit taken from the column header",
+    "Currency taken from the column header"
   ]
 }

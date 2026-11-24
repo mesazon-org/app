@@ -1,20 +1,2 @@
 [
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/1",
-    "value" : "Left out slogan \"СНАБЖАЕМ\", contact details beside it",
-    "old" : "Left out slogan \"СНАБЖАЕМ\", nothing beside it"
-  },
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/2",
-    "value" : "Left out slogan \"СОЗДАЕМ\", contact details beside it",
-    "old" : "Left out slogan \"СОЗДАЕМ\", nothing beside it"
-  },
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/3",
-    "value" : "Left out slogan \"РАЗВИВАЕМ\", contact details beside it",
-    "old" : "Left out slogan \"РАЗВИВАЕМ\", nothing beside it"
-  }
 ]

@@ -23,7 +23,7 @@
             "postalCode": "115 26",
             "country": null,
             "extractionNotes": [
-              "Country is not shown"
+              "Country is missing"
             ]
           },
           "addressType": "Billing"
@@ -55,7 +55,7 @@
             "postalCode": "262 23",
             "country": null,
             "extractionNotes": [
-              "Country is not shown"
+              "Country is missing"
             ]
           },
           "addressType": "Billing"
@@ -87,7 +87,7 @@
             "postalCode": "241 00",
             "country": null,
             "extractionNotes": [
-              "Country is not shown"
+              "Country is missing"
             ]
           },
           "addressType": "Billing"
@@ -95,7 +95,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Email address could not be fully read",
+        "Email could not be fully read",
         "Tax number shown but not kept"
       ]
     }
@@ -123,7 +123,7 @@
             "postalCode": "716 01",
             "country": null,
             "extractionNotes": [
-              "Country is not shown"
+              "Country is missing"
             ]
           },
           "addressType": "Billing"
@@ -164,7 +164,7 @@
             "postalCode": "731 00",
             "country": null,
             "extractionNotes": [
-              "Country is not shown"
+              "Country is missing"
             ]
           },
           "addressType": "Billing"
@@ -197,6 +197,6 @@
   "extractionNotes": [
     "Left out title \"Πελάτες\", nothing beside it",
     "Left out column labels \"Όνομα\", nothing beside it",
-    "Phone country codes taken from the Greek addresses"
+    "Phone country codes taken from the address"
   ]
 }

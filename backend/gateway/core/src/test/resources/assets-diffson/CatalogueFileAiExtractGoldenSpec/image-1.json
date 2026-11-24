@@ -2,37 +2,58 @@
   {
     "op" : "replace",
     "path" : "/extractionNotes/0",
-    "value" : "Left out supplier details \"M.CH. FRUITHAVEN TRADERS LTD\", registration beside it",
+    "value" : "The ΕΛΛΕΙΨΗ columns appear to contain prices",
     "old" : "Left out supplier name \"M.CH. FRUITHAVEN TRADERS LTD T.I.C:60099862T\", nothing beside it"
   },
   {
     "op" : "replace",
     "path" : "/extractionNotes/1",
-    "value" : "Left out supplier contact details, nothing beside them",
+    "value" : "Left out supplier logo, nothing beside it",
     "old" : "Left out contact line \"Tel +35799255087 +35799254569 info@mchfruithaven.com\", nothing beside it"
   },
   {
     "op" : "replace",
     "path" : "/extractionNotes/2",
-    "value" : "Left out supplier address, nothing beside it",
+    "value" : "Left out supplier name, tax number beside it",
     "old" : "Left out address \"Agiou Epiktitou 17, Agios Athanasios, Limassol, Cyprus\", nothing beside it"
   },
   {
     "op" : "replace",
     "path" : "/extractionNotes/3",
-    "value" : "Left out title \"Period:\", nothing beside it",
+    "value" : "Left out contact details, nothing beside it",
     "old" : "Left out date label \"Period:\", dates below it"
   },
   {
     "op" : "replace",
     "path" : "/extractionNotes/4",
-    "value" : "Left out date \"20/4/2026 - 23/4/2026\", nothing beside it",
+    "value" : "Left out supplier address, nothing beside it",
     "old" : "Left out date \"20/4/2026 – 23/4/2026\", nothing beside it"
+  },
+  {
+    "op" : "add",
+    "path" : "/extractionNotes/5",
+    "value" : "Left out heading \"Period:\", nothing beside it"
+  },
+  {
+    "op" : "add",
+    "path" : "/extractionNotes/6",
+    "value" : "Left out date \"20/4/2026 - 23/4/2026\", nothing beside it"
+  },
+  {
+    "op" : "add",
+    "path" : "/extractionNotes/-",
+    "value" : "The ΕΛΛΕΙΨΗ column was not used"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/0/name",
+    "value" : "Αγγούρια Α'",
+    "old" : "Αγγούρια Α’"
   },
   {
     "op" : "replace",
     "path" : "/candidates/5/name",
-    "value" : "Πράκαπα",
+    "value" : "Πάκραπα",
     "old" : "Πάρκαπα"
   },
   {

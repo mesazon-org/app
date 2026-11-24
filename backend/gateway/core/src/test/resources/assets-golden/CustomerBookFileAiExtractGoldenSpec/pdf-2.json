@@ -83,7 +83,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Country code +357 guessed, but the address is in Greece"
+        "Country code +357 guessed, the address is in Greece"
       ]
     },
     {
@@ -123,9 +123,7 @@
             "postalCode": null,
             "country": null,
             "extractionNotes": [
-              "Street address is missing",
-              "Postal code is missing",
-              "Country is missing"
+              "Street, postal code and country are missing"
             ]
           },
           "addressType": "Billing"
@@ -133,7 +131,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Country code +357 guessed, but the city is in Greece"
+        "Country code +357 guessed, the address is in Greece"
       ]
     }
   ],
@@ -287,8 +285,7 @@
             "postalCode": null,
             "country": "Κύπρος",
             "extractionNotes": [
-              "Street address is missing",
-              "Postal code is missing"
+              "Street and postal code are missing"
             ]
           },
           "addressType": "Billing"

@@ -1,14 +1,8 @@
 [
   {
     "op" : "replace",
-    "path" : "/individualCandidates/2/extractionNotes/0",
-    "value" : "Email address is incomplete",
-    "old" : "Email address could not be fully read"
-  },
-  {
-    "op" : "replace",
     "path" : "/extractionNotes/3",
-    "value" : "Phone country codes taken from Greece throughout the list",
-    "old" : "Phone country codes taken from the Greek addresses"
+    "value" : "Country code taken from the address",
+    "old" : "Phone country codes taken from the address"
   }
 ]

@@ -1,12 +1,2 @@
 [
-  {
-    "op" : "add",
-    "path" : "/extractionNotes/3",
-    "value" : "Left out footer \"Перезвонить в пн!\", nothing beside it"
-  },
-  {
-    "op" : "remove",
-    "path" : "/extractionNotes/5",
-    "old" : "Left out footer \"Перезвонить в пн!\", nothing beside it"
-  }
 ]
