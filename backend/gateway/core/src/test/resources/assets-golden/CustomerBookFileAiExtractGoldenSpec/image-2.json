@@ -1,0 +1,175 @@
+{
+  "entriesIdentified": 5,
+  "entriesProcessed": 5,
+  "individualCandidates": [
+    {
+      "fullName": "Γιώργος Παπαδόπουλος",
+      "emails": [
+        "giorgos.pap@gmail.com"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "99124567",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Λεωφ. Αθηνάς 14",
+            "addressLine2": null,
+            "city": "Αθήνα",
+            "postalCode": "10551",
+            "country": "Ελλάδα",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        "Country code +357 guessed, the address is in Greece"
+      ]
+    },
+    {
+      "fullName": "Μαρία Κωνσταντίνου",
+      "emails": [
+        "maria.kon@gmail.com"
+      ],
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Νίκος Ανδρέου",
+      "emails": [
+        
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "96334221",
+          "phoneCountryCode": "+357",
+          "phoneCountryCodeInferred": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": null,
+            "addressLine2": null,
+            "city": "Θεσσαλονίκη",
+            "postalCode": null,
+            "country": null,
+            "extractionNotes": [
+              "Street, postal code and country are missing"
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        "Country code +357 guessed, the address is in Greece"
+      ]
+    }
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "Αφοί Νικολάου ΟΕ",
+      "emails": [
+        "info@nikolaoutools.gr"
+      ],
+      "taxID": "094582761",
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "2106654321",
+          "phoneCountryCode": "+30",
+          "phoneCountryCodeInferred": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Βιομηχανική Περιοχή, Οδός 3",
+            "addressLine2": "Μονάδα Β",
+            "city": "Πάτρα",
+            "postalCode": "26332",
+            "country": "Ελλάδα",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Ελένη Νικολάου",
+          "role": null,
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        "Country code taken from the address"
+      ]
+    },
+    {
+      "businessName": "Κυπριακή Ψύξη Ltd",
+      "emails": [
+        
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": null,
+            "addressLine2": null,
+            "city": "Λευκωσία",
+            "postalCode": null,
+            "country": "Κύπρος",
+            "extractionNotes": [
+              "Street and postal code are missing"
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        "Phone number could not be fully read"
+      ]
+    }
+  ],
+  "emptyEntryRowIndexes": [
+    
+  ],
+  "unidentifiedEntryRowIndexes": [
+    
+  ],
+  "extractionNotes": [
+    "Left out title \"Πελάτες\", date beside it",
+    "Left out date \"12/3/2025\", title beside it"
+  ]
+}

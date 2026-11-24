@@ -1,0 +1,157 @@
+{
+  "entriesIdentified": 5,
+  "entriesProcessed": 4,
+  "individualCandidates": [
+    {
+      "fullName": "Daniel Mercer",
+      "emails": [
+        "dan.mercer@gmail.com"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "7700900341",
+          "phoneCountryCode": "+44",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "18 Pine Rd",
+            "addressLine2": null,
+            "city": "Bristol",
+            "postalCode": "BS1 4DJ",
+            "country": "UK",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Sofia Lang",
+      "emails": [
+        
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "7718334921",
+          "phoneCountryCode": "+44",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    }
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "Evia Flowers Ltd",
+      "emails": [
+        "orders@eviaflowers.co.uk"
+      ],
+      "taxID": "GB381552122",
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "2079462013",
+          "phoneCountryCode": "+44",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "7 Market Lane",
+            "addressLine2": "Unit 2",
+            "city": "London",
+            "postalCode": "E8 3RT",
+            "country": "UK",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Maria Cole",
+          "role": "buyer",
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Aegean Repairs",
+      "emails": [
+        
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "22 Dock Street",
+            "addressLine2": null,
+            "city": "Southampton",
+            "postalCode": "SO14 3JQ",
+            "country": "UK",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "A. Reed",
+          "role": null,
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        "Phone number could not be fully read"
+      ]
+    }
+  ],
+  "emptyEntryRowIndexes": [
+    
+  ],
+  "unidentifiedEntryRowIndexes": [
+    5
+  ],
+  "extractionNotes": [
+    "Left out title \"Customers\", date beside it",
+    "Left out date \"12/03/25\", title beside it",
+    "Comments were not used"
+  ]
+}

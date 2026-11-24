@@ -1,0 +1,7 @@
+[
+  {
+    "op" : "remove",
+    "path" : "/candidates/8/variants/0/extractionNotes/0",
+    "old" : "Price is marked TBD"
+  }
+]

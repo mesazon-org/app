@@ -1,0 +1,75 @@
+[
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/0",
+    "value" : "The ΕΛΛΕΙΨΗ columns appear to contain prices",
+    "old" : "Left out \"Period:\", nothing beside it"
+  },
+  {
+    "op" : "add",
+    "path" : "/extractionNotes/1",
+    "value" : "Left out \"M.CH FRUITHAVEN\", nothing beside it"
+  },
+  {
+    "op" : "add",
+    "path" : "/extractionNotes/2",
+    "value" : "Left out \"Period:\", supplier details beside it"
+  },
+  {
+    "op" : "add",
+    "path" : "/extractionNotes/3",
+    "value" : "Left out date \"20/4/2026 - 23/4/2026\", supplier details beside it"
+  },
+  {
+    "op" : "remove",
+    "path" : "/extractionNotes/5",
+    "old" : "Left out date \"20/4/2026 – 23/4/2026\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/7",
+    "value" : "Left out column labels \"Product\", column labels beside it",
+    "old" : "Left out column labels \"Product\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/8",
+    "value" : "Left out column labels \"Product\", column labels beside it",
+    "old" : "Left out column labels \"Product\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/9",
+    "value" : "Left out heading \"VEGETABLES\", heading beside it",
+    "old" : "Left out heading \"VEGETABLES\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/10",
+    "value" : "Left out heading \"GREENS\", heading beside it",
+    "old" : "Left out heading \"GREENS\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/0/name",
+    "value" : "Αγγούρια Α'",
+    "old" : "Αγγούρια Α’"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/5/name",
+    "value" : "Πάραπα",
+    "old" : "Πάρκαπα"
+  },
+  {
+    "op" : "remove",
+    "path" : "/candidates/5/extractionNotes/0",
+    "old" : "Name may be misspelled in the source"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/47/name",
+    "value" : "Ακτινίδιο",
+    "old" : "Ακτινιδιο"
+  }
+]

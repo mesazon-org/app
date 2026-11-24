@@ -1,0 +1,170 @@
+{
+  "entriesIdentified": 6,
+  "entriesProcessed": 6,
+  "individualCandidates": [
+    {
+      "fullName": "Наталья Орлова",
+      "emails": [
+        "n.orlova@mail.ru"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "9161234567",
+          "phoneCountryCode": "+7",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Сергей Павлов",
+      "emails": [
+        "s.pavlov@inbox.ru"
+      ],
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Екатерина Смирнова",
+      "emails": [
+        "e.smirnova@list.ru"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "9053342144",
+          "phoneCountryCode": "+7",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    }
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "ООО Ладога Маркет",
+      "emails": [
+        "info@ladoga-market.ru"
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "8126002211",
+          "phoneCountryCode": "+7",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Игорь Беляев",
+          "role": "директор",
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "ИП Захарова",
+      "emails": [
+        
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "9037789012",
+          "phoneCountryCode": "+7",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Анна Захарова",
+          "role": "владелец",
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "ТехноСервис",
+      "emails": [
+        "a.kuznetsov@techno.ru"
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Алексей Кузнецов",
+          "role": "менеджер",
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        "Phone number could not be fully read"
+      ]
+    }
+  ],
+  "emptyEntryRowIndexes": [
+    
+  ],
+  "unidentifiedEntryRowIndexes": [
+    
+  ],
+  "extractionNotes": [
+    "Left out title \"Клиенты.csv\", nothing beside it",
+    "Left out column labels \"Имя\", nothing beside it",
+    "Customer types were not used"
+  ]
+}

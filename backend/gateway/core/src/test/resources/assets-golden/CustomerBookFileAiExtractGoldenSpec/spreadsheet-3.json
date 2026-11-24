@@ -1,0 +1,50 @@
+{
+  "entriesIdentified": 2,
+  "entriesProcessed": 2,
+  "individualCandidates": [
+    {
+      "fullName": "John Smith",
+      "emails": [
+        "john.smith@example.com"
+      ],
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Jane Doe",
+      "emails": [
+        "jane.doe@example.com"
+      ],
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    }
+  ],
+  "businessCandidates": [
+    
+  ],
+  "emptyEntryRowIndexes": [
+    
+  ],
+  "unidentifiedEntryRowIndexes": [
+    
+  ],
+  "extractionNotes": [
+    
+  ]
+}

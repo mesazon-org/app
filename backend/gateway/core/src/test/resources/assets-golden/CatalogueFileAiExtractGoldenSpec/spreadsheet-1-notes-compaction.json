@@ -1,0 +1,679 @@
+{
+  "entriesIdentified": 26,
+  "entriesProcessed": 19,
+  "candidates": [
+    {
+      "name": null,
+      "description": null,
+      "variants": [
+        {
+          "sku": "HNG-7",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Colour",
+              "value": "Brass"
+            }
+          ],
+          "price": {
+            "amount": 1.20,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Garden hose",
+      "description": null,
+      "variants": [
+        {
+          "sku": "GH-20",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Size",
+              "value": "20 m"
+            },
+            {
+              "name": "Colour",
+              "value": "Green"
+            }
+          ],
+          "price": {
+            "amount": 18.90,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        },
+        {
+          "sku": "GH-30",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Size",
+              "value": "30 m"
+            },
+            {
+              "name": "Colour",
+              "value": "Green"
+            }
+          ],
+          "price": {
+            "amount": 24.90,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        },
+        {
+          "sku": "GH-50",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Size",
+              "value": "50 m"
+            },
+            {
+              "name": "Colour",
+              "value": "Black"
+            }
+          ],
+          "price": {
+            "amount": 34.90,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Watering can",
+      "description": null,
+      "variants": [
+        {
+          "sku": "WC-10",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Size",
+              "value": "10 l"
+            },
+            {
+              "name": "Colour",
+              "value": "Green"
+            }
+          ],
+          "price": {
+            "amount": 9.50,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Watering can",
+      "description": null,
+      "variants": [
+        {
+          "sku": "WC-5",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Size",
+              "value": "5 l"
+            },
+            {
+              "name": "Colour",
+              "value": "Grey"
+            }
+          ],
+          "price": {
+            "amount": 7.50,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "WATERING CAN",
+      "description": null,
+      "variants": [
+        {
+          "sku": "WC-2",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Size",
+              "value": "2 l"
+            },
+            {
+              "name": "Colour",
+              "value": "Red"
+            }
+          ],
+          "price": {
+            "amount": 4.95,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Olive oil extra virgin 500 ml bottle",
+      "description": null,
+      "variants": [
+        {
+          "sku": "OIL-500",
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": {
+            "amount": 6.40,
+            "currency": "GBP",
+            "currencyInferred": false
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Bottle"
+            },
+            "unitSize": {
+              "value": 500,
+              "unit": "Millilitre"
+            }
+          },
+          "sellingUnitInferred": true,
+          "extractionNotes": [
+            "Selling unit taken from the product name"
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Potting soil",
+      "description": null,
+      "variants": [
+        {
+          "sku": "ab-1",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Supplier notes",
+              "value": "Sold loose"
+            }
+          ],
+          "price": {
+            "amount": 0.85,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Kilogram"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Plant pot",
+      "description": null,
+      "variants": [
+        {
+          "sku": "AB-1",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Size",
+              "value": "Ø 20 cm"
+            },
+            {
+              "name": "Colour",
+              "value": "Terracotta"
+            }
+          ],
+          "price": {
+            "amount": 3.20,
+            "currency": "EUR",
+            "currencyInferred": false
+          },
+          "sellingUnit": null,
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Hand trowel",
+      "description": null,
+      "variants": [
+        {
+          "sku": "TR-1",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Colour",
+              "value": "Steel"
+            }
+          ],
+          "price": null,
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            "Price is marked TBD"
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Pruning shears",
+      "description": null,
+      "variants": [
+        {
+          "sku": "PS-1",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Colour",
+              "value": "Red"
+            },
+            {
+              "name": "Supplier notes",
+              "value": "Price on request"
+            }
+          ],
+          "price": null,
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Paving stones",
+      "description": null,
+      "variants": [
+        {
+          "sku": "PV-40",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Size",
+              "value": "40 x 40 cm"
+            },
+            {
+              "name": "Colour",
+              "value": "Grey"
+            }
+          ],
+          "price": {
+            "amount": 189,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": null,
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            "Selling unit pallet is not supported"
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Hand trowel",
+      "description": null,
+      "variants": [
+        {
+          "sku": "TR-2",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Colour",
+              "value": "Steel"
+            }
+          ],
+          "price": {
+            "amount": 4.5,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Hose connector",
+      "description": null,
+      "variants": [
+        {
+          "sku": "HC-1",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Colour",
+              "value": "Blue"
+            }
+          ],
+          "price": {
+            "amount": 2.5,
+            "currency": null,
+            "currencyInferred": false
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            "Currency CHF is not supported"
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Seed mix",
+      "description": null,
+      "variants": [
+        {
+          "sku": "SM-1",
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": null,
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Box"
+            },
+            "perUnit": {
+              "value": 12,
+              "unit": "Bag"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            "Price has more than two decimal places"
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Greenhouse kit",
+      "description": null,
+      "variants": [
+        {
+          "sku": "GK-1",
+          "label": null,
+          "description": null,
+          "attributes": [
+            
+          ],
+          "price": null,
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            "Price exceeds the supported limit"
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Bird feeder",
+      "description": null,
+      "variants": [
+        {
+          "sku": "BF-1",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Colour",
+              "value": "Natural"
+            }
+          ],
+          "price": {
+            "amount": 12,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": {
+            "quantity": {
+              "value": 1,
+              "unit": "Piece"
+            }
+          },
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "name": "Bamboo canes",
+      "description": null,
+      "variants": [
+        {
+          "sku": "BC-150",
+          "label": null,
+          "description": null,
+          "attributes": [
+            {
+              "name": "Size",
+              "value": "150 cm"
+            },
+            {
+              "name": "Supplier notes",
+              "value": "sold per bundle of 10"
+            }
+          ],
+          "price": {
+            "amount": 0.6,
+            "currency": "EUR",
+            "currencyInferred": true
+          },
+          "sellingUnit": null,
+          "sellingUnitInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "extractionNotes": [
+        
+      ]
+    }
+  ],
+  "emptyEntryRows": [
+    2,
+    3,
+    15,
+    16,
+    30,
+    31
+  ],
+  "unidentifiedEntryRows": [
+    28
+  ],
+  "extractionNotes": [
+    "Left out row 4, heading \"GARDEN\", nothing beside it",
+    "Left out row 17, column labels \"Product\", nothing beside it",
+    "Left out row 18, heading \"TOOLS\", nothing beside it",
+    "Left out row 29, total \"Total, 1.250.000.000.295,94\", nothing beside it",
+    "Currency taken from the column header"
+  ]
+}

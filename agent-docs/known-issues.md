@@ -195,11 +195,12 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 
 ## Catalogue image golden exhausts the request timeout
 
-- **Status:** Manual-check timeout adjusted; live reverification pending.
+- **Status:** Resolved 2026-11-23. With 600 seconds per attempt, the issue 607 capture run at high effort (2026-11-22, about 10 minutes for all 10 cases) and the run at default effort (2026-11-23, 7 min 16 s for all 10) both answered every case, `image-2.jpeg` included, with no timeout.
 - **Signature:** `CatalogueFileAiExtractFromImageGoldenSpec` fails after about three minutes with `Unable to send message to AI` → `SttpClientException.TimeoutException` → `java.net.http.HttpTimeoutException: request timed out` for `/v1/chat/completions` (recorded before the issue 607 move; the same failure now names `/v1/responses`).
 - **Cause:** Each attempt exceeded the golden's 60-second read deadline; the client allowed two retries with exponential delay. The exception does not identify whether provider latency, request complexity, or connectivity caused the delay. No completion reached JSON decoding.
-- **Adjustment:** The catalogue image manual golden first moved to 180 seconds per attempt, and on 2026-11-17 to 600 seconds, because `CatalogueFileAiExtractFromImageGoldenSpec/image-2.jpeg` (about 150 rows) timed out on every 180-second attempt. It keeps two retries, so a timeout-only case can take roughly 30 minutes. The shared production default stays 180 seconds per attempt, with the existing environment override and client retry/error behavior retained.
+- **Adjustment:** The catalogue image manual golden first moved to 180 seconds per attempt, and on 2026-11-17 to 600 seconds, because `CatalogueFileAiExtractFromImageGoldenSpec/image-2.jpeg` (125 priced rows) timed out on every 180-second attempt. It keeps two retries, so a timeout-only case can take roughly 30 minutes. The shared production default stays 180 seconds per attempt, with the existing environment override and client retry/error behavior retained.
 - **Verify:** Compile/lint the spec without sending data. A person can then run it with their configured key and asset to observe whether a complete response arrives within the longer deadline; canceled or timed-out runs are not extraction-quality evidence.
+- **Issue 607 rework (done):** `CatalogueFileAiExtractFromImageGoldenSpec` is deleted. Its image cases are in `golden/CatalogueFileAiExtractGoldenSpec` (`image-2.jpeg` keeps its name and bytes), which uses 600 seconds with two retries for every case, so the same failure now names that spec. The signature above was recorded from the old spec.
 
 ## Several arbitrary users in one test collide on the unique phone number
 
@@ -230,3 +231,32 @@ Agent diagnostic index. Match the signature before changing code. Record reusabl
 - **Fix:** Start Docker, or run the same specs through `Test / testOnly`, which skips the Docker publish: `sbt "gateway-core/Test/testOnly io.mesazon.gateway.fun.CustomerBookFileServiceSpec"`.
 - **Prevention:** The `CLAUDE.md` command `gateway-core/testOnly io.mesazon.gateway.fun.*` ("no containers") needs Docker for the image publish. Use the `Test/testOnly` form when Docker is down; acceptance (`gateway-it/test`) always needs Docker.
 - **Verify:** With Docker stopped, the `Test/testOnly` command runs the spec (`CustomerBookFileServiceSpec` has 56 tests) and reports `All tests passed`.
+
+## Converting an XLSX spreadsheet rewrites the source file
+
+- **Status:** Resolved 2026-11-23 (issue 607, slice 5S)
+- **Severity:** Low
+- **Signature:** After a run of `golden/CatalogueFileAiExtractGoldenSpec` that converts `spreadsheet-3.xlsx`, `git status` shows `backend/gateway/core/src/test/resources/assets-test/CatalogueFileAiExtractGoldenSpec/spreadsheet-3.xlsx` modified, its size changing from 6,693 to 7,030 bytes (observed 2026-11-22 in the issue 607 capture run). The CSV records read from it are unaffected, because they are read before the file is written.
+- **Cause (proven by the fix's red test, which failed for `.xlsx` only):** `SpreadsheetTool.convertExcelToCsvFile` opens the workbook with `WorkbookFactory.create(File)`, which opens it read-write. On `workbook.close()`, Apache POI saves an XLSX package opened read-write back to its file. In production the file is the uploaded scan's temp file, so only that temp copy is rewritten, with no user-visible effect. The golden spec passes the committed asset's source-tree path straight to `SpreadsheetTool`, so it rewrites the committed asset. `SpreadsheetToolSpec` and the acceptance specs work on temp copies.
+- **Fix:** `SpreadsheetTool` opens the workbook read-only, `WorkbookFactory.create(file, null, workbookReadOnly)`: no password (`null`), and a named `inline val` for the read-only flag (issue 607 round 3). The arguments are positional because POI's Java overload has no parameter names (`x$0..x$2`), so the constant carries the meaning the named-Boolean rule in [Scala](standards/scala.md) asks for.
+- **Verify:** `SpreadsheetToolSpec` "leave the .xlsx/.xls workbook file unchanged after converting it" (byte-identical before and after, records unchanged; only the `.xlsx` case can go red, because HSSF never writes `.xls` on close, so the `.xls` case is a guard against a later change); `CatalogueFileApiSpec` and `CustomerBookFileApiSpec` XLS/XLSX success cases still pass. After any golden run, `git status` shows no change under `assets-test/`.
+
+## A new Scala file passes local lint but fails CI `checkLint`
+
+- **Status:** Workaround available (issue 607, 2026-11-23)
+- **Severity:** Medium
+- **Signature:** CI (or `ENABLE_SCALA_LINT_ON_COMPILE=false sbt "checkLint"`) fails with `scalafmt: …/<NewSpec>.scala isn't formatted properly!` and `(<module> / Test / scalafmtCheck) scalafmt: 1 files must be formatted`, although `sbt "runLint"` reported no change before the file was committed. Seen on `golden/CustomerBookFileAiExtractGoldenSpec.scala` after 44fb6bd.
+- **Cause:** `.scalafmt.conf` sets `project.git = true`, so scalafmt formats and checks only files git tracks; a new, untracked file is skipped by `runLint`, `checkLint` and format-on-compile alike, so "no change" proves nothing for it. Once the file is tracked, local compiles reformat it silently, because `build.sbt` turns `scalafmtOnCompile`/`scalafixOnCompile` on unless `ENABLE_SCALA_LINT_ON_COMPILE=false`, while CI sets that variable to `false` (`.github/workflows/job-scala-build.yml`) and only checks.
+- **Fix:** once the file is tracked, run `sbt "runLint"` and commit the formatting it produces.
+- **Prevention:** a slice that adds a new Scala file is not lint-verified until the file is tracked. Agents never stage, so the check runs in the slice after the commit that adds the file: `ENABLE_SCALA_LINT_ON_COMPILE=false sbt "checkLint"`, and any formatting goes into that next commit.
+- **Verify:** `ENABLE_SCALA_LINT_ON_COMPILE=false sbt "checkLint"` exits 0.
+
+## Manual AI golden check ignores the API key given on the command line
+
+- **Status:** Workaround available (observed 2026-11-22, issue 607 slice 1)
+- **Severity:** Medium
+- **Signature:** `AI_CLIENT_DATA_EXTRACTION_API_KEY=<key> sbt "gateway-core/testOnly io.mesazon.gateway.golden.CatalogueFileAiExtractGoldenSpec"` reports every case `CANCELED` ("Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually") although the key was set. The reverse also happens: a run with no key set still uses a key from an earlier session.
+- **Cause:** sbt 2's thin client hands the command to an already-running sbt server. The forked test JVM inherits the **server's** startup environment, not the shell's, so a key set on the client command line is never seen. A server started while a key was set keeps that key until it stops.
+- **Fix:** Stop any running server, then run in one standalone process: `sbt shutdown`, then `AI_CLIENT_DATA_EXTRACTION_API_KEY=<key> sbt --server "gateway-core/testOnly io.mesazon.gateway.golden.CatalogueFileAiExtractGoldenSpec"`. The same applies to the model and effort overrides (`AI_CLIENT_DATA_EXTRACTION_*`).
+- **Prevention:** Always use the `sbt shutdown` plus `sbt --server` form for live golden runs ([AI response performance: Running](project/ai-response-performance.md#running)). After a run with a real key, run `sbt shutdown` so no server keeps it.
+- **Verify:** Never use a dummy key: every golden now exists, so a dummy key gets past the golden check and sends the asset to OpenAI. Without a key, all 33 cases cancel.

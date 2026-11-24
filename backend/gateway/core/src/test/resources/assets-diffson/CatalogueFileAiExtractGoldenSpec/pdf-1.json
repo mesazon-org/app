@@ -1,0 +1,49 @@
+[
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/0",
+    "value" : "The ΕΛΛΕΙΨΗ columns appear to contain prices",
+    "old" : "\"ΕΛΛΕΙΨΗ\" columns appear to show prices"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/1",
+    "value" : "Left out \"M.CH FRUITHAVEN EST. 2014\", nothing beside it",
+    "old" : "Left out \"M.CH FRUITHAVEN\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/2",
+    "value" : "Left out heading \"Period:\", nothing beside it",
+    "old" : "Left out \"Period:\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/3",
+    "value" : "Left out date \"2/11/2026 – 4/11/2026\", supplier details beside it",
+    "old" : "Left out \"M.CH. FRUITHAVEN TRADERS LTD T.I.C:60099862T\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/4",
+    "value" : "Left out \"M.CH. FRUITHAVEN TRADERS LTD T.I.C:60099862T\", date beside it",
+    "old" : "Left out date \"2/11/2026 – 4/11/2026\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/5",
+    "value" : "Left out \"Tel +35799255087 +35799254569\", email beside it",
+    "old" : "Left out \"Tel +35799255087 +35799254569 info@mchfruithaven.com\", nothing beside it"
+  },
+  {
+    "op" : "add",
+    "path" : "/extractionNotes/6",
+    "value" : "Left out \"info@mchfruithaven.com\", telephone numbers beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/12",
+    "value" : "Left out heading \"FRUITS\", prices beside it",
+    "old" : "Left out heading \"FRUITS\", nothing beside it"
+  }
+]

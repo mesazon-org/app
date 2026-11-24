@@ -12,8 +12,11 @@ Matching is case-sensitive and skips code spans, so `OTP` in backticks and the
 "Http Error Responses" headings are left alone.
 {% endcomment %}
 
+*[AI]: Artificial Intelligence — the model that reads uploads and suggests items or customers
+*[CSV]: Comma-Separated Values — a plain-text spreadsheet file
 *[JWT]: JSON Web Token
 *[OTP]: One-Time Passcode
+*[PDF]: Portable Document Format — a document file, typed or scanned
 *[RFC]: Request for Comments — an internet standards document
 *[SKU]: Stock-Keeping Unit — the business's own code for one variant
 *[SMS]: Short Message Service — a text message

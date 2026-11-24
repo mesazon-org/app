@@ -29,6 +29,7 @@ object SpreadsheetTool {
     private inline val noCellsLastCellNumBound = 0
     private inline val firstCellIndex          = 0
     private inline val firstSheetIndex         = 0
+    private inline val workbookReadOnly        = true
 
     private def cellValues(row: Row, dataFormatter: DataFormatter): List[String] = {
       val lastCellNum = row.getLastCellNum
@@ -46,7 +47,9 @@ object SpreadsheetTool {
         csvTempFile <- TempFile.createScoped(csvTempFilePrefix)
         _           <- ZIO.acquireReleaseWith(
           ZIO
-            .attemptBlocking(WorkbookFactory.create(excelFileScannedPath.value.toFile))
+            .attemptBlocking(
+              WorkbookFactory.create(excelFileScannedPath.value.toFile, null, workbookReadOnly)
+            )
             .mapError(e => ServiceError.InternalServerError.UnexpectedError("Failed to open Excel workbook", Some(e)))
         )(workbook => ZIO.attemptBlocking(workbook.close()).ignoreLogged) { workbook =>
           ZIO.acquireReleaseWith(

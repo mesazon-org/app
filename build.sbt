@@ -223,6 +223,9 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.springSecurityCrypto,
     Dependencies.springCore,
     Dependencies.bouncyCastle,
+    Dependencies.diffsonCirce % Test,
+    Dependencies.circeCore    % Test,
+    Dependencies.circeParser  % Test,
   )
   .settings(Settings.testAfterDockerPublish(backendWiremock / Docker / publishLocal))
 

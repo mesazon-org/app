@@ -1,0 +1,62 @@
+{
+  "entriesIdentified": 1,
+  "entriesProcessed": 1,
+  "individualCandidates": [
+    
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "ООО Балтик Сервис",
+      "emails": [
+        
+      ],
+      "taxID": "7812465098",
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Лиговский пр., 52",
+            "addressLine2": "офис 14",
+            "city": "Санкт-Петербург",
+            "postalCode": "191040",
+            "country": "Россия",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Ирина Смирнова",
+          "role": "менеджер по закупкам",
+          "email": "i.smirnova@baltservice.ru",
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            "Phone number could not be fully read"
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    }
+  ],
+  "emptyEntryRowIndexes": [
+    
+  ],
+  "unidentifiedEntryRowIndexes": [
+    
+  ],
+  "extractionNotes": [
+    "Left out \"Надежные решения для вашего бизнеса\", nothing beside it",
+    "Left out \"СНАБЖАЕМ\", nothing beside it",
+    "Left out \"СОЗДАЕМ\", nothing beside it",
+    "Left out \"РАЗВИВАЕМ\", nothing beside it"
+  ]
+}

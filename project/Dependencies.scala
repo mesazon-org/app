@@ -45,6 +45,7 @@ object Dependencies {
   lazy val zioS3V               = "0.4.4"
   lazy val poiV                 = "6.0.0"
   lazy val commonsCsvV          = "1.14.1"
+  lazy val diffsonV             = "4.7.1"
 
   // Http4s
   lazy val http4sDsl         = "org.http4s" %% "http4s-dsl"          % http4sV
@@ -98,6 +99,9 @@ object Dependencies {
   lazy val scalamock                    = "org.scalamock"     %% "scalamock"                      % scalamockV
   lazy val scalamockScalaTest           = "org.scalamock"     %% "scalamock-scalatest"            % scalamockV
   lazy val scalamockZIO                 = "org.scalamock"     %% "scalamock-zio"                  % scalamockV
+
+  // Diffson
+  lazy val diffsonCirce = "org.gnieh" %% "diffson-circe" % diffsonV
 
   // Chimney
   lazy val chimney = "io.scalaland" %% "chimney" % chimneyV

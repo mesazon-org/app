@@ -1,0 +1,202 @@
+{
+  "entriesIdentified": 5,
+  "entriesProcessed": 5,
+  "individualCandidates": [
+    {
+      "fullName": "Ελένη Παναγιώτου",
+      "emails": [
+        "eleni.panagiotou@gmail.com"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "6945123456",
+          "phoneCountryCode": "+30",
+          "phoneCountryCodeInferred": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Λεωφ. Κηφισίας 124",
+            "addressLine2": null,
+            "city": "Αθήνα",
+            "postalCode": "115 26",
+            "country": null,
+            "extractionNotes": [
+              "Country is missing"
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        "Tax number shown but not kept"
+      ]
+    },
+    {
+      "fullName": "Σπύρος Θεοδώρου",
+      "emails": [
+        "spyros.theodorou@hotmail.gr"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "6932456789",
+          "phoneCountryCode": "+30",
+          "phoneCountryCodeInferred": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Αγίου Δημητρίου 8",
+            "addressLine2": null,
+            "city": "Πάτρα",
+            "postalCode": "262 23",
+            "country": null,
+            "extractionNotes": [
+              "Country is missing"
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        "Tax number shown but not kept"
+      ]
+    },
+    {
+      "fullName": "Μαρία Κωνσταντίνου",
+      "emails": [
+        
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "6971889920",
+          "phoneCountryCode": "+30",
+          "phoneCountryCodeInferred": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Πλατεία Ναυαρίνου 5",
+            "addressLine2": null,
+            "city": "Καλαμάτα",
+            "postalCode": "241 00",
+            "country": null,
+            "extractionNotes": [
+              "Country is missing"
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        "Email could not be fully read",
+        "Tax number shown but not kept"
+      ]
+    }
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "Αιγαίο Εξοπλισμοί ΕΠΕ",
+      "emails": [
+        "info@aigaioequip.gr"
+      ],
+      "taxID": "998877663",
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "2109876543",
+          "phoneCountryCode": "+30",
+          "phoneCountryCodeInferred": true
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "Βιομηχανική Περιοχή Ηρακλείου",
+            "addressLine2": null,
+            "city": "Ηράκλειο",
+            "postalCode": "716 01",
+            "country": null,
+            "extractionNotes": [
+              "Country is missing"
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Μάριος Ιωάννου",
+          "role": null,
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Κρήτη Τεχνική ΑΕ",
+      "emails": [
+        "contact@kriti-texniki.gr"
+      ],
+      "taxID": "777665544",
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "3ο χλμ. Ε.Ο. Χανίων – Ρεθύμνου",
+            "addressLine2": null,
+            "city": "Χανιά",
+            "postalCode": "731 00",
+            "country": null,
+            "extractionNotes": [
+              "Country is missing"
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Γιώργος Κτιστάκης",
+          "role": null,
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    }
+  ],
+  "emptyEntryRowIndexes": [
+    
+  ],
+  "unidentifiedEntryRowIndexes": [
+    
+  ],
+  "extractionNotes": [
+    "Left out title \"Πελάτες\", nothing beside it",
+    "Left out column labels \"Όνομα\", nothing beside it",
+    "Country code taken from the country used across the image"
+  ]
+}

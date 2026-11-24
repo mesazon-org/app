@@ -1,0 +1,175 @@
+{
+  "entriesIdentified": 5,
+  "entriesProcessed": 4,
+  "individualCandidates": [
+    {
+      "fullName": "Алексей Воронов",
+      "emails": [
+        "voronov.a@mail.ru"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "9213341256",
+          "phoneCountryCode": "+7",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "ул. Лесная, д. 10",
+            "addressLine2": "кв. 25",
+            "city": "г. Санкт-Петербург",
+            "postalCode": null,
+            "country": null,
+            "extractionNotes": [
+              "Postal code and country are missing"
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        "Tax number shown but not kept"
+      ]
+    },
+    {
+      "fullName": "Ольга Романова",
+      "emails": [
+        
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "9052213344",
+          "phoneCountryCode": "+7",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "ул. Чистопольская, д. 8",
+            "addressLine2": null,
+            "city": "г. Казань",
+            "postalCode": null,
+            "country": null,
+            "extractionNotes": [
+              "Postal code and country are missing"
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        "Tax number shown but not kept"
+      ]
+    }
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "ООО СеверТрейд",
+      "emails": [
+        "mk@severtrade.ru"
+      ],
+      "taxID": "5190087654",
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "8124487711",
+          "phoneCountryCode": "+7",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "пр. Ленина, д. 45",
+            "addressLine2": null,
+            "city": "г. Мурманск",
+            "postalCode": null,
+            "country": null,
+            "extractionNotes": [
+              "Postal code and country are missing"
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Марина Кузнецова",
+          "role": null,
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "ИП Михайлов",
+      "emails": [
+        "ip-mihailov@bk.ru"
+      ],
+      "taxID": "540712345670",
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "9637770018",
+          "phoneCountryCode": "+7",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "ул. Кирова, д. 121",
+            "addressLine2": null,
+            "city": "г. Новосибирск",
+            "postalCode": null,
+            "country": null,
+            "extractionNotes": [
+              "Postal code and country are missing"
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Сергей Михайлов",
+          "role": null,
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    }
+  ],
+  "emptyEntryRowIndexes": [
+    
+  ],
+  "unidentifiedEntryRowIndexes": [
+    5
+  ],
+  "extractionNotes": [
+    "Left out date \"12.03.2025\", nothing beside it",
+    "Left out title \"Список клиентов\", nothing beside it",
+    "Left out column labels \"Имя / Компания\", nothing beside it",
+    "Left out footer \"Перезвонить в пн!\", nothing beside it",
+    "Left out footer \"Уточнить ИНН\", nothing beside it"
+  ]
+}

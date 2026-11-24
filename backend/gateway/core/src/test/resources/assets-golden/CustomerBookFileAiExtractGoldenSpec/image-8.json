@@ -1,0 +1,204 @@
+{
+  "entriesIdentified": 5,
+  "entriesProcessed": 5,
+  "individualCandidates": [
+    {
+      "fullName": "Olivia Anne Carter",
+      "emails": [
+        "olivia.carter@mail.com"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "4165550198",
+          "phoneCountryCode": "+1",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "123 Maple Ave",
+            "addressLine2": null,
+            "city": "Toronto",
+            "postalCode": "M4B 1C3",
+            "country": "Canada",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "fullName": "Leo Martin",
+      "emails": [
+        "leo.martin@email.com"
+      ],
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "2079460321",
+          "phoneCountryCode": "+44",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "22 Kingsway",
+            "addressLine2": "Flat 4",
+            "city": "London",
+            "postalCode": "WC2B 6LE",
+            "country": "UK",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "fullNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    }
+  ],
+  "businessCandidates": [
+    {
+      "businessName": "Green Harbor Logistics Ltd",
+      "emails": [
+        "info@greenharbor.ca"
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "6045550144",
+          "phoneCountryCode": "+1",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "200-1188 West Pender St",
+            "addressLine2": null,
+            "city": "Vancouver",
+            "postalCode": "V6E 4A2",
+            "country": "Canada",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Ben Walsh",
+          "role": null,
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Orion Print House",
+      "emails": [
+        "hello@orionprint.co.uk"
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        {
+          "phoneNationalNumber": "1615550177",
+          "phoneCountryCode": "+44",
+          "phoneCountryCodeInferred": false
+        }
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "56 Barton Rd",
+            "addressLine2": "Unit 3",
+            "city": "Manchester",
+            "postalCode": "M3 7JL",
+            "country": "UK",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        {
+          "fullName": "Sara Ng",
+          "role": null,
+          "email": null,
+          "phoneNumber": null,
+          "fullNameInferred": false,
+          "extractionNotes": [
+            
+          ]
+        }
+      ],
+      "businessNameInferred": false,
+      "extractionNotes": [
+        
+      ]
+    },
+    {
+      "businessName": "Riverview Homes",
+      "emails": [
+        "contact@riverviewhomes.com"
+      ],
+      "taxID": null,
+      "phoneNumbers": [
+        
+      ],
+      "addresses": [
+        {
+          "address": {
+            "addressLine1": "789 Oak Ridge Dr",
+            "addressLine2": "Suite 12",
+            "city": "Austin",
+            "postalCode": "78704",
+            "country": "USA",
+            "extractionNotes": [
+              
+            ]
+          },
+          "addressType": "Billing"
+        }
+      ],
+      "customerBusinessContacts": [
+        
+      ],
+      "businessNameInferred": true,
+      "extractionNotes": [
+        "Business name taken from the email"
+      ]
+    }
+  ],
+  "emptyEntryRowIndexes": [
+    
+  ],
+  "unidentifiedEntryRowIndexes": [
+    
+  ],
+  "extractionNotes": [
+    "Left out title \"Customers.csv\", nothing beside it",
+    "Left out column labels \"First Name\", nothing beside it"
+  ]
+}
