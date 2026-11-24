@@ -35,6 +35,14 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
 
   private inline val AiClientDataExtractionApiKeyEnvName = "AI_CLIENT_DATA_EXTRACTION_API_KEY"
 
+  private inline val OpenAiScheme = "https"
+
+  private inline val OpenAiHost = "api.openai.com"
+
+  private inline val OpenAiPort = 443
+
+  private inline val GoldenRequestTimeoutSeconds = 600
+
   private given lcsJson: Lcs[Json] = new Patience[Json]
 
   private final case class Context(
@@ -47,6 +55,8 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
       AiClientDataExtractionApiKeyEnvName,
       "",
     )
+
+  private val missingApiKeyMessage = s"Set $AiClientDataExtractionApiKeyEnvName to run this manually"
 
   private val assetDirectory =
     Paths.get("src/test/resources/assets-test/CatalogueFileAiExtractGoldenSpec")
@@ -75,7 +85,13 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
     else readFromString[CatalogueFileAIExtract](Files.readString(golden))
   }
 
-  private def withContext[A](csvBatchMaxDataRowsOpt: Option[Int] = None)(f: Context => Task[A]): A =
+  private def withContext[A](f: Context => Task[A]): A =
+    withContextAndCsvBatchMaxDataRows(csvBatchMaxDataRowsOpt = None)(f)
+
+  private def withCompactionContext[A](f: Context => Task[A]): A =
+    withContextAndCsvBatchMaxDataRows(csvBatchMaxDataRowsOpt = Some(CsvBatchMaxDataRowsCompaction))(f)
+
+  private def withContextAndCsvBatchMaxDataRows[A](csvBatchMaxDataRowsOpt: Option[Int])(f: Context => Task[A]): A =
     ZIO
       .serviceWithZIO[Context](f)
       .provide(
@@ -86,11 +102,11 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
         AIClientDataExtractionConfig.live.map(environment =>
           environment.update[AIClientDataExtractionConfig](aiClientDataExtractionConfig =>
             aiClientDataExtractionConfig.copy(
-              scheme = "https",
-              host = "api.openai.com",
-              port = 443,
+              scheme = OpenAiScheme,
+              host = OpenAiHost,
+              port = OpenAiPort,
               apiKey = apiKey,
-              requestTimeout = Duration.fromSeconds(600),
+              requestTimeout = Duration.fromSeconds(GoldenRequestTimeoutSeconds),
               csvBatchMaxDataRows = csvBatchMaxDataRowsOpt.getOrElse(aiClientDataExtractionConfig.csvBatchMaxDataRows),
             )
           )
@@ -146,14 +162,14 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
 
   "AIClientDataExtraction" when {
     "extractFromImage" should {
-      "match the golden answer for the price-list picture image-1.jpeg sent with its processing message" in withContext() {
+      "match the golden answer for the price-list picture image-1.jpeg sent with its processing message" in withContext {
         context =>
           import context.*
 
           for {
             _ = assume(
               apiKey.nonEmpty,
-              "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+              missingApiKeyMessage,
             )
 
             catalogueFileProcessingMessage =
@@ -173,13 +189,13 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
           } yield ()
       }
 
-      "match the golden answer for the price-list picture image-2.jpeg" in withContext() { context =>
+      "match the golden answer for the price-list picture image-2.jpeg" in withContext { context =>
         import context.*
 
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName               = "image-2.json"
@@ -196,13 +212,13 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
         } yield ()
       }
 
-      "match the golden answer with no items for the unrelated picture image-3.jpeg" in withContext() { context =>
+      "match the golden answer with no items for the unrelated picture image-3.jpeg" in withContext { context =>
         import context.*
 
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName               = "image-3.json"
@@ -221,13 +237,13 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
     }
 
     "extractFromPdf" should {
-      "match the golden answer for the PDF price list pdf-1.pdf" in withContext() { context =>
+      "match the golden answer for the PDF price list pdf-1.pdf" in withContext { context =>
         import context.*
 
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName               = "pdf-1.json"
@@ -235,6 +251,7 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
 
           catalogueFileAIExtract <- aiClientDataExtraction.extractFromPdf[CatalogueFileAIExtract](
             FileScannedPath(assetDirectory.resolve("pdf-1.pdf")),
+            // Upper-case .PDF on purpose: proves the AI service accepts an upper-case extension.
             "Catalogue-Price-List.PDF",
             AIInstructions.extractCatalogueItemsFromPdfInstructions,
             None,
@@ -244,13 +261,13 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
         } yield ()
       }
 
-      "match the golden answer with no items for the unrelated PDF pdf-2.pdf" in withContext() { context =>
+      "match the golden answer with no items for the unrelated PDF pdf-2.pdf" in withContext { context =>
         import context.*
 
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName               = "pdf-2.json"
@@ -269,13 +286,13 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
     }
 
     "extractFromCsv" should {
-      "match the golden answer for the spreadsheet spreadsheet-1.csv" in withContext() { context =>
+      "match the golden answer for the spreadsheet spreadsheet-1.csv" in withContext { context =>
         import context.*
 
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName               = "spreadsheet-1.json"
@@ -295,13 +312,13 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
         } yield ()
       }
 
-      "match the golden answer for the spreadsheet spreadsheet-2.xls" in withContext() { context =>
+      "match the golden answer for the spreadsheet spreadsheet-2.xls" in withContext { context =>
         import context.*
 
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName               = "spreadsheet-2.json"
@@ -321,13 +338,13 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
         } yield ()
       }
 
-      "match the golden answer for the spreadsheet spreadsheet-3.xlsx" in withContext() { context =>
+      "match the golden answer for the spreadsheet spreadsheet-3.xlsx" in withContext { context =>
         import context.*
 
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName               = "spreadsheet-3.json"
@@ -347,49 +364,48 @@ class CatalogueFileAiExtractGoldenSpec extends ZWordSpecBase {
         } yield ()
       }
 
-      "match the golden answer with shortened notes for spreadsheet-1.csv read in several groups" in withContext(
-        csvBatchMaxDataRowsOpt = Some(CsvBatchMaxDataRowsCompaction)
-      ) { context =>
-        import context.*
-
-        for {
-          _ = assume(
-            apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
-          )
-
-          goldenFileName               = "spreadsheet-1-notes-compaction.json"
-          catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden(goldenFileName)
-
-          catalogueFileAIExtracts <- ZIO.scoped(
-            aiClientDataExtraction.extractFromCsv[CatalogueFileAIExtract](
-              spreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-1.csv"))),
-              AIInstructions.extractCatalogueItemsFromFileInstructions,
-              None,
-            )
-          )
-
-          catalogueFileAIExtractMerged = mergeCatalogueFileAIExtracts(catalogueFileAIExtracts)
-
-          noteCompactionOutput <- aiClientDataExtraction.noteCompaction(
-            catalogueFileAIExtractMerged.extractionNotes,
-            AIInstructions.compactCatalogueFileNotesInstructions,
-          )
-
-          catalogueFileAIExtract = catalogueFileAIExtractMerged.copy(extractionNotes = noteCompactionOutput.notes)
-
-          _ = compareWithGolden(goldenFileName, catalogueFileAIExtract, catalogueFileAIExtractGolden)
-        } yield ()
-      }
-
-      "match the golden answer with no items for the unrelated spreadsheet spreadsheet-4.csv" in withContext() {
+      "match the golden answer with shortened notes for spreadsheet-1.csv read in several groups" in withCompactionContext {
         context =>
           import context.*
 
           for {
             _ = assume(
               apiKey.nonEmpty,
-              "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+              missingApiKeyMessage,
+            )
+
+            goldenFileName               = "spreadsheet-1-notes-compaction.json"
+            catalogueFileAIExtractGolden = loadCatalogueFileAIExtractGolden(goldenFileName)
+
+            catalogueFileAIExtracts <- ZIO.scoped(
+              aiClientDataExtraction.extractFromCsv[CatalogueFileAIExtract](
+                spreadsheetTool.convertToCsv(FileScannedPath(assetDirectory.resolve("spreadsheet-1.csv"))),
+                AIInstructions.extractCatalogueItemsFromFileInstructions,
+                None,
+              )
+            )
+
+            catalogueFileAIExtractMerged = mergeCatalogueFileAIExtracts(catalogueFileAIExtracts)
+
+            noteCompactionOutput <- aiClientDataExtraction.noteCompaction(
+              catalogueFileAIExtractMerged.extractionNotes,
+              AIInstructions.compactCatalogueFileNotesInstructions,
+            )
+
+            catalogueFileAIExtract = catalogueFileAIExtractMerged.copy(extractionNotes = noteCompactionOutput.notes)
+
+            _ = compareWithGolden(goldenFileName, catalogueFileAIExtract, catalogueFileAIExtractGolden)
+          } yield ()
+      }
+
+      "match the golden answer with no items for the unrelated spreadsheet spreadsheet-4.csv" in withContext {
+        context =>
+          import context.*
+
+          for {
+            _ = assume(
+              apiKey.nonEmpty,
+              missingApiKeyMessage,
             )
 
             goldenFileName               = "spreadsheet-4.json"

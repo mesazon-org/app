@@ -1,35 +1,40 @@
 [
   {
-    "op" : "add",
+    "op" : "replace",
     "path" : "/extractionNotes/0",
+    "value" : "The ΕΛΛΕΙΨΗ columns appear to contain prices",
+    "old" : "Left out \"Period:\", nothing beside it"
+  },
+  {
+    "op" : "add",
+    "path" : "/extractionNotes/1",
     "value" : "Left out \"M.CH FRUITHAVEN\", nothing beside it"
   },
   {
-    "op" : "replace",
+    "op" : "add",
     "path" : "/extractionNotes/2",
-    "value" : "Left out \"Tel +35799255087 +35799254569\", email beside it",
-    "old" : "Left out \"Tel +35799255087 +35799254569 info@mchfruithaven.com\", nothing beside it"
+    "value" : "Left out \"Period:\", supplier details beside it"
   },
   {
     "op" : "add",
     "path" : "/extractionNotes/3",
-    "value" : "Left out \"info@mchfruithaven.com\", telephone numbers beside it"
-  },
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/5",
-    "value" : "Left out heading \"Period:\", nothing beside it",
-    "old" : "Left out \"Period:\", nothing beside it"
-  },
-  {
-    "op" : "replace",
-    "path" : "/extractionNotes/6",
-    "value" : "Left out date \"20/4/2026 - 23/4/2026\", nothing beside it",
-    "old" : "Left out date \"20/4/2026 – 23/4/2026\", nothing beside it"
+    "value" : "Left out date \"20/4/2026 - 23/4/2026\", supplier details beside it"
   },
   {
     "op" : "remove",
+    "path" : "/extractionNotes/5",
+    "old" : "Left out date \"20/4/2026 – 23/4/2026\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/5/name",
+    "value" : "Πάρακαπ",
+    "old" : "Πάρκαπα"
+  },
+  {
+    "op" : "replace",
     "path" : "/candidates/5/extractionNotes/0",
+    "value" : "Name partly unclear, please check",
     "old" : "Name may be misspelled in the source"
   },
   {

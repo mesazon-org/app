@@ -84,9 +84,6 @@ lazy val backendTestKitModule = createBackendModule("test-kit")(None)
     Dependencies.testcontainersScalaScalatest,
     Dependencies.chimney,
     Dependencies.sttpClient4ZIO,
-    Dependencies.diffsonCirce,
-    Dependencies.circeCore,
-    Dependencies.circeParser,
   )
 
 lazy val backendPostgreSQLTestModule = createBackendModule("postgresql-test")(None)
@@ -226,6 +223,9 @@ lazy val backendGatewayCore = createBackendGatewayModule(Some("core"))
     Dependencies.springSecurityCrypto,
     Dependencies.springCore,
     Dependencies.bouncyCastle,
+    Dependencies.diffsonCirce % Test,
+    Dependencies.circeCore    % Test,
+    Dependencies.circeParser  % Test,
   )
   .settings(Settings.testAfterDockerPublish(backendWiremock / Docker / publishLocal))
 

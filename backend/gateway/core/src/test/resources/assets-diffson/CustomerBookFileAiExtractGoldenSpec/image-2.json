@@ -1,12 +1,2 @@
 [
-  {
-    "op" : "remove",
-    "path" : "/businessCandidates/0/extractionNotes/0",
-    "old" : "Country code taken from the address"
-  },
-  {
-    "op" : "add",
-    "path" : "/extractionNotes/-",
-    "value" : "Country code taken from the address"
-  }
 ]

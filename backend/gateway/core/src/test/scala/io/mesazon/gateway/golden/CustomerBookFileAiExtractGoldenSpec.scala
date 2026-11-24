@@ -28,6 +28,14 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
 
   private inline val AiClientDataExtractionApiKeyEnvName = "AI_CLIENT_DATA_EXTRACTION_API_KEY"
 
+  private inline val OpenAiScheme = "https"
+
+  private inline val OpenAiHost = "api.openai.com"
+
+  private inline val OpenAiPort = 443
+
+  private inline val GoldenRequestTimeoutSeconds = 600
+
   private given lcsJson: Lcs[Json] = new Patience[Json]
 
   private final case class Context(
@@ -40,6 +48,8 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
       AiClientDataExtractionApiKeyEnvName,
       "",
     )
+
+  private val missingApiKeyMessage = s"Set $AiClientDataExtractionApiKeyEnvName to run this manually"
 
   private val assetDirectory =
     Paths.get("src/test/resources/assets-test/CustomerBookFileAiExtractGoldenSpec")
@@ -79,11 +89,11 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         AIClientDataExtractionConfig.live.map(environment =>
           environment.update[AIClientDataExtractionConfig](
             _.copy(
-              scheme = "https",
-              host = "api.openai.com",
-              port = 443,
+              scheme = OpenAiScheme,
+              host = OpenAiHost,
+              port = OpenAiPort,
               apiKey = apiKey,
-              requestTimeout = Duration.fromSeconds(600),
+              requestTimeout = Duration.fromSeconds(GoldenRequestTimeoutSeconds),
             )
           )
         ),
@@ -145,7 +155,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "image-1.json"
@@ -168,7 +178,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "image-2.json"
@@ -191,7 +201,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "image-3.json"
@@ -214,7 +224,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "image-4.json"
@@ -237,7 +247,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "image-5.json"
@@ -260,7 +270,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "image-6.json"
@@ -283,7 +293,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "image-7.json"
@@ -306,7 +316,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "image-8.json"
@@ -329,7 +339,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "image-9.json"
@@ -352,7 +362,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "image-10.json"
@@ -376,7 +386,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
           for {
             _ = assume(
               apiKey.nonEmpty,
-              "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+              missingApiKeyMessage,
             )
 
             customerBookFileProcessingMessage = "omit phone numbers, keep everything else"
@@ -401,7 +411,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "image-11.json"
@@ -424,7 +434,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "image-12.json"
@@ -447,7 +457,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "image-13.json"
@@ -470,7 +480,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "image-14.json"
@@ -495,7 +505,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "pdf-1.json"
@@ -518,7 +528,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "pdf-2.json"
@@ -541,7 +551,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "pdf-3.json"
@@ -566,7 +576,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "spreadsheet-1.json"
@@ -592,7 +602,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "spreadsheet-2.json"
@@ -618,7 +628,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
         for {
           _ = assume(
             apiKey.nonEmpty,
-            "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+            missingApiKeyMessage,
           )
 
           goldenFileName                  = "spreadsheet-3.json"
@@ -645,7 +655,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
           for {
             _ = assume(
               apiKey.nonEmpty,
-              "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+              missingApiKeyMessage,
             )
 
             goldenFileName                  = "spreadsheet-4.json"
@@ -681,7 +691,7 @@ class CustomerBookFileAiExtractGoldenSpec extends ZWordSpecBase {
           for {
             _ = assume(
               apiKey.nonEmpty,
-              "Set AI_CLIENT_DATA_EXTRACTION_API_KEY to run this manually",
+              missingApiKeyMessage,
             )
 
             goldenFileName                  = "spreadsheet-5.json"

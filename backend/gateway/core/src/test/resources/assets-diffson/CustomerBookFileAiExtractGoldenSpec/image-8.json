@@ -1,11 +1,5 @@
 [
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/1/emails/0",
-    "value" : "leo.martin@mail.com",
-    "old" : "leo.martin@email.com"
-  },
-  {
     "op" : "remove",
     "path" : "/extractionNotes/0",
     "old" : "Left out title \"Customers.csv\", nothing beside it"

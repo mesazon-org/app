@@ -254,10 +254,14 @@ object AIInstructions {
       |  such as "+357 99123456" or "00357 99123456", or in its own dialling-code column, is read, not inferred: split
       |  it out. Leave out a phone only when it plainly cannot be real: its first group after the "+" or "00", as
       |  printed, is not a real country code, such as "+563 30 626382", "+808", "+877", "+87", or "+6 741-882-9858",
-      |  or its digit count is impossible for its code, such as 16 digits. Never apply finer judgements, such as
+      |  or its digit count is impossible for its code, such as 16 digits. This digit-count test is only for a number
+      |  printed with a "+" or "00" code; a number printed with no code is never left out for its length, and follows
+      |  step 5. Never apply finer judgements, such as
       |  about area codes. Never return such a phone, and add the note "Phone number left out, not a real number"
-      |  once on its owner, even when several of the owner's phones are left out. When no code is written, apply this
-      |  interpretation sequence internally:
+      |  once on its owner, even when several of the owner's phones are left out. A phone whose code and number
+      |  together are plausibly real, a real country code and a digit count possible for it, is kept. A code printed
+      |  with no number is left out, with the note "Phone number is missing" on its owner. When no code is written,
+      |  apply this interpretation sequence internally:
       |  1. Read the phone in its context: its own format, such as a 10-digit North American number, the entry's own
       |     address, one country used across the file, or the processing message.
       |  2. Compare that context with real international dialling codes and with the length and format of the national
@@ -275,9 +279,9 @@ object AIInstructions {
       |     true and the note "Country code <code> guessed, the address is in <country>" on the phone's owner, such as
       |     "Country code +357 guessed, the address is in Greece". A guess is not an error: the phone stays a normal
       |     returned phone.
-      |  5. A number written with no "+" or "00" always gets a code from step 3 or step 4, never phoneCountryCode:
-      |     null, but only when its digit count is possible for that code. When no code fits its digit count, leave it
-      |     out with that one note on its owner. Never leave out a phone only because its country code is missing.
+      |  5. A number written with no "+" or "00" gets a code from step 3 or step 4. When no code can be inferred, keep
+      |     the number with phoneCountryCode: null and phoneCountryCodeInferred: false, and add the note
+      |     "Country code is missing" on its owner. Never leave out a phone only because its country code is missing.
       |- When the source clearly marks one email or phone as the main one, list it first; otherwise keep source order.
       |- Addresses. Missing, null, empty, and whitespace-only address text is empty. Keep an address when at least one
       |  of its five text fields has content, even when partial. Note its missing parts in that address's
@@ -321,7 +325,8 @@ object AIInstructions {
       |- Value constraints. A value that breaks one fails the whole result, so follow them exactly. fullName,
       |  businessName, taxID, role, phoneNationalNumber, phoneCountryCode, addressLine1, addressLine2, city,
       |  postalCode, and country are trimmed, non-empty text of at most 255 characters, or null where allowed.
-      |  phoneNationalNumber is never null. phoneCountryCode is a dialling code such as "+357", or null. Every email
+      |  phoneNationalNumber is never null. phoneCountryCode is a dialling code such as "+357", or null only when no
+      |  code could be inferred, with the note "Country code is missing". Every email
       |  has the form local@domain.tld, contains no whitespace, and has at most 255 characters. addressType is exactly
       |  one of Shipping, Billing, or ShippingAndBilling. entriesIdentified and entriesProcessed are non-negative whole
       |  numbers, and emptyEntryRowIndexes and unidentifiedEntryRowIndexes hold supplied Row Numbers.
@@ -350,6 +355,11 @@ object AIInstructions {
       |    country
       |  - "Empty address was left out" or "Empty addresses were left out"
       |  - "Phone number left out, not a real number"
+      |  - "Phone number is missing"
+      |  - "Country code is missing"
+      |  - "Tax number shown but not kept"
+      |  - "Contact link to this business is unclear"
+      |  - "<Detail> was too long and was cut"
       |  - "AI could not detect relevant customer data in this file."
       |- Candidate, address, and contact extractionNotes are required arrays of comments about their own extraction.
       |  Put one plain comment in each entry, with no bullet prefix, numbering, or position prefix. Use [] when there
@@ -360,7 +370,8 @@ object AIInstructions {
       |- The server writes no notes. Missing and inferred fields reach the user as structured data, so never write a
       |  note that only says a name is missing or a contact has no name. Do write
       |  one note, at the scope below, for each inferred value and its basis, each left-out or unreadable detail, each
-      |  phone kept without a country code, each partial address, each partly unclear free-text value, and each
+      |  phone kept with the note "Country code is missing", each partial address, each partly unclear free-text
+      |  value, and each
       |  free-text value that may be misspelled. These two free-text notes always go on the candidate, contact, or
       |  address, never at top level. A value the processing message supplied or reworded, or a detail it asked to
       |  leave out, gets no note.
@@ -450,8 +461,8 @@ object AIInstructions {
       |  "notes": ["Left out row 7, heading \"WHOLESALE CLIENTS\", nothing beside it",
       |    "Left out row 58, heading \"RETAIL\", nothing beside it", "The Balance column was not used"]
       |}
-      |That is the result for the supplied notes ["Left out row 58, heading "RETAIL", nothing beside it",
-      |"The Balance column was not used", "Left out row 7, heading "WHOLESALE CLIENTS", nothing beside it",
+      |That is the result for the supplied notes ["Left out row 58, heading \"RETAIL\", nothing beside it",
+      |"The Balance column was not used", "Left out row 7, heading \"WHOLESALE CLIENTS\", nothing beside it",
       |"The Balance column was not used"]. The two notes about the Balance column say the same thing, so they become
       |one. The notes about rows 7 and 58 differ in detail, so both stay exactly as supplied. The kept notes are then
       |ordered by kind and by row.
@@ -491,8 +502,8 @@ object AIInstructions {
       |  "notes": ["Left out row 7, heading \"FRUITS\", nothing beside it",
       |    "Left out row 58, heading \"VEGETABLES\", nothing beside it", "Currency taken from the price list header"]
       |}
-      |That is the result for the supplied notes ["Left out row 58, heading "VEGETABLES", nothing beside it",
-      |"Currency taken from the price list header", "Left out row 7, heading "FRUITS", nothing beside it",
+      |That is the result for the supplied notes ["Left out row 58, heading \"VEGETABLES\", nothing beside it",
+      |"Currency taken from the price list header", "Left out row 7, heading \"FRUITS\", nothing beside it",
       |"Currency taken from the price list header"]. The two notes about the currency say the same thing, so they
       |become one.
       |The notes about rows 7 and 58 differ in detail, so both stay exactly as supplied. The kept notes are then
@@ -638,8 +649,11 @@ object AIInstructions {
       |   counted in entriesIdentified and are not added to emptyEntryRows or unidentifiedEntryRows.
       |3. Map the column labels to catalogue fields. Use label meaning, value types, and context together, and
       |   translate any language internally when needed. Exact field names and a fixed column order are not required.
-      |   Map each table separately, and keep separate records and shared scopes apart. Name a meaningful unmapped
-      |   column as an attribute from its trimmed label, or from its values when no usable label exists. Skip Row
+      |   Map each table separately, and keep separate records and shared scopes apart. A column that describes the
+      |   item, such as its colour, size, origin, or notes, becomes an attribute even when no field in the shape
+      |   matches it: name it from its trimmed label, or from its values when no usable label exists. A column that
+      |   does not describe the item, such as internal or admin data like a stock balance, an order count, or a row
+      |   ID, is not used and gets the note "The <label> column was not used". Skip Row
       |   Number and columns that are empty in every row. When a removed label row introduces a differently shaped
       |   block, map the rows after it through those labels.
       |4. Read each record through that mapping, preserving the association between each field and its own value.
@@ -821,8 +835,7 @@ object AIInstructions {
       |  entriesProcessed plus the number of emptyEntryRows plus the number of unidentifiedEntryRows. A batch of 100
       |  data rows with row 6 blank and three other rows grouped into one item reports entriesProcessed 99,
       |  entriesIdentified 100, and 97 candidates. Titles, headings, totals, repeated label rows, and other rows left
-      |  out in step 2 count nowhere. Both counts are non-negative whole numbers, and emptyEntryRows and
-      |  unidentifiedEntryRows hold supplied Row Numbers.
+      |  out in step 2 count nowhere. Both counts are non-negative whole numbers.
       |- Write every extraction note, including top-level notes, for a person reviewing the upload. Use short, simple,
       |  natural wording and one point per entry. Split separate observations into separate entries. Do not join
       |  clauses with semicolons or pack several facts into a long sentence. Avoid technical field names, formal
@@ -843,8 +856,10 @@ object AIInstructions {
       |  - "Selling unit <x> is not supported"
       |  - "Currency <code> is not supported"
       |  - "Price exceeds the supported limit"
+      |  - "Item and variant grouping is unclear"
+      |  - "<Detail> was too long and was cut"
       |  - "<Field> taken from <source>", where <source> is one of the column header, the price list header, the
-      |    product name, the group heading, the document, the supplier; use your own words only when none fits
+      |    product name, the group heading, the file, the supplier; use your own words only when none fits
       |  - "AI could not detect relevant catalogue data in this file."
       |- Item and variant extractionNotes are required arrays of comments about their own extraction. Put one plain
       |  comment in each entry, with no bullet prefix, numbering, or variant-position prefix. Use [] when there is no
@@ -865,7 +880,7 @@ object AIInstructions {
       |     2. how the labels were read, as a tentative label interpretation.
       |     3. one note for each row left out as a non-item, by Row Number, smallest first.
       |     4. one note for each column that is not used at all, in column order, worded
-      |        "The <label> column was not used", for example "The Comments column was not used".
+      |        "The <label> column was not used", for example "The Balance column was not used".
       |     5. shared assumptions, such as one currency given in a price header, written once here instead of on each
       |        item.
       |     6. the nothing-detected note.
@@ -1017,8 +1032,11 @@ object AIInstructions {
       |3. Map the column labels to catalogue fields. Use label meaning, value types, and context together, and
       |   translate any language internally when needed. Exact field names and a fixed column order are not required.
       |   Map each table separately, and keep separate records and shared scopes apart. For labelled text outside a
-      |   table, associate labels and values through their placement and meaning. Name a meaningful unmapped column
-      |   as an attribute from its trimmed label, or from its values when no usable label exists. When a removed
+      |   table, associate labels and values through their placement and meaning. A column that describes the item,
+      |   such as its colour, size, origin, or notes, becomes an attribute even when no field in the shape matches
+      |   it: name it from its trimmed label, or from its values when no usable label exists. A column that does not
+      |   describe the item, such as internal or admin data like a stock balance, an order count, or a row ID, is
+      |   not used and gets the note "The <label> column was not used". When a removed
       |   label line introduces a differently shaped block, map the lines after it through those labels.
       |4. Read each record through that mapping, preserving the association between each field and its own value.
       |   A blank or unclear field does not shift values or make other fields unavailable. Assess each field
@@ -1134,7 +1152,7 @@ object AIInstructions {
       |  only Gram, Kilogram, Millilitre, Litre, Millimetre, Centimetre, Metre, or SquareMetre. These are output names,
       |  not a whitelist of source spellings. Resolve the meaning first and then encode it using one of those English
       |  names, even when no letters match the source. Parse a number and unit written together into the corresponding
-      |  quantity and canonical unit. Use the same interpretation across equivalent expressions in the document. A
+      |  quantity and canonical unit. Use the same interpretation across equivalent expressions in the $sourceName. A
       |  source expression is not unsupported merely because it is abbreviated, misspelled, unfamiliar, or written in
       |  another language. Leave optional parts null when they add no useful information. A populated example is
       |  {"quantity":{"value":6,"unit":"Pack"},"perUnit":{"value":1,"unit":"Bottle"},
@@ -1148,11 +1166,12 @@ object AIInstructions {
       |  digits is left out with price: null and the note "Price exceeds the supported limit".
       |- Currency. Normalize currency symbols and names to supported codes by meaning in any language, rather than
       |  requiring an exact English name or ISO-code spelling. Respect a currency written with the amount. When none is
-      |  written with it, choose the most likely supported currency from the document, the supplier, or the processing
-      |  message, and use the same choice throughout the document. When no supported currency can be settled, keep the
+      |  written with it, choose the most likely supported currency from the $sourceName, the supplier, or the
+      |  processing message, and use the same choice throughout the $sourceName. When no supported currency can be
+      |  settled, keep the
       |  readable amount with currency: null, and add the note "Currency <code> is not supported" when an unsupported
       |  currency is printed, or a short note saying why otherwise.
-      |- currencyInferred is true only when the currency came from the document, the supplier, or the processing
+      |- currencyInferred is true only when the currency came from the $sourceName, the supplier, or the processing
       |  message, rather than being written with the amount. It is always false when currency is null. Each true flag
       |  gets one note giving its basis as "<Field> taken from <source>", such as
       |  "Currency taken from the price list header". Write a shared basis, such as one currency used across the
@@ -1214,8 +1233,10 @@ object AIInstructions {
       |  - "Selling unit <x> is not supported"
       |  - "Currency <code> is not supported"
       |  - "Price exceeds the supported limit"
+      |  - "Item and variant grouping is unclear"
+      |  - "<Detail> was too long and was cut"
       |  - "<Field> taken from <source>", where <source> is one of the column header, the price list header, the
-      |    product name, the group heading, the document, the supplier; use your own words only when none fits
+      |    product name, the group heading, the $sourceName, the supplier; use your own words only when none fits
       |  - "AI could not detect relevant catalogue data in this $sourceName."
       |- Item and variant extractionNotes are required arrays of comments about their own extraction. Put one plain
       |  comment in each entry, with no bullet prefix, numbering, or variant-position prefix. Use [] when there is no
@@ -1233,10 +1254,10 @@ object AIInstructions {
       |  1. Top-level extractionNotes: only comments about the whole $sourceName. Write them in this order, and leave it
       |     only when the source calls for another:
       |     1. how the labels were read, as a tentative label interpretation.
-      |     2. one note for each line left out as a non-item, in source order: a PDF page by page, top to bottom, and
-      |        an image top to bottom, finishing each column before the next.
+      |     2. one note for each line left out as a non-item, in source order: row by row, top to bottom, at the same
+      |        height the left before the right, and a PDF page by page.
       |     3. one note for each column that is not used at all, in column order, worded
-      |        "The <label> column was not used", for example "The Comments column was not used".
+      |        "The <label> column was not used", for example "The Balance column was not used".
       |     4. shared assumptions, such as one currency used for the whole $sourceName, written once here instead of
       |        on each item.
       |     5. the nothing-detected note.
@@ -1256,7 +1277,7 @@ object AIInstructions {
       |     same height, and a line with several cells, other than column labels, quotes all of them, joined by ", ".
       |     When a title, date or other piece that is not a table cell shares its printed row with another such piece,
       |     each piece is its own left-out note with its own kind, naming the other as beside it, for example
-      |     "Left out title "Customers", date beside it", and the ", " join is only for the cells of one table row.
+      |     "Left out title "Price list", date beside it", and the ", " join is only for the cells of one table row.
       |     Never write a general note about an entry listed in unidentifiedEntryRows. Never put anything about one
       |     item or variant here. Use [] when there is no general comment.
       |  2. Item extractionNotes: only the item itself: its name, its description, and how its variants were grouped.
@@ -1394,7 +1415,7 @@ object AIInstructions {
       |   columns. When a label is blank, generic, duplicated, or contradicts its values, the values decide the column
       |   meaning. Describe a tentative interpretation once in top-level extractionNotes.
       |2. Filter the transcription. Remove only lines that are not customers: document titles, the letterhead or own
-      |   details of the business that made the document, periods or dates, column label lines, repeated labels,
+      |   details of the business that made the $sourceName, periods or dates, column label lines, repeated labels,
       |   totals, page numbers, and footers. A line with only a name is a valid customer. Remove it only when it is
       |   clearly a section heading that groups the lines below it, such as a centered, bold, or spanning
       |   "WHOLESALE CLIENTS". A line with any customer detail beside its name, such as an email, phone, address, tax
@@ -1408,10 +1429,10 @@ object AIInstructions {
       |   and contact person and role columns. A cell may hold several emails or phones; return each as its own value.
       |   Map each table separately. For labelled text outside a table, such as a business card, associate labels and
       |   values through their placement and meaning. A detail that maps to no field in the shape, such as a balance, a
-      |   comment, a birthday, or a loyalty tier, is left out of the candidates. Add one top-level extractionNotes
-      |   entry for each kind of left-out detail, not one per entry, worded "<Kind> were not used", for example
-      |   "Comments were not used". These notes are only for details belonging to an entry, such as a website, a
-      |   comment, a callback reminder, or a role.
+      |   birthday, a loyalty tier, or a customer type such as client or partner on an individual, is left out of the
+      |   candidates. Add one top-level extractionNotes entry for each kind of left-out detail, not one per entry,
+      |   worded "<Kind> were not used", for example "Balances were not used". These notes are only for details
+      |   belonging to an entry. A business contact's role is a real field, role, never an unused detail.
       |4. Read each record through that mapping, preserving the association between each field and its own value. A
       |   blank or unclear field does not shift values or make other fields unavailable. Assess each field
       |   independently: an unreadable name, for example, does not invalidate a readable phone.
@@ -1525,20 +1546,24 @@ object AIInstructions {
       |  such as "+357 99123456" or "00357 99123456", or in its own dialling-code column, is read, not inferred: split
       |  it out. Leave out a phone only when it plainly cannot be real: its first group after the "+" or "00", as
       |  printed, is not a real country code, such as "+563 30 626382", "+808", "+877", "+87", or "+6 741-882-9858",
-      |  or its digit count is impossible for its code, such as 16 digits. Never apply finer judgements, such as
+      |  or its digit count is impossible for its code, such as 16 digits. This digit-count test is only for a number
+      |  printed with a "+" or "00" code; a number printed with no code is never left out for its length, and follows
+      |  step 5. Never apply finer judgements, such as
       |  about area codes. Never return such a phone, and add the note "Phone number left out, not a real number"
-      |  once on its owner, even when several of the owner's phones are left out. When no code is written, apply this
-      |  interpretation sequence internally:
+      |  once on its owner, even when several of the owner's phones are left out. A phone whose code and number
+      |  together are plausibly real, a real country code and a digit count possible for it, is kept. A code printed
+      |  with no number is left out, with the note "Phone number is missing" on its owner. When no code is written,
+      |  apply this interpretation sequence internally:
       |  1. Read the phone in its context: its own format, such as a 10-digit North American number, the entry's own
       |     address, one country used across the source, or the processing message.
       |  2. Compare that context with real international dialling codes and with the length and format of the national
       |     number for that country.
       |  3. If the clues agree, return the code with phoneCountryCodeInferred: true. Its basis note is
-      |     "Country code taken from <source>", such as "Country code taken from the address". When each entry's own
-      |     address gives the code, write "Country code taken from the address" once at top level, and write a basis
-      |     note on the phone's owner, the candidate or the contact, only when its basis differs from that shared one.
-      |     A code taken from the processing message gets no basis note, but a conflict with the address still gets
-      |     the note in step 4.
+      |     "Country code taken from <source>", such as "Country code taken from the address", on the phone's owner,
+      |     the candidate or the contact. Only when one country is used across the whole $sourceName, write
+      |     "Country code taken from the country used across the $sourceName" once at top level instead, and write a
+      |     basis note on an owner only when its basis differs from that shared one. A code taken from the processing
+      |     message gets no basis note, but a conflict with the address still gets the note in step 4.
       |  4. If the clues conflict, such as an address in one country and a number whose length and format fit another,
       |     still make the best guess. Prefer the country whose length and format fit the national number, together
       |     with the country used across the rest of the source or the processing message. The address's city or
@@ -1546,9 +1571,9 @@ object AIInstructions {
       |     true and the note "Country code <code> guessed, the address is in <country>" on the phone's owner, such as
       |     "Country code +357 guessed, the address is in Greece". A guess is not an error: the phone stays a normal
       |     returned phone.
-      |  5. A number written with no "+" or "00" always gets a code from step 3 or step 4, never phoneCountryCode:
-      |     null, but only when its digit count is possible for that code. When no code fits its digit count, leave it
-      |     out with that one note on its owner. Never leave out a phone only because its country code is missing.
+      |  5. A number written with no "+" or "00" gets a code from step 3 or step 4. When no code can be inferred, keep
+      |     the number with phoneCountryCode: null and phoneCountryCodeInferred: false, and add the note
+      |     "Country code is missing" on its owner. Never leave out a phone only because its country code is missing.
       |- When the source clearly marks one email or phone as the main one, list it first; otherwise keep source order.
       |- Addresses. Missing, null, empty, and whitespace-only address text is empty. Keep an address when at least one
       |  of its five text fields has content, even when partial. Note its missing parts in that address's
@@ -1591,7 +1616,8 @@ object AIInstructions {
       |- Value constraints. A value that breaks one fails the whole result, so follow them exactly. fullName,
       |  businessName, taxID, role, phoneNationalNumber, phoneCountryCode, addressLine1, addressLine2, city,
       |  postalCode, and country are trimmed, non-empty text of at most 255 characters, or null where allowed.
-      |  phoneNationalNumber is never null. phoneCountryCode is a dialling code such as "+357", or null. Every email
+      |  phoneNationalNumber is never null. phoneCountryCode is a dialling code such as "+357", or null only when no
+      |  code could be inferred, with the note "Country code is missing". Every email
       |  has the form local@domain.tld, contains no whitespace, and has at most 255 characters. addressType is exactly
       |  one of Shipping, Billing, or ShippingAndBilling. entriesIdentified and entriesProcessed are non-negative whole
       |  numbers, and unidentifiedEntryRowIndexes holds whole positions starting at 1.
@@ -1613,15 +1639,20 @@ object AIInstructions {
       |  - "<Detail> partly unclear, please check"
       |  - "<Detail> may be misspelled in the source"
       |  - "<Field> taken from <source>", where <source> is one of the address, the other numbers, the email, the
-      |    number; use your own words only when none fits. For a phone's
+      |    number, the country used across the $sourceName; use your own words only when none fits. For a phone's
       |    country code, <Field> is always "Country code"
       |  - "Country code <code> guessed, the address is in <country>"
       |  - "<Parts> is missing" or "<Parts> are missing", with the parts in the order street, city, postal code,
       |    country
       |  - "Empty address was left out" or "Empty addresses were left out"
       |  - "Phone number left out, not a real number"
-      |  - "<Kind> were not used", where <Kind> is one of Websites, Comments, Callback reminders, Roles; use your own
-      |    words only when none fits
+      |  - "Phone number is missing"
+      |  - "Country code is missing"
+      |  - "Tax number shown but not kept"
+      |  - "Contact link to this business is unclear"
+      |  - "<Detail> was too long and was cut"
+      |  - "<Kind> were not used", where <Kind> is one of Websites, Comments, Callback reminders, Balances, Birthdays,
+      |    Loyalty tiers, Customer types; use your own words only when none fits
       |  - "AI could not detect relevant customer data in this $sourceName."
       |- Candidate, address, and contact extractionNotes are required arrays of comments about their own extraction.
       |  Put one plain comment in each entry, with no bullet prefix, numbering, or position prefix. Use [] when there
@@ -1632,7 +1663,8 @@ object AIInstructions {
       |- The server writes no notes. Missing and inferred fields reach the user as structured data, so never write a
       |  note that only says a name is missing or a contact has no name. Do write
       |  one note, at the scope below, for each inferred value and its basis, each left-out or unreadable detail, each
-      |  phone kept without a country code, each partial address, each partly unclear free-text value, and each
+      |  phone kept with the note "Country code is missing", each partial address, each partly unclear free-text
+      |  value, and each
       |  free-text value that may be misspelled. These two free-text notes always go on the candidate, contact, or
       |  address, never at top level. A value the processing message supplied or reworded, or a detail it asked to
       |  leave out, gets no note.
@@ -1640,8 +1672,8 @@ object AIInstructions {
       |  1. Top-level extractionNotes: only comments about the whole $sourceName. Write them in this order, and leave it
       |     only when the source calls for another:
       |     1. how the labels were read, as a tentative label interpretation.
-      |     2. one note for each line left out as a non-customer, in source order: a PDF page by page, top to bottom,
-      |        and an image top to bottom, finishing each column before the next.
+      |     2. one note for each line left out as a non-customer, in source order: row by row, top to bottom, at the
+      |        same height the left before the right, and a PDF page by page.
       |     3. one note for each kind of detail left out because it maps to no field, worded "<Kind> were not used",
       |        such as "Websites were not used".
       |     4. shared assumptions, such as one country code used for the whole $sourceName, written once here instead

@@ -2,13 +2,13 @@
   {
     "op" : "replace",
     "path" : "/extractionNotes/3",
-    "value" : "Callback reminders were not used",
+    "value" : "Left out \"Уточнить ИНН\", nothing beside it",
     "old" : "Left out footer \"Перезвонить в пн!\", nothing beside it"
   },
   {
     "op" : "replace",
     "path" : "/extractionNotes/4",
-    "value" : "Comments were not used",
+    "value" : "Left out \"Перезвонить в пн!\", nothing beside it",
     "old" : "Left out footer \"Уточнить ИНН\", nothing beside it"
   }
 ]

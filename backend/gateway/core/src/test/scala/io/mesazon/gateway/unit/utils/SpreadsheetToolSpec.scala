@@ -93,6 +93,8 @@ class SpreadsheetToolSpec extends ZWordSpecBase {
         csvRecordValues shouldBe wellFormedCsvRecordValues
       }
 
+      // Apache POI's HSSF (.xls) never writes back on close, so this cannot fail today: unlike the .xlsx case above,
+      // it is a guard against a later change to how the workbook is opened or closed writing to the uploaded file.
       "leave the .xls workbook file unchanged after converting it" in {
         val spreadsheetTool = ZIO
           .service[SpreadsheetTool]

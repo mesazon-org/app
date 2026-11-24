@@ -1,8 +1,20 @@
 [
   {
     "op" : "replace",
+    "path" : "/extractionNotes/4",
+    "value" : "Currency taken from the price list header",
+    "old" : "Currency taken from the column header"
+  },
+  {
+    "op" : "replace",
     "path" : "/candidates/8/variants/0/extractionNotes/0",
     "value" : "Price could not be fully read",
     "old" : "Price is marked TBD"
+  },
+  {
+    "op" : "replace",
+    "path" : "/entriesIdentified",
+    "value" : 20,
+    "old" : 26
   }
 ]

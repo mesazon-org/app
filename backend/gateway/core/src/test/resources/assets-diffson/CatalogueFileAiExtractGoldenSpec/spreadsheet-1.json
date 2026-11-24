@@ -1,5 +1,11 @@
 [
   {
+    "op" : "replace",
+    "path" : "/extractionNotes/4",
+    "value" : "Currency taken from the price list header",
+    "old" : "Currency taken from the column header"
+  },
+  {
     "op" : "remove",
     "path" : "/candidates/8/variants/0/extractionNotes/0",
     "old" : "Price is marked TBD"

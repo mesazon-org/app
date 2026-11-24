@@ -1,7 +1,8 @@
 [
   {
-    "op" : "remove",
+    "op" : "replace",
     "path" : "/extractionNotes/0",
+    "value" : "Роль appears to show customer types and contact roles",
     "old" : "Left out title \"Клиенты.csv\", nothing beside it"
   }
 ]
