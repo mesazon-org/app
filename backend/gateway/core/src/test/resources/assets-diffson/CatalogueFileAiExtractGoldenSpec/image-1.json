@@ -27,14 +27,43 @@
   },
   {
     "op" : "replace",
-    "path" : "/candidates/5/name",
-    "value" : "Πάρακαπ",
-    "old" : "Πάρκαπα"
+    "path" : "/extractionNotes/7",
+    "value" : "Left out column labels \"Product\", column labels beside it",
+    "old" : "Left out column labels \"Product\", nothing beside it"
   },
   {
     "op" : "replace",
+    "path" : "/extractionNotes/8",
+    "value" : "Left out column labels \"Product\", column labels beside it",
+    "old" : "Left out column labels \"Product\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/9",
+    "value" : "Left out heading \"VEGETABLES\", heading beside it",
+    "old" : "Left out heading \"VEGETABLES\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/10",
+    "value" : "Left out heading \"GREENS\", heading beside it",
+    "old" : "Left out heading \"GREENS\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/0/name",
+    "value" : "Αγγούρια Α'",
+    "old" : "Αγγούρια Α’"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/5/name",
+    "value" : "Πάραπα",
+    "old" : "Πάρκαπα"
+  },
+  {
+    "op" : "remove",
     "path" : "/candidates/5/extractionNotes/0",
-    "value" : "Name partly unclear, please check",
     "old" : "Name may be misspelled in the source"
   },
   {

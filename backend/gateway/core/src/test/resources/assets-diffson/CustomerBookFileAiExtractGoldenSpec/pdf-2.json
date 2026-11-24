@@ -1,26 +1,5 @@
 [
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/2/extractionNotes/0",
-    "value" : "Country code +357 guessed, the address is in Ελλάδα",
-    "old" : "Country code +357 guessed, the address is in Greece"
-  },
-  {
-    "op" : "replace",
-    "path" : "/businessCandidates/3/extractionNotes/0",
-    "value" : "Country code taken from the address",
-    "old" : "Phone number could not be fully read"
-  },
-  {
-    "op" : "add",
-    "path" : "/businessCandidates/3/phoneNumbers/-",
-    "value" : {
-      "phoneNationalNumber" : "22761478",
-      "phoneCountryCode" : "+357",
-      "phoneCountryCodeInferred" : true
-    }
-  },
-  {
     "op" : "add",
     "path" : "/extractionNotes/-",
     "value" : "Callback reminders were not used"

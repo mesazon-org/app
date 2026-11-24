@@ -1,141 +1,13 @@
 [
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/6/addresses/0/address/city",
-    "value" : "Nicosia",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/6/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/10/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/10/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
     "op" : "add",
     "path" : "/individualCandidates/11/extractionNotes/-",
     "value" : "Country code taken from the address"
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/14/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/14/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/15/extractionNotes/-",
-    "value" : "Country code taken from the number"
-  },
-  {
     "op" : "add",
     "path" : "/individualCandidates/19/extractionNotes/-",
     "value" : "Country code taken from the address"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/19/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/19/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/20/addresses/0/address/city",
-    "value" : "Nicosia",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/20/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/20/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Limassol",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/20/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Larnaca",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/21/addresses/0/address/city",
-    "value" : "Nicosia",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/21/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/21/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Limassol",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
   },
   {
     "op" : "add",
@@ -149,95 +21,9 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/32/addresses/0/address/city",
-    "value" : "Larnaca",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/32/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/34/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/34/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/35/addresses/0/address/city",
-    "value" : "Nicosia",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/35/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/35/addresses/1",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Larnaca",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/35/addresses/2",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Limassol",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/37/extractionNotes/-",
-    "value" : "Country code taken from the number"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/39/extractionNotes/-",
-    "value" : "Country code taken from the number"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/42/addresses/1/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/42/addresses/1/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
+    "path" : "/individualCandidates/34/addresses/0/addressType",
+    "value" : "Billing",
+    "old" : "ShippingAndBilling"
   },
   {
     "op" : "replace",
@@ -246,62 +32,10 @@
     "old" : "ShippingAndBilling"
   },
   {
-    "op" : "add",
-    "path" : "/individualCandidates/42/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : null,
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street, city and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
     "op" : "replace",
-    "path" : "/individualCandidates/45/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/45/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/46/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/46/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/46/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Nicosia",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
+    "path" : "/individualCandidates/45/addresses/0/addressType",
+    "value" : "Shipping",
+    "old" : "ShippingAndBilling"
   },
   {
     "op" : "add",
@@ -312,35 +46,6 @@
     "op" : "remove",
     "path" : "/individualCandidates/50/extractionNotes/1",
     "old" : "Empty address was left out"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/50/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/50/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/50/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Nicosia",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
   },
   {
     "op" : "add",
@@ -354,39 +59,9 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/52/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/52/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/53/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/53/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/55/addresses/0/address/city",
-    "value" : "Nicosia",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/55/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
+    "path" : "/individualCandidates/52/addresses/0/addressType",
+    "value" : "Shipping",
+    "old" : "ShippingAndBilling"
   },
   {
     "op" : "add",
@@ -395,15 +70,9 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/60/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/60/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
+    "path" : "/individualCandidates/60/addresses/0/addressType",
+    "value" : "Shipping",
+    "old" : "ShippingAndBilling"
   },
   {
     "op" : "add",
@@ -411,84 +80,14 @@
     "value" : "Country code taken from the address"
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/61/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/61/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
     "op" : "add",
     "path" : "/individualCandidates/64/extractionNotes/-",
     "value" : "Country code taken from the address"
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/65/addresses/0/address/city",
-    "value" : "Larnaca",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/65/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/66/extractionNotes/-",
-    "value" : "Country code taken from the number"
-  },
-  {
     "op" : "add",
     "path" : "/individualCandidates/67/extractionNotes/-",
     "value" : "Country code taken from the address"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/71/addresses/0/address/city",
-    "value" : "Nicosia",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/71/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/71/addresses/1",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Limassol",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/72/addresses/0/address/city",
-    "value" : "Nicosia",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/72/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "add",
@@ -499,175 +98,6 @@
     "op" : "add",
     "path" : "/individualCandidates/74/extractionNotes/0",
     "value" : "Country code taken from the address"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/75/addresses/1/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/75/addresses/1/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/78/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/78/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/79/addresses/1/address/city",
-    "value" : "Larnaca",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/79/addresses/1/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/79/addresses/2",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Limassol",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/80/extractionNotes/-",
-    "value" : "Country code taken from the number"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/84/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/84/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/85/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/85/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/86/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/86/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/86/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Nicosia",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/87/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/87/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/87/addresses/1",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Nicosia",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/88/addresses/0/address/city",
-    "value" : "Nicosia",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/88/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/88/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Limassol",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
   },
   {
     "op" : "remove",
@@ -686,55 +116,14 @@
   },
   {
     "op" : "replace",
-    "path" : "/individualCandidates/91/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/91/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
-  },
-  {
-    "op" : "replace",
     "path" : "/individualCandidates/91/addresses/0/addressType",
     "value" : "Shipping",
     "old" : "ShippingAndBilling"
   },
   {
     "op" : "add",
-    "path" : "/individualCandidates/91/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : null,
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street, city and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "add",
     "path" : "/individualCandidates/95/extractionNotes/-",
     "value" : "Country code taken from the address"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/97/addresses/0/address/city",
-    "value" : "Limassol",
-    "old" : null
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/97/addresses/0/address/extractionNotes/0",
-    "value" : "Street and postal code are missing",
-    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "add",
@@ -759,36 +148,70 @@
   {
     "op" : "add",
     "path" : "/individualCandidates/102/extractionNotes/-",
-    "value" : "Country code taken from the number"
+    "value" : "Country code is missing"
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/102/phoneNumbers/0/phoneCountryCode",
+    "value" : null,
+    "old" : "+357"
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/102/phoneNumbers/0/phoneCountryCodeInferred",
+    "value" : false,
+    "old" : true
   },
   {
     "op" : "add",
     "path" : "/individualCandidates/104/extractionNotes/-",
-    "value" : "Country code taken from the number"
+    "value" : "Country code is missing"
   },
   {
-    "op" : "remove",
-    "path" : "/individualCandidates/106/extractionNotes/0",
-    "old" : "Phone number left out, not a real number"
+    "op" : "replace",
+    "path" : "/individualCandidates/104/phoneNumbers/0/phoneCountryCode",
+    "value" : null,
+    "old" : "+357"
   },
   {
-    "op" : "add",
-    "path" : "/individualCandidates/106/phoneNumbers/-",
-    "value" : {
-      "phoneNationalNumber" : "71692624",
-      "phoneCountryCode" : "+592",
-      "phoneCountryCodeInferred" : false
-    }
+    "op" : "replace",
+    "path" : "/individualCandidates/104/phoneNumbers/0/phoneCountryCodeInferred",
+    "value" : false,
+    "old" : true
   },
   {
     "op" : "add",
     "path" : "/individualCandidates/108/extractionNotes/0",
-    "value" : "Country code taken from the number"
+    "value" : "Country code is missing"
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/108/phoneNumbers/0/phoneCountryCode",
+    "value" : null,
+    "old" : "+357"
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/108/phoneNumbers/0/phoneCountryCodeInferred",
+    "value" : false,
+    "old" : true
   },
   {
     "op" : "add",
     "path" : "/individualCandidates/112/extractionNotes/-",
-    "value" : "Country code taken from the number"
+    "value" : "Country code is missing"
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/112/phoneNumbers/0/phoneCountryCode",
+    "value" : null,
+    "old" : "+357"
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/112/phoneNumbers/0/phoneCountryCodeInferred",
+    "value" : false,
+    "old" : true
   },
   {
     "op" : "add",
@@ -802,6 +225,23 @@
   },
   {
     "op" : "add",
+    "path" : "/individualCandidates/118/addresses/-",
+    "value" : {
+      "address" : {
+        "addressLine1" : null,
+        "addressLine2" : null,
+        "city" : "Larnaca",
+        "postalCode" : null,
+        "country" : "Cyprus",
+        "extractionNotes" : [
+          "Street and postal code are missing"
+        ]
+      },
+      "addressType" : "Billing"
+    }
+  },
+  {
+    "op" : "add",
     "path" : "/individualCandidates/121/extractionNotes/0",
     "value" : "Phone number left out, not a real number"
   },
@@ -811,6 +251,20 @@
     "old" : {
       "phoneNationalNumber" : "50407771",
       "phoneCountryCode" : "+224",
+      "phoneCountryCodeInferred" : false
+    }
+  },
+  {
+    "op" : "remove",
+    "path" : "/individualCandidates/126/extractionNotes/0",
+    "old" : "Phone number left out, not a real number"
+  },
+  {
+    "op" : "add",
+    "path" : "/individualCandidates/126/phoneNumbers/-",
+    "value" : {
+      "phoneNationalNumber" : "21383240",
+      "phoneCountryCode" : "+420",
       "phoneCountryCodeInferred" : false
     }
   },
@@ -835,6 +289,18 @@
     "value" : "Country code taken from the address"
   },
   {
+    "op" : "replace",
+    "path" : "/individualCandidates/144/addresses/1/address/city",
+    "value" : "Nicosia",
+    "old" : null
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/144/addresses/1/address/extractionNotes/0",
+    "value" : "Street and postal code are missing",
+    "old" : "Street, city and postal code are missing"
+  },
+  {
     "op" : "add",
     "path" : "/individualCandidates/147/extractionNotes/-",
     "value" : "Country code taken from the address"
@@ -843,30 +309,6 @@
     "op" : "add",
     "path" : "/individualCandidates/151/extractionNotes/0",
     "value" : "Country code taken from the address"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/151/addresses/0/address/extractionNotes/-",
-    "value" : "City may be misspelled in the source"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/151/addresses/1/address/extractionNotes/-",
-    "value" : "City may be misspelled in the source"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/155/extractionNotes/-",
-    "value" : "Phone number left out, not a real number"
-  },
-  {
-    "op" : "remove",
-    "path" : "/individualCandidates/155/phoneNumbers/0",
-    "old" : {
-      "phoneNationalNumber" : "978816488",
-      "phoneCountryCode" : "+233",
-      "phoneCountryCodeInferred" : false
-    }
   },
   {
     "op" : "add",
@@ -882,6 +324,49 @@
     "op" : "remove",
     "path" : "/individualCandidates/165/addresses/1/address/extractionNotes/0",
     "old" : "Two streets shown for this address"
+  },
+  {
+    "op" : "add",
+    "path" : "/individualCandidates/166/addresses/-",
+    "value" : {
+      "address" : {
+        "addressLine1" : null,
+        "addressLine2" : null,
+        "city" : "Limassol",
+        "postalCode" : null,
+        "country" : "Cyprus",
+        "extractionNotes" : [
+          "Street and postal code are missing"
+        ]
+      },
+      "addressType" : "Billing"
+    }
+  },
+  {
+    "op" : "add",
+    "path" : "/individualCandidates/171/extractionNotes/0",
+    "value" : "Phone number left out, not a real number"
+  },
+  {
+    "op" : "remove",
+    "path" : "/individualCandidates/171/phoneNumbers/0",
+    "old" : {
+      "phoneNationalNumber" : "17090326",
+      "phoneCountryCode" : "+376",
+      "phoneCountryCodeInferred" : false
+    }
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/172/addresses/1/address/city",
+    "value" : "Nicosia",
+    "old" : null
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/172/addresses/1/address/extractionNotes/0",
+    "value" : "Street and postal code are missing",
+    "old" : "Street, city and postal code are missing"
   },
   {
     "op" : "add",
@@ -918,6 +403,29 @@
     "value" : "Country code taken from the address"
   },
   {
+    "op" : "add",
+    "path" : "/individualCandidates/196/addresses/-",
+    "value" : {
+      "address" : {
+        "addressLine1" : null,
+        "addressLine2" : null,
+        "city" : "Nicosia",
+        "postalCode" : null,
+        "country" : "Cyprus",
+        "extractionNotes" : [
+          "Street and postal code are missing"
+        ]
+      },
+      "addressType" : "Billing"
+    }
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/199/extractionNotes/0",
+    "value" : "Country code taken from the number",
+    "old" : "Country code +1 guessed, the address is in Cyprus"
+  },
+  {
     "op" : "remove",
     "path" : "/individualCandidates/199/addresses/0/address/extractionNotes/0",
     "old" : "Two streets shown for this address"
@@ -943,50 +451,28 @@
     "value" : "Country code taken from the address"
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/213/extractionNotes/0",
-    "value" : "Country code is missing",
-    "old" : "Country code taken from the number"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/213/phoneNumbers/0/phoneCountryCode",
-    "value" : null,
-    "old" : "+1"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/213/phoneNumbers/0/phoneCountryCodeInferred",
-    "value" : false,
-    "old" : true
-  },
-  {
     "op" : "add",
     "path" : "/individualCandidates/217/extractionNotes/-",
     "value" : "Country code taken from the address"
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/220/extractionNotes/0",
-    "value" : "Country code is missing",
-    "old" : "Country code taken from the number"
+    "op" : "remove",
+    "path" : "/individualCandidates/222/extractionNotes/0",
+    "old" : "Phone number left out, not a real number"
   },
   {
-    "op" : "replace",
-    "path" : "/individualCandidates/220/phoneNumbers/0/phoneCountryCode",
-    "value" : null,
-    "old" : "+1"
-  },
-  {
-    "op" : "replace",
-    "path" : "/individualCandidates/220/phoneNumbers/0/phoneCountryCodeInferred",
-    "value" : false,
-    "old" : true
+    "op" : "add",
+    "path" : "/individualCandidates/222/phoneNumbers/-",
+    "value" : {
+      "phoneNationalNumber" : "46891876",
+      "phoneCountryCode" : "+423",
+      "phoneCountryCodeInferred" : false
+    }
   },
   {
     "op" : "add",
     "path" : "/individualCandidates/224/extractionNotes/-",
-    "value" : "Country code taken from Cyprus addresses"
+    "value" : "Country code taken from the number"
   },
   {
     "op" : "add",
@@ -995,36 +481,8 @@
   },
   {
     "op" : "add",
-    "path" : "/individualCandidates/243/extractionNotes/0",
-    "value" : "Phone number left out, not a real number"
-  },
-  {
-    "op" : "remove",
-    "path" : "/individualCandidates/243/phoneNumbers/0",
-    "old" : {
-      "phoneNationalNumber" : "49328042",
-      "phoneCountryCode" : "+250",
-      "phoneCountryCodeInferred" : false
-    }
-  },
-  {
-    "op" : "add",
     "path" : "/individualCandidates/249/extractionNotes/0",
-    "value" : "Phone number left out, not a real number"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/249/extractionNotes/1",
     "value" : "Country code taken from the address"
-  },
-  {
-    "op" : "remove",
-    "path" : "/individualCandidates/249/phoneNumbers/0",
-    "old" : {
-      "phoneNationalNumber" : "95801900",
-      "phoneCountryCode" : "+975",
-      "phoneCountryCodeInferred" : false
-    }
   },
   {
     "op" : "add",
@@ -1032,16 +490,16 @@
     "value" : "Country code taken from the address"
   },
   {
-    "op" : "add",
-    "path" : "/individualCandidates/258/extractionNotes/0",
-    "value" : "Phone number left out, not a real number"
+    "op" : "remove",
+    "path" : "/individualCandidates/256/extractionNotes/0",
+    "old" : "Phone number left out, not a real number"
   },
   {
-    "op" : "remove",
-    "path" : "/individualCandidates/258/phoneNumbers/0",
-    "old" : {
-      "phoneNationalNumber" : "13099784",
-      "phoneCountryCode" : "+258",
+    "op" : "add",
+    "path" : "/individualCandidates/256/phoneNumbers/-",
+    "value" : {
+      "phoneNationalNumber" : "95628227",
+      "phoneCountryCode" : "+255",
       "phoneCountryCodeInferred" : false
     }
   },
@@ -1058,7 +516,33 @@
   {
     "op" : "add",
     "path" : "/individualCandidates/272/extractionNotes/-",
-    "value" : "Country code taken from Cyprus addresses"
+    "value" : "Country code taken from the number"
+  },
+  {
+    "op" : "remove",
+    "path" : "/individualCandidates/275/extractionNotes/0",
+    "old" : "Phone number left out, not a real number"
+  },
+  {
+    "op" : "add",
+    "path" : "/individualCandidates/275/phoneNumbers/-",
+    "value" : {
+      "phoneNationalNumber" : "60991470",
+      "phoneCountryCode" : "+994",
+      "phoneCountryCodeInferred" : false
+    }
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/275/addresses/1/address/city",
+    "value" : "Limassol",
+    "old" : null
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/275/addresses/1/address/extractionNotes/0",
+    "value" : "Postal code is missing",
+    "old" : "City and postal code are missing"
   },
   {
     "op" : "add",
@@ -1068,7 +552,7 @@
   {
     "op" : "add",
     "path" : "/individualCandidates/289/extractionNotes/-",
-    "value" : "Country code taken from Cyprus addresses"
+    "value" : "Country code taken from the number"
   },
   {
     "op" : "add",
@@ -1076,8 +560,32 @@
     "value" : "Country code taken from the address"
   },
   {
+    "op" : "replace",
+    "path" : "/individualCandidates/292/addresses/1/address/city",
+    "value" : "Limassol",
+    "old" : null
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/292/addresses/1/address/extractionNotes/0",
+    "value" : "Postal code is missing",
+    "old" : "City and postal code are missing"
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/293/addresses/1/address/city",
+    "value" : "Nicosia",
+    "old" : null
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/293/addresses/1/address/extractionNotes/0",
+    "value" : "Postal code is missing",
+    "old" : "City and postal code are missing"
+  },
+  {
     "op" : "add",
-    "path" : "/individualCandidates/300/extractionNotes/-",
+    "path" : "/individualCandidates/300/extractionNotes/0",
     "value" : "Country code taken from the address"
   },
   {
@@ -1096,108 +604,6 @@
     "value" : "Country code taken from the address"
   },
   {
-    "op" : "add",
-    "path" : "/individualCandidates/315/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Limassol",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/315/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Nicosia",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/321/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Nicosia",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/321/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Limassol",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/332/addresses/1",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Nicosia",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/332/addresses/2",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Limassol",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
     "op" : "replace",
     "path" : "/individualCandidates/333/addresses/0/addressType",
     "value" : "Shipping",
@@ -1205,7 +611,7 @@
   },
   {
     "op" : "add",
-    "path" : "/individualCandidates/337/extractionNotes/-",
+    "path" : "/individualCandidates/337/extractionNotes/0",
     "value" : "Country code taken from the address"
   },
   {
@@ -1215,63 +621,7 @@
   },
   {
     "op" : "add",
-    "path" : "/individualCandidates/339/addresses/3",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Limassol",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "add",
     "path" : "/individualCandidates/340/extractionNotes/-",
     "value" : "Country code taken from the address"
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/344/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Nicosia",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "add",
-    "path" : "/individualCandidates/344/addresses/-",
-    "value" : {
-      "address" : {
-        "addressLine1" : null,
-        "addressLine2" : null,
-        "city" : "Limassol",
-        "postalCode" : null,
-        "country" : "Cyprus",
-        "extractionNotes" : [
-          "Street and postal code are missing"
-        ]
-      },
-      "addressType" : "Billing"
-    }
-  },
-  {
-    "op" : "remove",
-    "path" : "/extractionNotes/18",
-    "old" : "Country code taken from the country used across the file"
   }
 ]

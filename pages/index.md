@@ -36,6 +36,7 @@ An **epic** covers one area of the product end to end: the steps a person goes t
 | [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}) | The organization's address book of the people and companies it trades with: adding, browsing, updating, and archiving them. |
 | [Catalogue]({{ site.baseurl }}{% link epics/06-catalogue.md %}) | What the organization sells: adding items, giving them prices and pictures, browsing, updating, and archiving them. |
 | [AI Response Performance]({{ site.baseurl }}{% link epics/07-ai-response-performance.md %}) | How developers check the AI's reading of a price list or contact list against a hand-checked correct answer, and see every difference. Covers Catalogue and Customer Book extraction. |
+| [AI Response Performance: Latest Results]({{ site.baseurl }}{% link epics/07-ai-response-performance/results.md %}) | The latest numbers for how well the AI reads uploads: how many cases match the hand-checked answer exactly, how consistent the AI is, the trend across rounds, and every case. Updated after every run. |
 
 Each epic also closes with **Known gaps and open questions** — the decisions that have not been made yet, kept separate from what the product does today so the two are never confused.
 

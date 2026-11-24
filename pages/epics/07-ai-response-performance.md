@@ -4,6 +4,8 @@ title: AI Response Performance
 
 # AI Response Performance
 
+> **Latest results:** the current numbers, the trend across rounds and every case are on [AI Response Performance: Latest Results]({{ site.baseurl }}{% link epics/07-ai-response-performance/results.md %}), updated after every run.
+>
 > **Status: built.** The Catalogue check runs its 10 cases, and the Customer Book check its 23 cases, against hand-corrected golden answers. Every list is compared position by position, so order counts. A difference never fails a case: each case prints its stored and current differences as the comparison tool's indented lists, each placed by position, readable without colour and with no test id line. The old scored checks are removed: every Catalogue and Customer Book extraction check, both note-shortening checks, the scoring and all old golden answers. Customer Book's source files were kept, and its check is rebuilt from them ([gap 2](#2-customer-books-golden-check-is-rebuilt)). Notes in italics starting *Before this rework* describe the removed checks.
 >
 > **First live run**, at the product's default settings: it took about 7 minutes, and every case got an answer, with no AI errors or timeouts. All 10 cases showed differences; at that time any difference failed a case. The golden answers were not changed to make them pass (see gaps 3, 6 and 7). That run used the earlier comparison, which paired items by product code or name and printed the whole answer. The next default-settings run, on 2026-11-24, used the position-by-position comparison and wrote the first stored patches.
@@ -18,7 +20,7 @@ title: AI Response Performance
 >
 > **Reading-consistency round 2, built (user decision).** After the user's own runs still showed too much noise, Customer Book reading changed again ([Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}) step 8): a phone number that cannot be real is left out with one fixed note; country-code basis notes always say "Country code", use a longer fixed source list, and repeat on a candidate only when its basis differs from the shared note; unused details belonging to an entry in a picture or PDF get one `<Kind> were not used` note per kind; and a left-out line with no listed kind, such as each slogan or tagline line, gets its own note with no kind word, `Left out "<line>", <beside>`, as in Catalogue. Spreadsheets are now read with more AI reasoning so the State/Region rule is followed ([gap 10](#10-spreadsheet-reads-are-slower-and-cost-more)). Two runs at the product's default settings on 2026-11-24 passed all 33 cases, and the first rewrote the stored patches: differences from the golden answers fell from 282 to 232. Reading the same files twice gave identical answers in 21 of 33 cases. Most of the remaining run-to-run differences are in Customer Book's 347-row export and Catalogue's dense price-list photo ([gap 7](#7-at-default-settings-the-ai-still-breaks-some-reading-rules)).
 >
-> **Reading-consistency round 3, built (user decision).** Customer Book keeps a phone whose code and number can be real, keeps a number with no workable code with `Country code is missing`, and leaves out a code with no number with `Phone number is missing`; an address basis for a country code is noted on the customer in pictures and PDFs too; and the `<Kind> were not used` list becomes Websites, Comments, Callback reminders, Balances, Birthdays, Loyalty tiers and Customer types, replacing Roles. Catalogue turns columns that describe the item into attributes and gives the not-used note only to columns that do not. In pictures and PDFs, both features list left-out lines row by row, top to bottom, left before right.
+> **Reading-consistency round 3, built (user decision).** Customer Book keeps a phone whose code and number can be real, keeps a number with no workable code with `Country code is missing`, and leaves out a code with no number with `Phone number is missing`; an address basis for a country code is noted on the customer in pictures and PDFs too; and the `<Kind> were not used` list becomes Websites, Comments, Callback reminders, Balances, Birthdays, Loyalty tiers and Customer types, replacing Roles. Catalogue turns columns that describe the item into attributes and gives the not-used note only to columns that do not. In pictures and PDFs, both features list left-out lines row by row, top to bottom, left before right, while items and customers in tables side by side are read one table at a time, the left table first. One run at the product's default settings on 2026-11-25 answered all 33 cases and rewrote the stored patches: differences from the golden answers fell to 212 (Catalogue 93, Customer Book 119), with 18 of 33 cases showing none. A second, partial run was stopped after 31 cases. See [the latest results]({{ site.baseurl }}{% link epics/07-ai-response-performance/results.md %}).
 
 ### Overview
 
@@ -230,6 +232,8 @@ The check shows these as differences, and the golden answers keep the rules.
 
 In the reading-consistency round 2 runs, the AI still sometimes took the city from a State or Region column in Customer Book's 347-row export, was inconsistent about whether to write a customer's own country-code note, and re-read names and digits differently in Catalogue's dense price-list photo.
 
+In the round 3 runs, cities from a State or Region column still appeared in the 347-row export, dense-photo re-reads continued in Catalogue's second picture, the TBD price note and the currency source were still worded freely in the Catalogue spreadsheets, and the "beside" wording of the slogan lines on Customer Book's business card varied.
+
 **Accepted for now:** this was the user's choice. Any work on the AI instructions to fix these would be a separate request.
 
 #### 8. One skipped or extra item can make many later items differ
@@ -250,4 +254,4 @@ To make the AI follow the rule that a State or Region column is never the city, 
 
 **Accepted for now:** this was the user's choice.
 
-{% raw %}{% include abbreviations.md %}{% endraw %}
+{% include abbreviations.md %}

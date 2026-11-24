@@ -31,7 +31,6 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Country code taken from the address",
         "Tax number shown but not kept"
       ]
     },
@@ -64,7 +63,6 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Country code taken from the address",
         "Tax number shown but not kept"
       ]
     },
@@ -97,7 +95,6 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Country code taken from the address",
         "Email could not be fully read",
         "Tax number shown but not kept"
       ]
@@ -146,7 +143,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        "Country code taken from the address"
+        
       ]
     },
     {
@@ -199,6 +196,7 @@
   ],
   "extractionNotes": [
     "Left out title \"Πελάτες\", nothing beside it",
-    "Left out column labels \"Όνομα\", nothing beside it"
+    "Left out column labels \"Όνομα\", nothing beside it",
+    "Country code taken from the country used across the image"
   ]
 }

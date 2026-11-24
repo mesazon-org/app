@@ -6,8 +6,9 @@
     "old" : "Currency taken from the column header"
   },
   {
-    "op" : "remove",
+    "op" : "replace",
     "path" : "/candidates/8/variants/0/extractionNotes/0",
+    "value" : "Price is to be determined",
     "old" : "Price is marked TBD"
   }
 ]

@@ -1017,7 +1017,9 @@ object AIInstructions {
       |   including rotated, merged, multi-line, or repeated labels. Then note every visible line from top to bottom
       |   as a row of cell values under those labels. Keep empty cells empty and place each value in its own column
       |   by position and alignment, never by assumed order. Include every line, even one that looks like a heading,
-      |   title, or category. Do not translate, map, normalize, or drop anything yet.
+      |   title, or category. Do not translate, map, normalize, or drop anything yet. Items in tables that sit side by
+      |   side are read one table at a time, the left table first, each top to bottom; the row-by-row order applies
+      |   only to left-out notes.
       |   Check for labels offset from their values, and combine a group label with its sub-labels into one meaning,
       |   such as a price group over retail and wholesale columns. When a label is blank, generic, duplicated, or
       |   contradicts its values, the values decide the column meaning. Describe a tentative interpretation once in
@@ -1255,7 +1257,7 @@ object AIInstructions {
       |     only when the source calls for another:
       |     1. how the labels were read, as a tentative label interpretation.
       |     2. one note for each line left out as a non-item, in source order: row by row, top to bottom, at the same
-      |        height the left before the right, and a PDF page by page.
+      |        height the left before the right, and a PDF page by page. This order is for the left-out notes only.
       |     3. one note for each column that is not used at all, in column order, worded
       |        "The <label> column was not used", for example "The Balance column was not used".
       |     4. shared assumptions, such as one currency used for the whole $sourceName, written once here instead of
@@ -1409,7 +1411,9 @@ object AIInstructions {
       |   line from top to bottom as a row of values under those labels. Keep empty cells empty and place each value in
       |   its own column by position and alignment, never by assumed order. On a card or free-form note, keep each line
       |   with its printed label or icon. Include every line, even one that looks like a heading, title, or letterhead.
-      |   Do not translate, map, normalize, or drop anything yet.
+      |   Do not translate, map, normalize, or drop anything yet. Entries in tables that sit side by side are read one
+      |   table at a time, the left table first, each top to bottom; the row-by-row order applies only to left-out
+      |   notes.
       |   Check for labels offset from their values, and combine a group label with its sub-labels into one meaning,
       |   such as an address group over street, city, and postal code columns, or a contact group over name and role
       |   columns. When a label is blank, generic, duplicated, or contradicts its values, the values decide the column
@@ -1673,7 +1677,8 @@ object AIInstructions {
       |     only when the source calls for another:
       |     1. how the labels were read, as a tentative label interpretation.
       |     2. one note for each line left out as a non-customer, in source order: row by row, top to bottom, at the
-      |        same height the left before the right, and a PDF page by page.
+      |        same height the left before the right, and a PDF page by page. This order is for the left-out notes
+      |        only.
       |     3. one note for each kind of detail left out because it maps to no field, worded "<Kind> were not used",
       |        such as "Websites were not used".
       |     4. shared assumptions, such as one country code used for the whole $sourceName, written once here instead

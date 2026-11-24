@@ -31,7 +31,7 @@
       ],
       "fullNameInferred": false,
       "extractionNotes": [
-        "Country code taken from the address"
+        
       ]
     },
     {
@@ -122,7 +122,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        "Country code taken from the address"
+        
       ]
     },
     {
@@ -176,6 +176,7 @@
   "extractionNotes": [
     "Left out title \"Πελάτες\", date beside it",
     "Left out date \"12/03/2025\", title beside it",
-    "Left out column labels \"Όνομα/Επωνυμία\", nothing beside it"
+    "Left out column labels \"Όνομα/Επωνυμία\", nothing beside it",
+    "Country code taken from the country used across the image"
   ]
 }
