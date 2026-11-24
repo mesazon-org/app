@@ -1,0 +1,23 @@
+[
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/0",
+    "value" : "Slogans were not used",
+    "old" : "Left out slogan \"Quality Supplies for a Foodservice Industry\", nothing beside it"
+  },
+  {
+    "op" : "remove",
+    "path" : "/extractionNotes/3",
+    "old" : "Left out slogan \"Stronger Together\", nothing beside it"
+  },
+  {
+    "op" : "remove",
+    "path" : "/extractionNotes/2",
+    "old" : "Left out slogan \"Businesses\", nothing beside it"
+  },
+  {
+    "op" : "remove",
+    "path" : "/extractionNotes/1",
+    "old" : "Left out slogan \"Kitchens\", nothing beside it"
+  }
+]

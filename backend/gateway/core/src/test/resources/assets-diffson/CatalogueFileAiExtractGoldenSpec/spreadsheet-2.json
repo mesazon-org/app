@@ -1,0 +1,50 @@
+[
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/3",
+    "value" : "Left out row 29, total \"Total, 1.250.000.000.295,94\", prices beside it",
+    "old" : "Left out row 29, total \"Total, 1.250.000.000.295,94\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/4",
+    "value" : "Prices without a currency use euros from the header",
+    "old" : "Euro prices come from the cost column heading"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/5/variants/0/extractionNotes/0",
+    "value" : "Bottle size comes from the product name",
+    "old" : "Selling unit comes from the product name"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/8/variants/0/extractionNotes/0",
+    "value" : "Price is listed as TBD",
+    "old" : "Price is marked TBD"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/10/variants/0/extractionNotes/0",
+    "value" : "Pallet could not be matched to a supported unit",
+    "old" : "Selling unit pallet could not be matched"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/12/variants/0/extractionNotes/0",
+    "value" : "CHF is not a supported currency",
+    "old" : "Currency CHF is not supported"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/14/variants/0/extractionNotes/0",
+    "value" : "Price exceeds the supported amount",
+    "old" : "Price exceeds the supported limit"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/16/variants/0/extractionNotes/0",
+    "value" : "Bundle size comes from the supplier notes",
+    "old" : "Selling unit comes from the supplier note"
+  }
+]

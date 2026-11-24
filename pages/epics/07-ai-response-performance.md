@@ -6,13 +6,15 @@ title: AI Response Performance
 
 > **Status: built.** The Catalogue check runs its 10 cases, and the Customer Book check its 23 cases, against hand-corrected golden answers. Every list is compared position by position, so order counts. A difference never fails a case: each case prints its stored and current differences as the comparison tool's indented lists, each placed by position, readable without colour and with no test id line. The old scored checks are removed: every Catalogue and Customer Book extraction check, both note-shortening checks, the scoring and all old golden answers. Customer Book's source files were kept, and its check is rebuilt from them ([gap 2](#2-customer-books-golden-check-is-rebuilt)). Notes in italics starting *Before this rework* describe the removed checks.
 >
-> **First live run**, at the product's default settings: it took about 7 minutes, and every case got an answer, with no AI errors or timeouts. All 10 cases failed on differences. That is the agreed behaviour: the check reports differences, and the golden answers were not changed to make them pass (see gaps 3, 6 and 7). That run used the earlier comparison, which paired items by product code or name and printed the whole answer; the check has not been run live since it moved to position-by-position comparison.
+> **First live run**, at the product's default settings: it took about 7 minutes, and every case got an answer, with no AI errors or timeouts. All 10 cases failed on differences. That is the agreed behaviour: the check reports differences, and the golden answers were not changed to make them pass (see gaps 3, 6 and 7). That run used the earlier comparison, which paired items by product code or name and printed the whole answer. The next default-settings run, on 2026-11-24, used the position-by-position comparison and wrote the first stored patches.
 >
-> **Customer Book check, built (user decision):** built the same way as Catalogue's, with 23 cases, described in the Customer Book parts of requirements 1 and 3 to 6 and in gaps 2 and 6. Its golden answers are hand-corrected from one careful capture under the notes-change instructions. It has not been run live at the product's default settings yet; that run is optional and needs the user's go-ahead.
+> **Customer Book check, built (user decision):** built the same way as Catalogue's, with 23 cases, described in the Customer Book parts of requirements 1 and 3 to 6 and in gaps 2 and 6. Its golden answers are hand-corrected from one careful capture under the notes-change instructions. Its first run at the product's default settings was on 2026-11-24, with the user's go-ahead, and wrote its stored patches.
 >
 > **Notes change, built (user decision):** the product's AI instructions now put the general notes in a fixed order and give "left out" notes one wording ([Catalogue]({{ site.baseurl }}{% link epics/06-catalogue.md %}) requirement 12 and scenario 36, [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}) requirement 22 and scenario 34). The golden answers follow that change, as requirements 1 and 2 describe.
 >
-> **Stored patches, built (user decision):** each case keeps a stored patch, its list of differences from the golden answer, and prints it beside today's; a difference never fails a case (requirements 7 and 8). The first stored patches are not written yet: all 33 come from one run at the product's default settings, which needs the user's go-ahead. Until then, every case prints only its Current block.
+> **Stored patches, built (user decision):** each case keeps a stored patch, its list of differences from the golden answer, and prints it beside today's; a difference never fails a case (requirements 7 and 8). All 33 first stored patches were written by one run at the product's default settings on 2026-11-24, with the user's go-ahead, so every case now prints its Stored and Current blocks.
+>
+> **Agreed, not built yet (user decision): reading-consistency round.** The product's AI instructions change so the same file reads as alike as possible on every run: fixed note sentences, settled ambiguous rules and character-by-character copying ([Catalogue]({{ site.baseurl }}{% link epics/06-catalogue.md %}) step 10, [Customer Book]({{ site.baseurl }}{% link epics/05-customer-book.md %}) step 8). After that change, the golden answers are corrected to the new rules, and then one run at the product's default settings, with the user's key and go-ahead, rewrites the stored patches (requirement 8).
 
 ### Overview
 
@@ -38,7 +40,7 @@ This is a check that developers run by hand. Customers never see it, and it chan
 1. A **golden answer** is the correct AI answer, written down in advance, in the shape the AI returns it, not the shape of the final product response. It starts from one careful AI reading and is then corrected by hand against the source and the extraction rules, including the AI's notes. Running the check never changes a golden answer. *Before this rework, the golden notes were never hand-checked, because notes were not compared.*
 
    Customer Book's golden answers are made and corrected the same way, from one new careful capture of all 23 cases taken after the notes change, only with the user's go-ahead. *A capture made before the notes change was not used (user decision).* The same correction rulings as Catalogue's apply (user decision):
-   - for look-alike characters, the golden answer follows the source where there is evidence, otherwise the AI's choice ([gap 6](#6-characters-that-look-the-same-can-show-a-difference-that-looks-like-none));
+   - for look-alike characters, the golden answer follows the source where there is evidence, otherwise the AI's choice ([gap 6](#6-characters-that-look-the-same-can-show-a-difference-that-looks-like-none)); *after the reading-consistency round, where there is no evidence it follows the letters around it, as the product rule then says (agreed, not built yet)*;
    - a blurred character keeps the human reading;
    - a missing accent, or a Greek-style spelling of a foreign word, does not get the "may be misspelled in the source" note; only a clear spelling mistake does.
 2. All golden answers are made again for the new check. Each new golden answer comes from one live AI run, which happens only when the developer gives the go-ahead and supplies the key. *Before this rework, the old golden answers were used. They are now removed and replaced.*
@@ -88,7 +90,7 @@ This is a check that developers run by hand. Customers never see it, and it chan
    - A run never overwrites a stored patch. To refresh one, the developer deletes it on purpose and runs again.
    - Stored patches are committed and reviewed like golden answers. They come from one run at the product's default settings, with the user's go-ahead and key.
    - Editing a golden answer means deleting its stored patch and rewriting it in the same change.
-   - The first stored patches are made once each check's golden answers are final, which they now are after the notes change. They are not written yet (see the status above).
+   - The first stored patches are made once each check's golden answers are final, which they now are after the notes change. They were written by one default-settings run on 2026-11-24 (see the status above).
 
    *Before stored patches, there were none (user decision).*
 
@@ -183,11 +185,11 @@ Three of its product codes have one blurred digit. Their golden answer keeps the
 
 This rework removed Customer Book's golden checks and their golden answers: ten contact-list pictures (one of them in a second case meant to leave out phone numbers, which by then no longer sent that message), two PDFs, four spreadsheets, unrelated files, and five note-shortening cases. The source files were kept for the rebuild. Until it was rebuilt, a change to the Customer Book AI instructions could not be checked against golden answers.
 
-**Built:** the user chose to rebuild it the same way as Catalogue's, and it now runs its 23 cases against hand-corrected golden answers (requirements 1 and 3 to 6). It has not been run live at the product's default settings yet. Nothing is left to decide.
+**Built:** the user chose to rebuild it the same way as Catalogue's, and it now runs its 23 cases against hand-corrected golden answers (requirements 1 and 3 to 6). It was first run at the product's default settings on 2026-11-24. Nothing is left to decide.
 
 #### 3. Differences in note wording fill the patch
 
-Notes are now compared, and every difference shows in the Current block. The AI rarely words notes the same way twice, so a case can show differences even when every item is right. *Before stored patches, such a case failed (user decision).* The first live run confirmed it: the three unrelated files failed on note wording alone. The agreed notes change (a fixed order of general notes and one "left out" wording) is meant to make general-note differences rarer; it does not change how the AI words item, variant or customer notes.
+Notes are now compared, and every difference shows in the Current block. The AI rarely words notes the same way twice, so a case can show differences even when every item is right. *Before stored patches, such a case failed (user decision).* The first live run confirmed it: the three unrelated files failed on note wording alone. The agreed notes change (a fixed order of general notes and one "left out" wording) is meant to make general-note differences rarer; it does not change how the AI words item, variant or customer notes. The agreed reading-consistency round adds fixed sentences for many of those notes too (agreed, not built yet).
 
 **Accepted for now:** this was the user's choice. Revisit it if note wording makes the differences too long to be useful.
 
@@ -205,7 +207,7 @@ The check joins spreadsheet groups and shortens notes with its own copy of the p
 
 #### 6. Characters that look the same can show a difference that looks like none
 
-Some letters and marks look identical but are different characters. Examples are the Greek and Latin capitals X/Χ, I/Ι and L/Λ, and straight and curly apostrophes. Where the source gives evidence, such as the PDF's own text for an apostrophe, the golden answer follows the source. Otherwise it keeps the AI's choice. If the AI picks the other character in a later run, it shows as a difference whose two sides look the same. *Before stored patches, that difference also failed the case.* The first live run confirmed it: look-alike Latin and Greek letters showed up as differences in the second picture. The same ruling applies to Customer Book's golden answers (user decision), where names, emails and phone numbers raise the same choices.
+Some letters and marks look identical but are different characters. Examples are the Greek and Latin capitals X/Χ, I/Ι and L/Λ, and straight and curly apostrophes. Where the source gives evidence, such as the PDF's own text for an apostrophe, the golden answer follows the source. Otherwise it keeps the AI's choice; after the agreed reading-consistency round, it follows the letters around it instead (not built yet). If the AI picks the other character in a later run, it shows as a difference whose two sides look the same. *Before stored patches, that difference also failed the case.* The first live run confirmed it: look-alike Latin and Greek letters showed up as differences in the second picture. The same ruling applies to Customer Book's golden answers (user decision), where names, emails and phone numbers raise the same choices.
 
 **Accepted for now:** this was the user's choice.
 

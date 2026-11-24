@@ -1,0 +1,29 @@
+[
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/4/addresses/0/address/extractionNotes/0",
+    "value" : "Only the city is shown",
+    "old" : "Street address is missing"
+  },
+  {
+    "op" : "remove",
+    "path" : "/individualCandidates/4/addresses/0/address/extractionNotes/2",
+    "old" : "Country is missing"
+  },
+  {
+    "op" : "remove",
+    "path" : "/individualCandidates/4/addresses/0/address/extractionNotes/1",
+    "old" : "Postal code is missing"
+  },
+  {
+    "op" : "replace",
+    "path" : "/businessCandidates/3/addresses/0/address/extractionNotes/0",
+    "value" : "Address shows only city and country",
+    "old" : "Street address is missing"
+  },
+  {
+    "op" : "remove",
+    "path" : "/businessCandidates/3/addresses/0/address/extractionNotes/1",
+    "old" : "Postal code is missing"
+  }
+]

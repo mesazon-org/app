@@ -1,0 +1,24 @@
+[
+  {
+    "op" : "remove",
+    "path" : "/individualCandidates/1/extractionNotes/0",
+    "old" : "Name may be misspelled in the source"
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/1/fullName",
+    "value" : "Марина Волкова",
+    "old" : "Марина Вочкова"
+  },
+  {
+    "op" : "replace",
+    "path" : "/businessCandidates/0/addresses/0/address/extractionNotes/0",
+    "value" : "Postal code is not shown",
+    "old" : "Postal code not shown"
+  },
+  {
+    "op" : "add",
+    "path" : "/extractionNotes/-",
+    "value" : "Comments were not used"
+  }
+]

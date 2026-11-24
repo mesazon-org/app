@@ -1,0 +1,54 @@
+[
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/3",
+    "value" : "Left out row 29, total \"Total, 1.250.000.000.295,94\", prices beside it",
+    "old" : "Left out row 29, total \"Total, 1.250.000.000.295,94\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/4",
+    "value" : "Euro prices come from the Cost € header",
+    "old" : "Prices without a currency use the euro price heading"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/10/variants/0/extractionNotes/0",
+    "value" : "Pallet is not a supported selling unit",
+    "old" : "Pallet could not be matched to a supported unit"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/12/variants/0/extractionNotes/0",
+    "value" : "Swiss francs are not a supported currency",
+    "old" : "CHF is not a supported currency"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/16/variants/0/extractionNotes/0",
+    "value" : "Bundle is not a supported selling unit",
+    "old" : "Selling unit comes from the supplier's note"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/16/variants/0/sellingUnitInferred",
+    "value" : false,
+    "old" : true
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/16/variants/0/sellingUnit",
+    "value" : null,
+    "old" : {
+      "quantity" : {
+        "value" : 1,
+        "unit" : "Pack"
+      },
+      "perUnit" : {
+        "value" : 10,
+        "unit" : "Piece"
+      },
+      "unitSize" : null
+    }
+  }
+]

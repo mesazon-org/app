@@ -1,0 +1,39 @@
+[
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/0/extractionNotes/0",
+    "value" : "Country code +357 guessed, but city is in Greece",
+    "old" : "Country code +357 guessed, but address is in Greece"
+  },
+  {
+    "op" : "replace",
+    "path" : "/individualCandidates/2/addresses/0/address/extractionNotes/0",
+    "value" : "Street address is not shown",
+    "old" : "Only the city is shown"
+  },
+  {
+    "op" : "add",
+    "path" : "/individualCandidates/2/addresses/0/address/extractionNotes/-",
+    "value" : "Postal code is not shown"
+  },
+  {
+    "op" : "add",
+    "path" : "/individualCandidates/2/addresses/0/address/extractionNotes/-",
+    "value" : "Country is not shown"
+  },
+  {
+    "op" : "replace",
+    "path" : "/businessCandidates/1/extractionNotes/0",
+    "value" : "Phone country code taken from the address",
+    "old" : "Phone number could not be fully read"
+  },
+  {
+    "op" : "add",
+    "path" : "/businessCandidates/1/phoneNumbers/-",
+    "value" : {
+      "phoneNationalNumber" : "22761478",
+      "phoneCountryCode" : "+357",
+      "phoneCountryCodeInferred" : true
+    }
+  }
+]

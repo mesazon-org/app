@@ -1,0 +1,66 @@
+[
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/3",
+    "value" : "Left out row 29, total \"Total, 1.250.000.000.295,94\", prices beside it",
+    "old" : "Left out row 29, total \"Total, 1.250.000.000.295,94\", nothing beside it"
+  },
+  {
+    "op" : "replace",
+    "path" : "/extractionNotes/4",
+    "value" : "Euro currency comes from the cost header",
+    "old" : "Prices without a currency use euros from the heading"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/5/variants/0/extractionNotes/0",
+    "value" : "Bottle size comes from the product name",
+    "old" : "Bottle size comes from the item name"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/10/variants/0/extractionNotes/0",
+    "value" : "Pallet unit could not be matched",
+    "old" : "Selling unit pallet is not supported"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/12/variants/0/extractionNotes/0",
+    "value" : "Swiss francs are not supported",
+    "old" : "CHF is not a supported currency"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/14/variants/0/extractionNotes/0",
+    "value" : "Price exceeds the supported amount",
+    "old" : "Price exceeds the supported limit"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/16/variants/0/extractionNotes/0",
+    "value" : "Bundle unit could not be matched",
+    "old" : "Selling unit comes from the supplier's note"
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/16/variants/0/sellingUnitInferred",
+    "value" : false,
+    "old" : true
+  },
+  {
+    "op" : "replace",
+    "path" : "/candidates/16/variants/0/sellingUnit",
+    "value" : null,
+    "old" : {
+      "quantity" : {
+        "value" : 1,
+        "unit" : "Pack"
+      },
+      "perUnit" : {
+        "value" : 10,
+        "unit" : "Piece"
+      },
+      "unitSize" : null
+    }
+  }
+]
