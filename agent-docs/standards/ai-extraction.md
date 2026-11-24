@@ -75,6 +75,8 @@ For extraction contracts with note lists, each string is one concise, plain-lang
 
 Give each observation one owner and one scope: the service owns every fact it reports in the field lists, and the AI writes each remaining observation once at its narrowest scope. Do not apply a blanket `.distinct` to candidate notes: similar notes on different variants or contacts can be valid. Keep note lists intact rather than joining them into one string, and preserve source order when combining batches. Summary wording must distinguish source entries from resulting candidates.
 
+**Fixed note sentences and faithful copying (issue 607 reading-consistency round, user decisions; agreed, not built).** Recurring observations use fixed sentences the AI writes exactly (`<Detail> could not be fully read`, `<Detail> partly unclear, please check`, `<Detail> may be misspelled in the source`, `<Field> taken from <source>` with a fixed `<source>` list, plus each feature's own fixed sentences); free wording is allowed only when no fixed sentence fits. Values are copied character by character: never changed to a known word, no accents added or removed, the printed alphabet kept (a look-alike follows the letters around it), codes digit by digit, unsure parts returned as visible with the partly-unclear note. Details: [Catalogue](../features/catalogue.md), [Customer Book](../features/customer-book.md).
+
 ## Default instructions and user guidance
 
 - Keep default extraction instructions in `AIInstructions.scala`. Describe the exact output shape, supported values, grouping rules, counts/rows, flag meanings, and note examples. JSON examples must be consistent with the schema and business rules.
