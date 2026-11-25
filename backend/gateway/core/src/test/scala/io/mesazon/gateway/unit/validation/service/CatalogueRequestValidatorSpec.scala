@@ -398,9 +398,33 @@ class CatalogueRequestValidatorSpec extends ZWordSpecBase, CatalogueSmithyArbitr
           organizationID = arbitrarySample[OrganizationID].value,
           name = request.name.map(_.value),
           sku = request.sku.map(_.value),
+          catalogueItemID = request.catalogueItemID.map(_.value),
+          catalogueItemVariantID = request.catalogueItemVariantID.map(_.value),
         )
 
         validator.validatedCatalogueItemUniquenessGetRequest(input).zioValue shouldBe request
+      }
+
+      "keep a supplied item ID and variant ID in their own fields" in {
+        val catalogueItemID                   = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantID            = arbitrarySample[CatalogueItemVariantID]
+        val catalogueItemUniquenessGetRequest = arbitrarySample[CatalogueItemUniquenessGetRequest].copy(
+          catalogueItemID = Some(catalogueItemID),
+          catalogueItemVariantID = Some(catalogueItemVariantID),
+        )
+        val catalogueItemUniquenessGetInputSmithy = smithy.CatalogueItemUniquenessGetInput(
+          organizationID = arbitrarySample[OrganizationID].value,
+          name = catalogueItemUniquenessGetRequest.name.map(_.value),
+          sku = catalogueItemUniquenessGetRequest.sku.map(_.value),
+          catalogueItemID = Some(catalogueItemID.value),
+          catalogueItemVariantID = Some(catalogueItemVariantID.value),
+        )
+
+        catalogueItemID.value shouldNot equal(catalogueItemVariantID.value)
+
+        validator
+          .validatedCatalogueItemUniquenessGetRequest(catalogueItemUniquenessGetInputSmithy)
+          .zioValue shouldBe catalogueItemUniquenessGetRequest
       }
 
       "fail with a ValidationError for invalid supplied name and SKU" in {
@@ -418,6 +442,24 @@ class CatalogueRequestValidatorSpec extends ZWordSpecBase, CatalogueSmithyArbitr
         )
       }
 
+      "fail with a ValidationError for only the invalid supplied name when item and variant IDs accompany it" in {
+        val catalogueItemUniquenessGetInputSmithy = smithy.CatalogueItemUniquenessGetInput(
+          organizationID = arbitrarySample[OrganizationID].value,
+          name = Some(""),
+          sku = None,
+          catalogueItemID = Some(arbitrarySample[CatalogueItemID].value),
+          catalogueItemVariantID = Some(arbitrarySample[CatalogueItemVariantID].value),
+        )
+
+        validator
+          .validatedCatalogueItemUniquenessGetRequest(catalogueItemUniquenessGetInputSmithy)
+          .zioError shouldBe ServiceError.BadRequestError.ValidationError(
+          List(
+            InvalidFieldError("name", invalidTextMessage, List(""))
+          )
+        )
+      }
+
       "fail with a ValidationError naming both absent uniqueness fields" in {
         val organizationID = arbitrarySample[OrganizationID].value
 
@@ -425,6 +467,25 @@ class CatalogueRequestValidatorSpec extends ZWordSpecBase, CatalogueSmithyArbitr
           .validatedCatalogueItemUniquenessGetRequest(
             smithy.CatalogueItemUniquenessGetInput(organizationID, None, None)
           )
+          .zioError shouldBe ServiceError.BadRequestError.ValidationError(
+          List(
+            InvalidFieldError("name", "At least one of name or sku must be provided", Seq.empty),
+            InvalidFieldError("sku", "At least one of name or sku must be provided", Seq.empty),
+          )
+        )
+      }
+
+      "fail with a ValidationError naming both name and SKU when only item and variant IDs are supplied" in {
+        val catalogueItemUniquenessGetInputSmithy = smithy.CatalogueItemUniquenessGetInput(
+          organizationID = arbitrarySample[OrganizationID].value,
+          name = None,
+          sku = None,
+          catalogueItemID = Some(arbitrarySample[CatalogueItemID].value),
+          catalogueItemVariantID = Some(arbitrarySample[CatalogueItemVariantID].value),
+        )
+
+        validator
+          .validatedCatalogueItemUniquenessGetRequest(catalogueItemUniquenessGetInputSmithy)
           .zioError shouldBe ServiceError.BadRequestError.ValidationError(
           List(
             InvalidFieldError("name", "At least one of name or sku must be provided", Seq.empty),

@@ -985,4 +985,12 @@ Every such candidate then looks as though it needs fixing, and it cannot be adde
 
 **To decide:** whether a detail dropped on request should stop counting as missing, and if so how the system should tell it apart from one that could not be read.
 
+#### 8. Unreadable request values lack the bad-request code
+
+A request value that cannot be read at all is refused with status 400 before any check runs, but without the `BAD_REQUEST_ERROR` code. Examples are a malformed customer or contact identifier, a value outside its fixed list such as an unknown customer kind, language or address type, a missing required field, and a wrongly typed value. Its body comes from the request reader, so a client looking for that code will not find it. A malformed organization identifier is reported as a server error (500) instead. A missing organization identifier correctly returns `BAD_REQUEST_ERROR`.
+
+This applies to every step in this epic except the extraction ([step 8](#8-user-extracts-customers-from-an-image-or-file)), which returns `BAD_REQUEST_ERROR` as described. The error tables above still name `BAD_REQUEST_ERROR` for these values, such as an unknown language or customer kind. A later product-wide fix will correct them row by row. The same holds in [Catalogue gap 15]({{ site.baseurl }}{% link epics/06-catalogue.md %}#15-unreadable-request-values-lack-the-bad-request-code). This was worked out from the request-reading library's code and has not been observed over HTTP.
+
+**Deferred:** a later product-wide fix will make these responses carry `BAD_REQUEST_ERROR` and correct the error tables row by row.
+
 {% include abbreviations.md %}

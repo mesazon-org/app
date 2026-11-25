@@ -132,6 +132,10 @@ operation CatalogueItemUniquenessGet {
         name: String
         @httpQuery("sku")
         sku: String
+        @httpQuery("catalogueItemID")
+        catalogueItemID: UUID
+        @httpQuery("catalogueItemVariantID")
+        catalogueItemVariantID: UUID
     }
     output: CatalogueItemUniquenessGetResponse
     errors: [BadRequest, ValidationError, Unauthorized, Forbidden, InternalServerError]

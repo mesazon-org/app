@@ -178,10 +178,18 @@ object CatalogueService {
         organizationID: UUID,
         name: Option[String],
         sku: Option[String],
+        catalogueItemID: Option[UUID],
+        catalogueItemVariantID: Option[UUID],
     ): ServiceTask[smithy.CatalogueItemUniquenessGetResponse] =
       for {
         catalogueItemUniquenessGetRequest <- catalogueRequestValidator.validatedCatalogueItemUniquenessGetRequest(
-          smithy.CatalogueItemUniquenessGetInput(organizationID, name, sku)
+          smithy.CatalogueItemUniquenessGetInput(
+            organizationID = organizationID,
+            name = name,
+            sku = sku,
+            catalogueItemID = catalogueItemID,
+            catalogueItemVariantID = catalogueItemVariantID,
+          )
         )
         isNameUniqueOpt <- ZIO.foreach(catalogueItemUniquenessGetRequest.name)(catalogueItemName =>
           catalogueRepository.isUniqueCatalogueItemName(
@@ -250,8 +258,18 @@ object CatalogueService {
           organizationID: UUID,
           name: Option[String],
           sku: Option[String],
+          catalogueItemID: Option[UUID],
+          catalogueItemVariantID: Option[UUID],
       ): Task[smithy.CatalogueItemUniquenessGetResponse] =
-        HttpErrorHandler.errorResponseHandler(service.catalogueItemUniquenessGet(organizationID, name, sku))
+        HttpErrorHandler.errorResponseHandler(
+          service.catalogueItemUniquenessGet(
+            organizationID,
+            name,
+            sku,
+            catalogueItemID = catalogueItemID,
+            catalogueItemVariantID = catalogueItemVariantID,
+          )
+        )
     }
 
   val local = ZLayer.derive[CatalogueServiceImpl].project[smithy.CatalogueService[ServiceTask]](identity)

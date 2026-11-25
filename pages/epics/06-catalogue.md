@@ -606,7 +606,7 @@ Nothing changes.
 | 6. User checks an item's current name while updating that item, giving the item's identifier | - That item is ignored, so the name is reported as free unless another non-archived item uses it |
 | 7. User checks a variant's current SKU while updating that variant, giving the variant's identifier | - That variant is ignored, so the SKU is reported as free unless another non-archived variant uses it, ignoring letter case - A SKU used by another variant of the same item is still reported as taken |
 | 8. A supplied item or variant identifier is missing, archived, or belongs to another organization | - Nothing is ignored; the check answers as though no identifier was given - The request is not rejected |
-| 9. A supplied item or variant identifier is malformed | - The request is rejected as a bad request |
+| 9. A supplied item or variant identifier is malformed | - The request is rejected with status 400 before the check runs - The response does not carry the `BAD_REQUEST_ERROR` code ([gap 15](#15-unreadable-request-values-lack-the-bad-request-code)) |
 
 #### Requirements
 
@@ -643,7 +643,7 @@ Nothing changes and no name or SKU is reserved.
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | Neither a name nor a SKU was supplied, or a supplied name or SKU is invalid; both fields are named when neither is supplied |
-| 400 | `BAD_REQUEST_ERROR` | The organization is missing, or an item or variant identifier is malformed |
+| 400 | `BAD_REQUEST_ERROR` | The organization is missing. A malformed item or variant identifier is refused with 400 but without this code ([gap 15](#15-unreadable-request-values-lack-the-bad-request-code)) |
 | 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
 | 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete |
 | 500 | `INTERNAL_SERVER_ERROR` | The person does not belong to the organization, or an unexpected error occurs |
@@ -931,5 +931,13 @@ Say a processing message for [extracting catalogue items](#10-user-extracts-cata
 Every such candidate then looks as though it needs fixing, and it cannot be added until the user supplies the very detail they asked to drop.
 
 **To decide:** whether a detail dropped on request should stop counting as missing, and if so how the system should tell it apart from one that could not be read. Answer it together with Customer Book gap 7.
+
+#### 15. Unreadable request values lack the bad-request code
+
+A request value that cannot be read at all is refused with status 400 before any check runs, but without the `BAD_REQUEST_ERROR` code. Examples are a malformed identifier, a value outside its fixed list such as an unknown currency or status, a missing required field, and a wrongly typed value. Its body comes from the request reader, so a client looking for that code will not find it. A malformed organization identifier is reported as a server error (500) instead. A missing organization identifier correctly returns `BAD_REQUEST_ERROR`.
+
+This applies to every step in this epic except the image upload ([step 2](#2-user-uploads-an-items-image)) and the extraction ([step 10](#10-user-extracts-catalogue-items-from-an-image-or-file)), which return `BAD_REQUEST_ERROR` as described. The error tables above still name `BAD_REQUEST_ERROR` for these values; only [step 9](#9-user-checks-a-name-or-sku-is-free) has been corrected so far. The same holds in [Customer Book gap 8]({{ site.baseurl }}{% link epics/05-customer-book.md %}#8-unreadable-request-values-lack-the-bad-request-code). This was worked out from the request-reading library's code and has not been observed over HTTP.
+
+**Deferred:** a later product-wide fix will make these responses carry `BAD_REQUEST_ERROR` and correct the error tables row by row.
 
 {% include abbreviations.md %}
