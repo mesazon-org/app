@@ -26,7 +26,7 @@ Reusable model-transformation rules. Related: [Scala](scala.md), [Smithy](smithy
 
 ## Enums
 
-- Mirrored domain and Smithy enums have identical `UpperCamelCase` cases and transform directly with `.transformInto[TargetEnum]`.
+- Mirrored domain and Smithy enums have identical `UpperCamelCase` cases and transform directly with `.transformInto[TargetEnum]`. A standard-code enum keeps the codes as its cases on both sides ([Smithy exception](smithy.md); `Currency`, lowercase `Language`) and transforms the same way.
 - Use the direct target case for a fixed compile-time value, for example `smithy.CustomerType.Individual`. Use `.transformInto[smithy.CustomerType]` for a runtime source value.
 - Never convert a mirrored enum through its string value, `fromString`, casting, or pattern matching.
 - Never add named domain-to-Smithy or Smithy-to-domain helpers for a one-to-one enum.

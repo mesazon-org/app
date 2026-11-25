@@ -31,7 +31,7 @@ Every request in this epic names the organization it applies to, and only touche
 4. Customers and business contacts are **archived**, never deleted. Archiving either one is permanent.
 5. A customer may have any number of email addresses and phone numbers. Each business contact has at most one email address and one phone number, and no address.
 6. A customer has no address, exactly one address marked as both shipping and billing, or exactly two addresses, one shipping and one billing in either order. Whenever addresses are sent, anything else is rejected: three or more, two of the same type, a single shipping-only or billing-only address, or a both-purposes address alongside another.
-7. *Not built yet.* Every customer, person or business, has exactly one language: English, Greek or Russian (see **Customer language** below). It is English unless another one is chosen, and customers stored before languages existed become English. Business contacts have no language. *Before this round, customers had no language (user decision).*
+7. *Not built yet.* Every customer, person or business, has exactly one language: English, Greek or Russian (see **Customer language** below). It is English unless another one is chosen. Business contacts have no language. *Before this round, customers had no language (nothing is stored live yet; user decision).*
 
 #### Non-functional
 
