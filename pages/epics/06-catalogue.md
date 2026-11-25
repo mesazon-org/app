@@ -591,6 +591,7 @@ Nothing changes.
 **Who can reach this step: any member of the organization.**
 
 - Before adding or updating an item, the user may check whether its name or a variant SKU is available.
+- While updating, the user may name the item and the variant being edited, so that their own current name and SKU are not counted against them.
 - The check reserves nothing; a later add or update can still lose a race and return a conflict.
 
 #### Business Scenarios
@@ -598,16 +599,22 @@ Nothing changes.
 | **Scenarios** | **Requirements** |
 | --- | --- |
 | 1. User checks a name, a SKU, or both | - The response contains the corresponding availability result |
-| 2. Neither value is supplied, or a supplied value is blank or invalid | - The request is rejected with the relevant validation fields |
+| 2. Neither a name nor a SKU is supplied, or a supplied value is blank or invalid | - The request is rejected with the relevant validation fields - Supplying only identifiers does not count as supplying a value |
 | 3. A non-archived item has the name | - The name is reported as taken |
 | 4. A non-archived variant has the SKU | - The SKU is reported as taken, ignoring letter case |
 | 5. Only archived records use the name or SKU | - The value is reported as free |
+| 6. User checks an item's current name while updating that item, giving the item's identifier | - That item is ignored, so the name is reported as free unless another non-archived item uses it |
+| 7. User checks a variant's current SKU while updating that variant, giving the variant's identifier | - That variant is ignored, so the SKU is reported as free unless another non-archived variant uses it, ignoring letter case - A SKU used by another variant of the same item is still reported as taken |
+| 8. A supplied item or variant identifier is missing, archived, or belongs to another organization | - Nothing is ignored; the check answers as though no identifier was given - The request is not rejected |
+| 9. A supplied item or variant identifier is malformed | - The request is rejected as a bad request |
 
 #### Requirements
 
 1. Any organization member may check availability.
 2. At least one of name and SKU must be supplied. When neither is supplied, both fields are named in the validation response.
 3. Name and SKU checks use the same non-archived scope and case-insensitive SKU rule as add and update.
+4. An optional item identifier leaves that item out of the name check, and an optional variant identifier leaves that variant out of the SKU check, for use while updating. Each identifier affects only its own check. When an identifier is left out, as when checking a new item or variant, every non-archived record counts. *Before this round, the check took no identifiers and counted the record being edited, so an unchanged name or SKU was reported as taken (user decision).*
+5. An identifier that matches no non-archived record of the organization leaves nothing out.
 
 #### Request / Response / Outcome
 
@@ -617,6 +624,8 @@ Nothing changes.
 | --- | --- | --- | --- | --- |
 | Name | `String` | 1–255 characters, trimmed | ❌ | The item name to check |
 | SKU | `String` | 1–255 characters, trimmed; comparison ignores letter case | ❌ | The variant SKU to check |
+| Catalogue Item ID | `UUID` | Canonical 36-character form | ❌ | The item being updated, which the name check ignores |
+| Catalogue Item Variant ID | `UUID` | Canonical 36-character form | ❌ | The variant being updated, which the SKU check ignores |
 
 **Response**
 
@@ -633,8 +642,8 @@ Nothing changes and no name or SKU is reserved.
 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | Neither field was supplied, or a supplied name or SKU is invalid; both fields are named when neither is supplied |
-| 400 | `BAD_REQUEST_ERROR` | The organization is missing |
+| 400 | `VALIDATION_ERROR` | Neither a name nor a SKU was supplied, or a supplied name or SKU is invalid; both fields are named when neither is supplied |
+| 400 | `BAD_REQUEST_ERROR` | The organization is missing, or an item or variant identifier is malformed |
 | 401 | `UNAUTHORIZED_ERROR` | The access token is missing, invalid, or expired |
 | 403 | `FORBIDDEN_ERROR` | Personal onboarding is incomplete |
 | 500 | `INTERNAL_SERVER_ERROR` | The person does not belong to the organization, or an unexpected error occurs |
@@ -914,12 +923,6 @@ Numbers with more than 34 significant digits can be rounded while a request or s
 When an item's variants fall into different 100-row batches, the preview can contain separate candidates for that item. Matching names are flagged as duplicates. A row without an item name at the start of a batch, continuing an item from the previous batch, comes back as a separate candidate without a name, with its name listed as missing.
 
 **Deferred:** combining these candidates and linking continuations across batches will be tackled later. Users review the separate candidates for now.
-
-#### 13. Availability checks count the record being edited
-
-Checking an item's unchanged name or a variant's unchanged SKU reports it as taken, because the check also counts that same record. This can make a valid edit look unavailable.
-
-**Deferred to the next PR:** allow the check to ignore the item or variant being edited. Checks for new items and variants continue to consider every existing non-archived record.
 
 #### 14. A detail dropped on request is still reported missing
 
