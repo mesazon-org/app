@@ -152,6 +152,7 @@ object CustomerBookRepository {
         insertCustomerIndividualInput.emails,
         insertCustomerIndividualInput.phoneNumbers,
         insertCustomerIndividualInput.addresses,
+        insertCustomerIndividualInput.language,
         isArchived = false,
         createdAt = CreatedAt(instantNow),
         updatedAt = UpdatedAt(instantNow),
@@ -171,6 +172,7 @@ object CustomerBookRepository {
         insertCustomerBusinessInput.emails,
         insertCustomerBusinessInput.phoneNumbers,
         insertCustomerBusinessInput.addresses,
+        insertCustomerBusinessInput.language,
         isArchived = false,
         createdAt = CreatedAt(instantNow),
         updatedAt = UpdatedAt(instantNow),
@@ -553,6 +555,7 @@ object CustomerBookRepository {
       emails: List[CustomerEmailEntryInput],
       phoneNumbers: List[CustomerPhoneNumberEntryInput],
       addresses: List[CustomerAddressEntry],
+      language: Language,
   )
 
   case class InsertCustomerBusinessInput(
@@ -561,6 +564,7 @@ object CustomerBookRepository {
       taxID: Option[CustomerTaxID],
       phoneNumbers: List[CustomerPhoneNumberEntryInput],
       addresses: List[CustomerAddressEntry],
+      language: Language,
       customerBusinessContacts: List[CustomerBusinessContactInput],
   )
 

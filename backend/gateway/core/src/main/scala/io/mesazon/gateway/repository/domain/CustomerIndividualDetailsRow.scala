@@ -10,6 +10,7 @@ case class CustomerIndividualDetailsRow(
     emails: List[CustomerEmailEntryInput],
     phoneNumbers: List[CustomerPhoneNumberEntryInput],
     addresses: List[CustomerAddressEntry],
+    language: Language,
     isArchived: Boolean,
     createdAt: CreatedAt,
     updatedAt: UpdatedAt,
