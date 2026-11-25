@@ -98,6 +98,20 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
     override def nullValue: smithy.CustomerType = null
   }
 
+  given JsonValueCodec[smithy.Language] = new JsonValueCodec[smithy.Language] {
+    override def decodeValue(in: JsonReader, default: smithy.Language): smithy.Language = {
+      val languageRaw = in.readString(null)
+      smithy.Language
+        .fromString(languageRaw)
+        .getOrElse(in.decodeError(s"Unknown Language: [$languageRaw]"))
+    }
+
+    override def encodeValue(language: smithy.Language, out: JsonWriter): Unit =
+      out.writeVal(language.stringValue)
+
+    override def nullValue: smithy.Language = null
+  }
+
   given JsonValueCodec[smithy.Currency] = new JsonValueCodec[smithy.Currency] {
     override def decodeValue(in: JsonReader, default: smithy.Currency): smithy.Currency = {
       val currencyRaw = in.readString(null)

@@ -1344,6 +1344,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
             emails = Some(customerBookIndividualPostRequest.emails),
             phoneNumbers = Some(customerBookIndividualPostRequest.phoneNumbers),
             addresses = Some(customerBookIndividualPostRequest.addresses),
+            language = None,
           ).transformInto[smithy.CustomerBookIndividualPutRequest]
           instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 

@@ -268,6 +268,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           emails = Some(customerBookIndividualPostRequest.emails),
           phoneNumbers = Some(customerBookIndividualPostRequest.phoneNumbers),
           addresses = Some(customerBookIndividualPostRequest.addresses),
+          language = Some(customerBookIndividualPostRequest.language),
         )
         val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
 
@@ -315,6 +316,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           emails = None,
           phoneNumbers = None,
           addresses = None,
+          language = None,
         )
         val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
 
@@ -362,6 +364,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           emails = Some(Nil),
           phoneNumbers = Some(Nil),
           addresses = Some(Nil),
+          language = None,
         )
         val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
 

@@ -328,6 +328,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           emails = None,
           phoneNumbers = None,
           addresses = None,
+          language = None,
         )
       }
 
@@ -346,6 +347,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
             emails = Some(List.empty),
             phoneNumbers = Some(List.empty),
             addresses = Some(List.empty),
+            language = None,
           )
       }
 
@@ -363,6 +365,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
               )
             )
           ),
+          language = Some(arbitrarySample[Language]),
         )
 
         customerBookRequestValidator
@@ -519,7 +522,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           Some(
             List(CustomerAddressEntry(arbitrarySample[AddressEntry].copy(addressType = AddressType.ShippingAndBilling)))
           ),
-          None,
+          Some(arbitrarySample[Language]),
           List(customerBusinessContactInsert),
           List(customerBusinessContactUpdate),
           List(customerBusinessContactArchive),
