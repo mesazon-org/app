@@ -102,12 +102,14 @@ trait CatalogueDomainArbitraries extends GatewayArbitraries {
 
   given arbCatalogueItemUniquenessGetRequest: Arbitrary[CatalogueItemUniquenessGetRequest] = Arbitrary(
     for {
-      name    <- Arbitrary.arbitrary[CatalogueItemName]
-      sku     <- Arbitrary.arbitrary[CatalogueItemVariantSku]
-      request <- Gen.oneOf(
-        CatalogueItemUniquenessGetRequest(Some(name), None),
-        CatalogueItemUniquenessGetRequest(None, Some(sku)),
-        CatalogueItemUniquenessGetRequest(Some(name), Some(sku)),
+      name                      <- Arbitrary.arbitrary[CatalogueItemName]
+      sku                       <- Arbitrary.arbitrary[CatalogueItemVariantSku]
+      catalogueItemIDOpt        <- Gen.option(Arbitrary.arbitrary[CatalogueItemID])
+      catalogueItemVariantIDOpt <- Gen.option(Arbitrary.arbitrary[CatalogueItemVariantID])
+      request                   <- Gen.oneOf(
+        CatalogueItemUniquenessGetRequest(Some(name), None, catalogueItemIDOpt, catalogueItemVariantIDOpt),
+        CatalogueItemUniquenessGetRequest(None, Some(sku), catalogueItemIDOpt, catalogueItemVariantIDOpt),
+        CatalogueItemUniquenessGetRequest(Some(name), Some(sku), catalogueItemIDOpt, catalogueItemVariantIDOpt),
       )
     } yield request
   )
