@@ -943,11 +943,11 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
 
         inSequence(
           catalogueRepositoryMock.isUniqueCatalogueItemName
-            .expects(organizationID, catalogueItemName)
+            .expects(organizationID, catalogueItemName, None)
             .returningZIO(true)
             .once(),
           catalogueRepositoryMock.isUniqueCatalogueItemVariantSKU
-            .expects(organizationID, catalogueItemVariantSku)
+            .expects(organizationID, catalogueItemVariantSku, None)
             .returningZIO(true)
             .once(),
         )
@@ -968,7 +968,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val catalogueItemName = arbitrarySample[CatalogueItemName]
 
         catalogueRepositoryMock.isUniqueCatalogueItemName
-          .expects(organizationID, catalogueItemName)
+          .expects(organizationID, catalogueItemName, None)
           .returningZIO(false)
           .once()
 
@@ -984,7 +984,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val catalogueItemVariantSku = arbitrarySample[CatalogueItemVariantSku]
 
         catalogueRepositoryMock.isUniqueCatalogueItemVariantSKU
-          .expects(organizationID, catalogueItemVariantSku)
+          .expects(organizationID, catalogueItemVariantSku, None)
           .returningZIO(false)
           .once()
 
@@ -1002,11 +1002,11 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
 
         inSequence(
           catalogueRepositoryMock.isUniqueCatalogueItemName
-            .expects(organizationID, catalogueItemName)
+            .expects(organizationID, catalogueItemName, None)
             .returningZIO(false)
             .once(),
           catalogueRepositoryMock.isUniqueCatalogueItemVariantSKU
-            .expects(organizationID, catalogueItemVariantSku)
+            .expects(organizationID, catalogueItemVariantSku, None)
             .returningZIO(false)
             .once(),
         )
@@ -1020,6 +1020,91 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
             Some(catalogueItemVariantSku.value),
           )
           .zioValue shouldBe smithy.CatalogueItemUniquenessGetResponse(Some(false), Some(false))
+      }
+
+      "check the name without the supplied item and the SKU without the supplied variant" in new TestContext {
+        val organizationID          = arbitrarySample[OrganizationID]
+        val catalogueItemName       = arbitrarySample[CatalogueItemName]
+        val catalogueItemVariantSku = arbitrarySample[CatalogueItemVariantSku]
+        val catalogueItemID         = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantID  = arbitrarySample[CatalogueItemVariantID]
+
+        catalogueItemID.value shouldNot equal(catalogueItemVariantID.value)
+
+        inSequence(
+          catalogueRepositoryMock.isUniqueCatalogueItemName
+            .expects(organizationID, catalogueItemName, Some(catalogueItemID))
+            .returningZIO(true)
+            .once(),
+          catalogueRepositoryMock.isUniqueCatalogueItemVariantSKU
+            .expects(organizationID, catalogueItemVariantSku, Some(catalogueItemVariantID))
+            .returningZIO(true)
+            .once(),
+        )
+
+        val catalogueService = buildCatalogueService
+
+        catalogueService
+          .catalogueItemUniquenessGet(
+            organizationID.value,
+            Some(catalogueItemName.value),
+            Some(catalogueItemVariantSku.value),
+            Some(catalogueItemID.value),
+            Some(catalogueItemVariantID.value),
+          )
+          .zioValue shouldBe smithy.CatalogueItemUniquenessGetResponse(Some(true), Some(true))
+      }
+
+      "check only the supplied SKU without the supplied variant and ignore the item ID" in new TestContext {
+        val organizationID          = arbitrarySample[OrganizationID]
+        val catalogueItemVariantSku = arbitrarySample[CatalogueItemVariantSku]
+        val catalogueItemID         = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantID  = arbitrarySample[CatalogueItemVariantID]
+
+        catalogueItemID.value shouldNot equal(catalogueItemVariantID.value)
+
+        catalogueRepositoryMock.isUniqueCatalogueItemVariantSKU
+          .expects(organizationID, catalogueItemVariantSku, Some(catalogueItemVariantID))
+          .returningZIO(true)
+          .once()
+
+        val catalogueService = buildCatalogueService
+
+        catalogueService
+          .catalogueItemUniquenessGet(
+            organizationID.value,
+            None,
+            Some(catalogueItemVariantSku.value),
+            Some(catalogueItemID.value),
+            Some(catalogueItemVariantID.value),
+          )
+          .zioValue shouldBe smithy.CatalogueItemUniquenessGetResponse(None, Some(true))
+      }
+
+      "check only the supplied name without the supplied item and ignore the variant ID" in new TestContext {
+        val organizationID         = arbitrarySample[OrganizationID]
+        val catalogueItemName      = arbitrarySample[CatalogueItemName]
+        val catalogueItemID        = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantID = arbitrarySample[CatalogueItemVariantID]
+
+        catalogueItemID.value shouldNot equal(catalogueItemVariantID.value)
+
+        catalogueRepositoryMock.isUniqueCatalogueItemName
+          .expects(organizationID, catalogueItemName, Some(catalogueItemID))
+          .returningZIO(true)
+          .once()
+
+        val catalogueService = buildCatalogueService
+
+        catalogueService
+          .catalogueItemUniquenessGet(
+            organizationID.value,
+            Some(catalogueItemName.value),
+            None,
+            Some(catalogueItemID.value),
+            Some(catalogueItemVariantID.value),
+          )
+          .zioValue shouldBe smithy.CatalogueItemUniquenessGetResponse(Some(true), None)
       }
 
       "fail with a ValidationError before repository access when supplied uniqueness fields are invalid" in new TestContext {
@@ -1044,7 +1129,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val catalogueItemVariantSku = arbitrarySample[CatalogueItemVariantSku]
 
         catalogueRepositoryMock.isUniqueCatalogueItemName
-          .expects(organizationID, catalogueItemName)
+          .expects(organizationID, catalogueItemName, None)
           .returns(ZIO.fail(repositoryError))
           .once()
 
@@ -1066,11 +1151,11 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
 
         inSequence(
           catalogueRepositoryMock.isUniqueCatalogueItemName
-            .expects(organizationID, catalogueItemName)
+            .expects(organizationID, catalogueItemName, None)
             .returningZIO(true)
             .once(),
           catalogueRepositoryMock.isUniqueCatalogueItemVariantSKU
-            .expects(organizationID, catalogueItemVariantSku)
+            .expects(organizationID, catalogueItemVariantSku, None)
             .returns(ZIO.fail(repositoryError))
             .once(),
         )
@@ -1091,7 +1176,7 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
         val catalogueItemName = arbitrarySample[CatalogueItemName]
 
         catalogueRepositoryMock.isUniqueCatalogueItemName
-          .expects(organizationID, catalogueItemName)
+          .expects(organizationID, catalogueItemName, None)
           .returns(ZIO.fail(repositoryError))
           .once()
 
@@ -1109,6 +1194,38 @@ class CatalogueServiceSpec extends ZWordSpecBase, CatalogueSmithyArbitraries, Re
 
         catalogueService
           .catalogueItemUniquenessGet(organizationID.value)
+          .zioError shouldBe
+          ServiceError.BadRequestError.ValidationError(
+            List(
+              ServiceError.BadRequestError.InvalidFieldError(
+                "name",
+                "At least one of name or sku must be provided",
+                Seq.empty,
+              ),
+              ServiceError.BadRequestError.InvalidFieldError(
+                "sku",
+                "At least one of name or sku must be provided",
+                Seq.empty,
+              ),
+            )
+          )
+      }
+
+      "fail with a ValidationError naming name and SKU before repository access when only item and variant IDs are supplied" in new TestContext {
+        val organizationID         = arbitrarySample[OrganizationID]
+        val catalogueItemID        = arbitrarySample[CatalogueItemID]
+        val catalogueItemVariantID = arbitrarySample[CatalogueItemVariantID]
+
+        val catalogueService = buildCatalogueService
+
+        catalogueService
+          .catalogueItemUniquenessGet(
+            organizationID.value,
+            None,
+            None,
+            Some(catalogueItemID.value),
+            Some(catalogueItemVariantID.value),
+          )
           .zioError shouldBe
           ServiceError.BadRequestError.ValidationError(
             List(
