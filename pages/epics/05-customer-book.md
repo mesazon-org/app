@@ -674,7 +674,7 @@ Nothing changes and the check reserves nothing.
 
 **Status: available.** The rules below for how the AI reads an image or file, including copying text exactly as printed (scenarios 43–45 and requirement 32), and combines a spreadsheet's general notes, have so far been checked only against a stand-in for the AI service, not the real one; until they are, treat them as intended behaviour. A file without a label row loses its first customer ([gap 6](#6-a-file-without-a-label-row-skips-its-first-customer)).
 
-**Processing message limited to reading the upload.** Scenario 42 and the processing-message parts of scenarios 28–29 and requirements 4, 19, 21, 22, 24 and 33 are shipped as instructions to the AI. Whether the real AI service follows them has not yet been checked; until a manual check confirms it, treat them as intended behaviour.
+**Processing message limited to reading the upload.** Scenario 42 and the processing-message parts of scenarios 28–29 and requirements 4, 19, 21, 22, 24 and 33 are shipped as instructions to the AI. Whether the real AI service follows them has not yet been checked; until a manual check confirms it, treat them as intended behaviour. Requirement 33's processing-message rule has been checked once, on a two-customer file: asked to make every customer Russian, the AI gave both Russian, with no note. One small check does not show it holds every time.
 
 **Who can reach this step: an owner or admin of the organization.**
 
