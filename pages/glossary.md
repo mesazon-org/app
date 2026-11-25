@@ -11,8 +11,8 @@ Words and short forms used across the epics. Anywhere an acronym appears in an e
 | **Acronym** | **Stands for** | **What it means here** |
 | --- | --- | --- |
 | AI | Artificial Intelligence | The model that reads an uploaded picture, PDF or spreadsheet and suggests catalogue items or customers from it, for the user to check before adding. |
-| BCP | Best Current Practice | An internet standards document. BCP 47 is the standard for short language tags, such as `en` for English, `el` for Greek and `ru` for Russian, which is how a customer's language is written. |
 | CSV | Comma-Separated Values | A plain-text spreadsheet file: one row per line, with the cells separated by commas. |
+| ISO | International Organization for Standardization | The body that publishes international standards. Its ISO 639-1 list gives each language a two-letter code, such as `en` for English, `el` for Greek and `ru` for Russian, which is how a customer's language is written. |
 | JWT | JSON Web Token | The format of the tokens that keep someone signed in. A signed piece of text the app can check without looking anything up. |
 | OTP | One-Time Passcode | A short code we send to someone to prove they own an email address or a phone number. It works once, and stops working after it expires. |
 | PDF | Portable Document Format | A document file, typed or scanned. An uploaded PDF is read like a picture, all its pages as one source. |

@@ -13,7 +13,7 @@ Read [PostgreSQL](../../standards/postgres.md). This slice owns DDL/config; Row/
 
 `terraform/dev/gateway-flyway/` runs the image as one-shot `app-job`; `FLYWAY_LOCATIONS=/flyway/sql`, `FLYWAY_SCHEMAS=<gateway schema>`. `clean`/`clean-on-validation-error` are dev-only.
 
-Current pre-release migration is `V2025.05.27__init.sql`; extend it only while nothing using it has shipped. Afterwards add an append-only dated migration. Same-day example: `V2026.07.09.1__...sql`. Match the init file's lowercase DDL style.
+Current pre-release migration is `V2025.05.27__init.sql`; extend it only while nothing using it has shipped. Afterwards add an append-only dated migration. Same-day example: `V2026.07.09.1__...sql`. Match the init file's lowercase DDL style. A change that must upgrade rows already stored (a backfill) always uses a dated migration, never an init edit, because editing an applied init upgrades nothing. The first one is `V2026.11.25__customer_language.sql` (issue 607, customer language; agreed, not built yet), see [Customer language](../customer-book.md#customer-language).
 
 ## Types and lifecycle
 
