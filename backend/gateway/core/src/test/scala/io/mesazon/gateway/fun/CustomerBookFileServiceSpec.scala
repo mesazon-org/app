@@ -54,6 +54,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = List(customerEmailDefault, customerEmailSecondary),
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = List("Handwriting next to the name is faint"),
         )
@@ -63,6 +64,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = Some(customerTaxID),
           phoneNumbers = Nil,
           addresses = Nil,
+          language = None,
           customerBusinessContacts = List(
             CustomerBusinessContactAIExtract(
               fullName = Some(customerBusinessContactFullName),
@@ -134,6 +136,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               ),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -151,6 +154,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = Some(customerTaxID),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.en,
               customerBusinessContacts = List(
                 CustomerBusinessContactCandidate(
                   fullName = Some(customerBusinessContactFullName),
@@ -257,6 +261,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = List(customerEmailDefault, customerEmailSecondary),
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -317,22 +322,24 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           .zioValue
 
         customerBookFileAiExtractPostResponse shouldBe CustomerBookFileAiExtractPostResponse(
-          individualCandidates = List(
-            CustomerIndividualCandidate(
-              fullName = Some(customerFullName),
-              emails = List(
-                CustomerEmailEntry(email = customerEmailDefault, isDefault = true),
-                CustomerEmailEntry(email = customerEmailSecondary, isDefault = false),
-              ),
-              phoneNumbers = Nil,
-              addresses = Nil,
-              inferredFields = Nil,
-              missingFields = Nil,
-              duplicateFields = Nil,
-              needsAttention = false,
-              extractionNotes = Nil,
-            )
-          ),
+          individualCandidates =
+            List(
+              CustomerIndividualCandidate(
+                fullName = Some(customerFullName),
+                emails = List(
+                  CustomerEmailEntry(email = customerEmailDefault, isDefault = true),
+                  CustomerEmailEntry(email = customerEmailSecondary, isDefault = false),
+                ),
+                phoneNumbers = Nil,
+                addresses = Nil,
+                language = Language.el,
+                inferredFields = Nil,
+                missingFields = Nil,
+                duplicateFields = Nil,
+                needsAttention = false,
+                extractionNotes = Nil,
+              )
+            ),
           businessCandidates = Nil,
           infoNotes = List("Processed 1 of 1 entries"),
           extractionNotes = List("Column B holds two emails for some rows"),
@@ -553,6 +560,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = None,
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -612,6 +620,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = Nil,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.en,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -719,6 +728,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = List(customerEmailBatch1Default, customerEmailBatch1Secondary),
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -732,6 +742,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = Nil,
           businessNameInferred = false,
           extractionNotes = Nil,
@@ -822,6 +833,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               ),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -836,6 +848,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               ),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -853,6 +866,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = None,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
               missingFields = Nil,
@@ -980,6 +994,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -1034,6 +1049,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = Nil,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -1133,6 +1149,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = List(customerEmail),
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -1188,6 +1205,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = List(CustomerEmailEntry(email = customerEmail, isDefault = true)),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
@@ -1218,6 +1236,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = List(customerEmail),
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -1277,6 +1296,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = List(CustomerEmailEntry(email = customerEmail, isDefault = true)),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
@@ -1298,6 +1318,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -1307,6 +1328,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = Nil,
           businessNameInferred = false,
           extractionNotes = Nil,
@@ -1331,6 +1353,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = Nil,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -1345,6 +1368,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = None,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
               missingFields = Nil,
@@ -1375,6 +1399,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = List(customerEmail),
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -1446,6 +1471,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = List(CustomerEmailEntry(email = customerEmail, isDefault = true)),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
@@ -1472,6 +1498,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = Nil,
           businessNameInferred = false,
           extractionNotes = Nil,
@@ -1495,6 +1522,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = None,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
               missingFields = Nil,
@@ -1577,6 +1605,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = List("The same name appears twice in the image"),
         )
@@ -1586,6 +1615,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = Nil,
           businessNameInferred = false,
           extractionNotes = Nil,
@@ -1604,6 +1634,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Language.el,
           inferredFields = Nil,
           missingFields = Nil,
           duplicateFields = List(FieldInfo(path = "/fullName")),
@@ -1616,6 +1647,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Language.ru,
           customerBusinessContacts = Nil,
           inferredFields = Nil,
           missingFields = Nil,
@@ -1650,6 +1682,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -1659,6 +1692,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = Nil,
           businessNameInferred = false,
           extractionNotes = Nil,
@@ -1677,6 +1711,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Language.el,
           inferredFields = Nil,
           missingFields = Nil,
           duplicateFields = List(FieldInfo(path = "/fullName")),
@@ -1689,6 +1724,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Language.ru,
           customerBusinessContacts = Nil,
           inferredFields = Nil,
           missingFields = Nil,
@@ -1752,6 +1788,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -1777,6 +1814,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = Nil,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -1788,6 +1826,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = Nil,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -1809,6 +1848,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -1818,6 +1858,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = Nil,
           businessNameInferred = false,
           extractionNotes = Nil,
@@ -1839,6 +1880,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = Nil,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -1853,6 +1895,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = None,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
               missingFields = Nil,
@@ -1876,6 +1919,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = List(customerEmail1),
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -1886,6 +1930,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = Some(customerTaxID1),
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = Nil,
           businessNameInferred = false,
           extractionNotes = Nil,
@@ -1908,6 +1953,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = List(CustomerEmailEntry(email = customerEmail1, isDefault = true)),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
@@ -1919,6 +1965,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = List(CustomerEmailEntry(email = customerEmail2, isDefault = true)),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
@@ -1933,6 +1980,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = Some(customerTaxID1),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/businessName")),
@@ -1946,6 +1994,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = Some(customerTaxID2),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/businessName")),
@@ -1969,6 +2018,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = List(customerEmail),
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = List("Only an email is readable"),
         )
@@ -2021,6 +2071,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = List(CustomerEmailEntry(email = customerEmail, isDefault = true)),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
@@ -2040,6 +2091,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                 )
               ),
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
@@ -2064,6 +2116,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   )
                 )
               ),
+              language = Language.el,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
@@ -2086,6 +2139,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = Some(customerTaxID),
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = Nil,
           businessNameInferred = false,
           extractionNotes = Nil,
@@ -2122,6 +2176,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = Some(customerTaxID),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/businessName")),
@@ -2135,6 +2190,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = None,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = List(
                 CustomerBusinessContactCandidate(
                   fullName = Some(customerBusinessContactFullName),
@@ -2187,6 +2243,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = List(
             customerBusinessContactAIExtractRole,
             customerBusinessContactAIExtractEmail,
@@ -2214,6 +2271,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = None,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = List(
                 CustomerBusinessContactCandidate(
                   fullName = None,
@@ -2269,6 +2327,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             )
           ),
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = List("The country code is cut off"),
         )
@@ -2295,6 +2354,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                 )
               ),
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/phoneNumbers/0/phoneNumber/phoneCountryCode")),
               duplicateFields = Nil,
@@ -2318,6 +2378,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = List(
             CustomerBusinessContactAIExtract(
               fullName = Some(customerBusinessContactFullName),
@@ -2356,6 +2417,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = None,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = List(
                 CustomerBusinessContactCandidate(
                   fullName = Some(customerBusinessContactFullName),
@@ -2409,6 +2471,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               addressType = arbitrarySample[AddressType],
             ),
           ),
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = List("Two addresses are shown"),
         )
@@ -2442,6 +2505,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   )
                 )
               ),
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -2485,6 +2549,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   addressType = customerFullNameWithAddressType.addressType,
                 )
               ),
+              language = Some(Language.el),
               fullNameInferred = false,
               extractionNotes = Nil,
             )
@@ -2517,6 +2582,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   )
                 )
               ),
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -2577,6 +2643,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   addressType = customerFullNameWithAddressTypePair.addressTypeSecond,
                 ),
               ),
+              language = Some(Language.el),
               fullNameInferred = false,
               extractionNotes = Nil,
             )
@@ -2622,6 +2689,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   )
                 ),
               ),
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -2685,6 +2753,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   addressType = customerFullNameWithAddressTypePair.addressTypeSecond,
                 ),
               ),
+              language = Some(Language.el),
               fullNameInferred = false,
               extractionNotes = Nil,
             )
@@ -2736,6 +2805,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   )
                 ),
               ),
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -2794,6 +2864,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               addressType = arbitrarySample[AddressType],
             ),
           ),
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -2843,6 +2914,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                     )
                   ),
                 ),
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -2917,6 +2989,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               addressType = arbitrarySample[AddressType],
             ),
           ),
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -2965,6 +3038,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                     )
                   ),
                 ),
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -3073,6 +3147,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               addressType = arbitrarySample[AddressType],
             ),
           ),
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -3127,6 +3202,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                     )
                   ),
                 ),
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -3176,6 +3252,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               addressType = arbitrarySample[AddressType],
             )
           ),
+          language = Some(Language.el),
           fullNameInferred = true,
           extractionNotes = List("Name inferred from the email address", "Country code inferred from the address"),
         )
@@ -3185,6 +3262,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = List(
             CustomerBusinessContactAIExtract(
               fullName = Some(customerBusinessContactFullName),
@@ -3236,6 +3314,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   )
                 )
               ),
+              language = Language.el,
               inferredFields = List(
                 FieldInfo(path = "/fullName"),
                 FieldInfo(path = "/phoneNumbers/0/phoneNumber/phoneCountryCode"),
@@ -3257,6 +3336,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = None,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = List(
                 CustomerBusinessContactCandidate(
                   fullName = Some(customerBusinessContactFullName),
@@ -3314,6 +3394,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             ),
           ),
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -3362,6 +3443,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                 ),
               ),
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/phoneNumbers/0/phoneNumber/phoneCountryCode")),
               duplicateFields = Nil,
@@ -3430,6 +3512,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               addressType = arbitrarySample[AddressType],
             ),
           ),
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = List("Candidate note"),
         )
@@ -3478,6 +3561,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                     )
                   ),
                 ),
+              language = Language.el,
               inferredFields = Nil,
               missingFields = Nil,
               duplicateFields = Nil,
@@ -3545,6 +3629,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               addressType = arbitrarySample[AddressType],
             ),
           ),
+          language = Some(Language.ru),
           customerBusinessContacts = List(
             CustomerBusinessContactAIExtract(
               fullName = Some(customerBusinessContactFullName1),
@@ -3614,6 +3699,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                     )
                   ),
                 ),
+              language = Language.ru,
               customerBusinessContacts = List(
                 CustomerBusinessContactCandidate(
                   fullName = Some(customerBusinessContactFullName1),
@@ -3677,6 +3763,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             ),
           ),
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -3697,6 +3784,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             ),
           ),
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = Nil,
           businessNameInferred = false,
           extractionNotes = Nil,
@@ -3742,6 +3830,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                 ),
               ),
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/phoneNumbers/2/phoneNumber/phoneCountryCode")),
               duplicateFields = Nil,
@@ -3769,6 +3858,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                 ),
               ),
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/phoneNumbers/1/phoneNumber/phoneCountryCode")),
@@ -3794,6 +3884,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = List(
             CustomerBusinessContactAIExtract(
               fullName = Some(customerBusinessContactFullName1),
@@ -3840,6 +3931,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = None,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts =
                 List(
                   CustomerBusinessContactCandidate(
@@ -3895,6 +3987,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
             ),
           ),
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = Nil,
           businessNameInferred = false,
           extractionNotes = List("Country code inferred from the address"),
@@ -3936,6 +4029,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
                   ),
                 ),
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = Nil,
               inferredFields = List(FieldInfo(path = "/phoneNumbers/1/phoneNumber/phoneCountryCode")),
               missingFields = Nil,
@@ -4023,6 +4117,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = List(
             customerBusinessContactAIExtractNameless,
             customerBusinessContactAIExtractPhoneNumberWithoutCountryCode,
@@ -4052,6 +4147,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = None,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = List(
                 CustomerBusinessContactCandidate(
                   fullName = None,
@@ -4141,6 +4237,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -4154,6 +4251,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = Some(customerTaxID),
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = Nil,
           businessNameInferred = false,
           extractionNotes = Nil,
@@ -4183,6 +4281,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Language.el,
           inferredFields = Nil,
           missingFields = Nil,
           duplicateFields = List(FieldInfo(path = "/fullName")),
@@ -4241,6 +4340,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               emails = List(CustomerEmailEntry(email = customerEmail, isDefault = true)),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.el,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/fullName")),
               duplicateFields = Nil,
@@ -4255,6 +4355,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = Some(customerTaxID),
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
               missingFields = List(FieldInfo(path = "/businessName")),
@@ -4268,6 +4369,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
               taxID = None,
               phoneNumbers = Nil,
               addresses = Nil,
+              language = Language.ru,
               customerBusinessContacts = Nil,
               inferredFields = Nil,
               missingFields = Nil,
@@ -4296,6 +4398,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = List(customerEmail),
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -4320,6 +4423,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = List(
             CustomerBusinessContactAIExtract(
               fullName = None,
@@ -4375,6 +4479,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = List(CustomerEmailEntry(email = customerEmail, isDefault = true)),
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Language.el,
           inferredFields = Nil,
           missingFields = List(FieldInfo(path = "/fullName")),
           duplicateFields = Nil,
@@ -4387,6 +4492,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Language.ru,
           customerBusinessContacts = List(
             CustomerBusinessContactCandidate(
               fullName = None,
@@ -4469,6 +4575,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = true,
           extractionNotes = Nil,
         )
@@ -4524,6 +4631,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Language.el,
           inferredFields = List(FieldInfo(path = "/fullName")),
           missingFields = Nil,
           duplicateFields = Nil,
@@ -4585,6 +4693,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           emails = Nil,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.el),
           fullNameInferred = false,
           extractionNotes = Nil,
         )
@@ -4594,6 +4703,7 @@ class CustomerBookFileServiceSpec extends ZWordSpecBase, CustomerBookDomainArbit
           taxID = None,
           phoneNumbers = Nil,
           addresses = Nil,
+          language = Some(Language.ru),
           customerBusinessContacts = Nil,
           businessNameInferred = false,
           extractionNotes = Nil,

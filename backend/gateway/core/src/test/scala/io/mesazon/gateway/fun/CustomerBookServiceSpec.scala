@@ -268,6 +268,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           emails = Some(customerBookIndividualPostRequest.emails),
           phoneNumbers = Some(customerBookIndividualPostRequest.phoneNumbers),
           addresses = Some(customerBookIndividualPostRequest.addresses),
+          language = Some(customerBookIndividualPostRequest.language),
         )
         val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
 
@@ -290,6 +291,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               )
             ),
             customerBookIndividualPutRequest.addresses,
+            customerBookIndividualPutRequest.language,
           )
           .returningZIO(Some(customerIndividualDetailsRow))
           .once()
@@ -315,6 +317,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           emails = None,
           phoneNumbers = None,
           addresses = None,
+          language = None,
         )
         val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
 
@@ -337,6 +340,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               )
             ),
             customerBookIndividualPutRequest.addresses,
+            customerBookIndividualPutRequest.language,
           )
           .returningZIO(Some(customerIndividualDetailsRow))
           .once()
@@ -362,6 +366,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           emails = Some(Nil),
           phoneNumbers = Some(Nil),
           addresses = Some(Nil),
+          language = None,
         )
         val customerIndividualDetailsRow = arbitrarySample[CustomerIndividualDetailsRow]
 
@@ -384,6 +389,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               )
             ),
             customerBookIndividualPutRequest.addresses,
+            customerBookIndividualPutRequest.language,
           )
           .returningZIO(Some(customerIndividualDetailsRow))
           .once()
@@ -419,7 +425,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
         val repositoryError = ServiceError.InternalServerError.UnexpectedError("update failed")
 
         customerBookRepositoryMock.updateCustomerIndividual
-          .expects(organizationID, customerID, None, None, None, None)
+          .expects(organizationID, customerID, None, None, None, None, None)
           .failingZIO(repositoryError)
           .once()
 
@@ -451,6 +457,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           Some(Some(arbitrarySample[CustomerTaxID])),
           Some(List(CustomerPhoneNumberEntry(arbitrarySample[CustomerPhoneNumber], isDefault = true))),
           Some(List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling)))),
+          Some(arbitrarySample[Language]),
           List(customerBusinessContactInsert),
           List(customerBusinessContactUpdate),
           List(customerBusinessContactArchive),
@@ -474,6 +481,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               _.map(entry => CustomerPhoneNumberEntryInput(entry.phoneNumber, isDefault = entry.isDefault))
             ),
             customerBookBusinessPutRequest.addresses,
+            customerBookBusinessPutRequest.language,
             List(
               UpdateCustomerBusinessContactInput(
                 customerBusinessContactUpdate.customerBusinessContactID,
@@ -520,6 +528,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
             None,
             None,
             None,
+            None,
             Nil,
             Nil,
             Nil,
@@ -548,6 +557,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           Some(None),
           Some(Nil),
           Some(Nil),
+          None,
           Nil,
           List(CustomerBusinessContactUpdate(customerBusinessContactID, None, Some(None), Some(None), Some(None))),
           Nil,
@@ -562,6 +572,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
             Some(None),
             Some(Nil),
             Some(Nil),
+            None,
             List(
               UpdateCustomerBusinessContactInput(customerBusinessContactID, None, Some(None), Some(None), Some(None))
             ),
@@ -602,6 +613,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
           .expects(
             organizationID,
             customerID,
+            None,
             None,
             None,
             None,
@@ -705,6 +717,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
             )
           ),
+          language = customerIndividualDetailsRow.language.transformInto[smithy.Language],
         )
       }
 
@@ -801,6 +814,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
             )
           ),
+          language = customerBusinessDetailsRow.language.transformInto[smithy.Language],
           customerBusinessContacts = List(
             smithy.CustomerBusinessContact(
               customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID.value,

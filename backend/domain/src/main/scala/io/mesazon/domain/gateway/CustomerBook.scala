@@ -19,6 +19,7 @@ case class CustomerBookIndividualPostRequest(
     emails: List[CustomerEmailEntry],
     phoneNumbers: List[CustomerPhoneNumberEntry],
     addresses: List[CustomerAddressEntry],
+    language: Language,
 )
 
 case class CustomerBookIndividualPutRequest(
@@ -26,6 +27,7 @@ case class CustomerBookIndividualPutRequest(
     emails: Option[List[CustomerEmailEntry]],
     phoneNumbers: Option[List[CustomerPhoneNumberEntry]],
     addresses: Option[List[CustomerAddressEntry]],
+    language: Option[Language],
 )
 
 // Business contacts
@@ -57,6 +59,7 @@ case class CustomerBookBusinessPostRequest(
     taxID: Option[CustomerTaxID],
     phoneNumbers: List[CustomerPhoneNumberEntry],
     addresses: List[CustomerAddressEntry],
+    language: Language,
     customerBusinessContacts: List[CustomerBusinessContactInsert],
 )
 
@@ -66,6 +69,7 @@ case class CustomerBookBusinessPutRequest(
     taxID: Option[Option[CustomerTaxID]],
     phoneNumbers: Option[List[CustomerPhoneNumberEntry]],
     addresses: Option[List[CustomerAddressEntry]],
+    language: Option[Language],
     customerBusinessContactsInsert: List[CustomerBusinessContactInsert],
     customerBusinessContactsUpdate: List[CustomerBusinessContactUpdate],
     customerBusinessContactsArchive: List[CustomerBusinessContactArchive],
@@ -119,6 +123,7 @@ case class CustomerIndividualAIExtract(
     emails: List[CustomerEmail],
     phoneNumbers: List[CustomerPhoneNumberAIExtract],
     addresses: List[CustomerAddressEntryAIExtract],
+    language: Option[Language],
     fullNameInferred: Boolean,
     extractionNotes: List[String],
 )
@@ -129,6 +134,7 @@ case class CustomerBusinessAIExtract(
     taxID: Option[CustomerTaxID],
     phoneNumbers: List[CustomerPhoneNumberAIExtract],
     addresses: List[CustomerAddressEntryAIExtract],
+    language: Option[Language],
     customerBusinessContacts: List[CustomerBusinessContactAIExtract],
     businessNameInferred: Boolean,
     extractionNotes: List[String],
@@ -168,6 +174,7 @@ case class CustomerIndividualCandidate(
     emails: List[CustomerEmailEntry],
     phoneNumbers: List[CustomerPhoneNumberEntryCandidate],
     addresses: List[CustomerAddressEntry],
+    language: Language,
     inferredFields: List[FieldInfo],
     missingFields: List[FieldInfo],
     duplicateFields: List[FieldInfo],
@@ -181,6 +188,7 @@ case class CustomerBusinessCandidate(
     taxID: Option[CustomerTaxID],
     phoneNumbers: List[CustomerPhoneNumberEntryCandidate],
     addresses: List[CustomerAddressEntry],
+    language: Language,
     customerBusinessContacts: List[CustomerBusinessContactCandidate],
     inferredFields: List[FieldInfo],
     missingFields: List[FieldInfo],

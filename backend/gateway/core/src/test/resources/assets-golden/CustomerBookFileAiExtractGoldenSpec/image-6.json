@@ -29,9 +29,10 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language taken from the name"
       ]
     },
     {
@@ -57,9 +58,10 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language taken from the name"
       ]
     },
     {
@@ -73,9 +75,11 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Email could not be fully read"
+        "Email could not be fully read",
+        "Language taken from the name"
       ]
     }
   ],
@@ -108,6 +112,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "customerBusinessContacts": [
         {
           "fullName": "Άννα Πετράκη",
@@ -122,7 +127,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language taken from the name"
       ]
     },
     {
@@ -149,6 +154,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "customerBusinessContacts": [
         {
           "fullName": "Κώστας Μαρής",
@@ -163,7 +169,8 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        "Phone number could not be fully read"
+        "Phone number could not be fully read",
+        "Language taken from the name"
       ]
     }
   ],

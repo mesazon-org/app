@@ -104,6 +104,7 @@ create table customer
     phone_numbers   jsonb           not null,
     tax_id          text,
     addresses       jsonb           not null,
+    language        text            not null,
     is_archived     boolean         not null,
     created_at      timestamptz     not null,
     updated_at      timestamptz     not null,

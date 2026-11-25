@@ -13,9 +13,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone number left out, not a real number"
+        "Phone number left out, not a real number",
+        "Language set to English by default"
       ]
     },
     {
@@ -29,9 +31,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -45,6 +48,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -61,6 +65,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -77,6 +82,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -170,6 +176,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -212,6 +219,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -232,6 +240,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Country code taken from the number"
@@ -286,6 +295,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -303,6 +313,7 @@
       "addresses": [
         
       ],
+      "language": "ru",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -331,6 +342,7 @@
           "addressType": "Shipping"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -377,6 +389,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -405,6 +418,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -422,6 +436,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -450,6 +465,7 @@
           "addressType": "Shipping"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -471,6 +487,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -487,6 +504,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -507,6 +525,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -539,9 +558,11 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Empty address was left out"
+        "Empty address was left out",
+        "Language Italian not supported, English used"
       ]
     },
     {
@@ -584,6 +605,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -612,6 +634,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -645,6 +668,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -661,6 +685,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -677,6 +702,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -693,6 +719,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -709,6 +736,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -754,6 +782,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -782,6 +811,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -824,6 +854,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -844,6 +875,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -872,6 +904,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "ru",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -993,6 +1026,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Country code is missing"
@@ -1021,6 +1055,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -1050,6 +1085,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -1079,6 +1115,7 @@
           "addressType": "ShippingAndBilling"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -1134,6 +1171,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -1151,6 +1189,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -1171,6 +1210,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -1187,6 +1227,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -1207,6 +1248,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -1227,6 +1269,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Country code taken from the number"
@@ -1243,6 +1286,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -1284,6 +1328,7 @@
           "addressType": "ShippingAndBilling"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -1313,6 +1358,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -1330,6 +1376,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -1359,6 +1406,7 @@
           "addressType": "ShippingAndBilling"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -1387,6 +1435,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -1433,6 +1482,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -1449,6 +1499,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -1465,9 +1516,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -1493,6 +1545,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -1539,6 +1592,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -1571,6 +1625,7 @@
           "addressType": "ShippingAndBilling"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -1629,6 +1684,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty addresses were left out"
@@ -1700,6 +1756,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty address was left out"
@@ -1728,6 +1785,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -1745,6 +1803,7 @@
       "addresses": [
         
       ],
+      "language": "ru",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -1790,6 +1849,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Country code is missing"
@@ -1835,6 +1895,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -1851,6 +1912,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -1879,6 +1941,7 @@
           "addressType": "ShippingAndBilling"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -1924,6 +1987,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -1940,6 +2004,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -1956,6 +2021,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -2001,6 +2067,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -2029,6 +2096,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -2050,6 +2118,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -2095,6 +2164,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -2111,6 +2181,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -2127,6 +2198,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -2143,6 +2215,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -2184,6 +2257,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -2213,6 +2287,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -2245,6 +2320,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -2278,6 +2354,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty address was left out"
@@ -2319,6 +2396,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -2336,6 +2414,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -2352,6 +2431,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -2380,6 +2460,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty address was left out"
@@ -2434,6 +2515,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -2455,6 +2537,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -2471,6 +2554,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -2487,6 +2571,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -2503,6 +2588,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -2531,6 +2617,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -2559,6 +2646,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -2587,6 +2675,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -2642,6 +2731,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -2671,6 +2761,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -2713,6 +2804,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -2729,6 +2821,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -2761,6 +2854,7 @@
           "addressType": "ShippingAndBilling"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -2789,6 +2883,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -2806,6 +2901,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -2834,6 +2930,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -2880,6 +2977,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -2896,6 +2994,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -2928,6 +3027,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty address was left out"
@@ -2973,6 +3073,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -3040,6 +3141,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -3086,6 +3188,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -3114,6 +3217,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -3135,6 +3239,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -3151,6 +3256,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -3172,6 +3278,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -3200,6 +3307,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -3217,9 +3325,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone number left out, not a real number"
+        "Phone number left out, not a real number",
+        "Language set to English by default"
       ]
     },
     {
@@ -3245,6 +3355,7 @@
           "addressType": "ShippingAndBilling"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -3265,6 +3376,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty address was left out"
@@ -3293,6 +3405,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -3310,9 +3423,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone number left out, not a real number"
+        "Phone number left out, not a real number",
+        "Language set to English by default"
       ]
     },
     {
@@ -3326,6 +3441,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -3346,6 +3462,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -3362,6 +3479,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -3407,6 +3525,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -3435,6 +3554,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -3452,6 +3572,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -3468,9 +3589,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email"
+        "Name taken from the email",
+        "Language set to English by default"
       ]
     },
     {
@@ -3500,6 +3623,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -3528,6 +3652,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -3557,6 +3682,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -3589,6 +3715,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty address was left out"
@@ -3605,6 +3732,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -3621,9 +3749,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -3637,9 +3766,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone number left out, not a real number"
+        "Phone number left out, not a real number",
+        "Language Ukrainian not supported, English used"
       ]
     },
     {
@@ -3665,6 +3796,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -3694,6 +3826,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -3727,6 +3860,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty address was left out"
@@ -3743,6 +3877,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -3771,6 +3906,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -3787,9 +3923,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email"
+        "Name taken from the email",
+        "Language set to English by default"
       ]
     },
     {
@@ -3819,6 +3957,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -3836,9 +3975,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -3852,6 +3992,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -3897,6 +4038,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -3942,6 +4084,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Country code is missing"
@@ -3958,6 +4101,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -3999,6 +4143,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -4020,6 +4165,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -4065,6 +4211,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "ru",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -4110,6 +4257,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -4127,6 +4275,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -4155,10 +4304,12 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
-        "Empty address was left out"
+        "Empty address was left out",
+        "Language German not supported, English used"
       ]
     },
     {
@@ -4197,6 +4348,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -4255,6 +4407,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -4272,9 +4425,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone number left out, not a real number"
+        "Phone number left out, not a real number",
+        "Language Italian not supported, English used"
       ]
     },
     {
@@ -4288,6 +4443,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -4333,6 +4489,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -4349,6 +4506,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -4377,6 +4535,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -4406,6 +4565,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -4452,6 +4612,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -4469,6 +4630,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -4497,6 +4659,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -4514,9 +4677,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -4546,6 +4710,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -4591,6 +4756,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Country code is missing"
@@ -4607,9 +4773,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language German not supported, English used"
       ]
     },
     {
@@ -4635,6 +4802,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -4681,6 +4849,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -4726,6 +4895,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -4754,6 +4924,7 @@
           "addressType": "ShippingAndBilling"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -4770,6 +4941,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -4786,6 +4958,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -4802,6 +4975,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -4843,6 +5017,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -4871,6 +5046,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -4887,6 +5063,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -4915,6 +5092,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -4932,6 +5110,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -4948,6 +5127,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -4993,6 +5173,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty addresses were left out"
@@ -5034,6 +5215,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -5051,6 +5233,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -5079,10 +5262,12 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
-        "Empty address was left out"
+        "Empty address was left out",
+        "Language French not supported, English used"
       ]
     },
     {
@@ -5096,6 +5281,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -5154,6 +5340,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty address was left out"
@@ -5170,6 +5357,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -5187,9 +5375,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email"
+        "Name taken from the email",
+        "Language set to English by default"
       ]
     },
     {
@@ -5203,9 +5393,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email"
+        "Name taken from the email",
+        "Language Hebrew not supported, English used"
       ]
     },
     {
@@ -5219,6 +5411,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -5265,6 +5458,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -5281,6 +5475,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -5297,6 +5492,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -5313,6 +5509,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -5329,6 +5526,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -5345,6 +5543,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -5374,6 +5573,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -5420,6 +5620,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -5462,6 +5663,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -5491,6 +5693,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -5520,6 +5723,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -5553,6 +5757,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty address was left out"
@@ -5569,6 +5774,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -5614,6 +5820,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -5630,6 +5837,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty addresses were left out"
@@ -5658,6 +5866,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -5686,6 +5895,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -5728,6 +5938,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -5773,6 +5984,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Country code +1 guessed, the address is in Cyprus"
@@ -5818,6 +6030,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -5834,6 +6047,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -5850,9 +6064,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -5866,6 +6081,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -5882,6 +6098,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -5927,6 +6144,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -5972,6 +6190,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -6000,6 +6219,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -6029,6 +6249,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -6046,6 +6267,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -6062,6 +6284,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -6078,6 +6301,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -6094,6 +6318,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -6114,6 +6339,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Country code taken from the number"
@@ -6130,6 +6356,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -6146,6 +6373,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -6174,6 +6402,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -6220,6 +6449,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -6236,6 +6466,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -6256,6 +6487,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Country code is missing"
@@ -6276,6 +6508,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Country code taken from the number"
@@ -6292,6 +6525,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -6308,6 +6542,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -6336,6 +6571,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -6357,6 +6593,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -6389,6 +6626,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -6406,6 +6644,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -6423,6 +6662,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -6439,9 +6679,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -6467,6 +6708,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -6484,9 +6726,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -6512,6 +6755,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -6541,6 +6785,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -6570,6 +6815,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -6599,6 +6845,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -6616,6 +6863,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -6644,6 +6892,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -6661,6 +6910,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -6689,6 +6939,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -6706,6 +6957,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -6734,10 +6986,12 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
-        "Empty address was left out"
+        "Empty address was left out",
+        "Language Ukrainian not supported, English used"
       ]
     },
     {
@@ -6751,9 +7005,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -6792,6 +7047,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -6825,6 +7081,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty address was left out"
@@ -6841,9 +7098,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -6857,6 +7115,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -6889,6 +7148,7 @@
           "addressType": "ShippingAndBilling"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -6905,9 +7165,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone number left out, not a real number"
+        "Phone number left out, not a real number",
+        "Language set to English by default"
       ]
     },
     {
@@ -6933,6 +7195,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -7010,6 +7273,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty addresses were left out"
@@ -7026,6 +7290,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -7042,9 +7307,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone number left out, not a real number"
+        "Phone number left out, not a real number",
+        "Language set to English by default"
       ]
     },
     {
@@ -7058,9 +7325,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -7074,6 +7342,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -7102,6 +7371,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -7148,6 +7418,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -7176,6 +7447,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -7205,6 +7477,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -7251,6 +7524,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty addresses were left out"
@@ -7279,6 +7553,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "ru",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -7325,6 +7600,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -7353,6 +7629,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -7382,6 +7659,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -7428,6 +7706,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -7456,6 +7735,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -7489,6 +7769,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty address was left out"
@@ -7505,6 +7786,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -7521,6 +7803,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -7537,9 +7820,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email"
+        "Name taken from the email",
+        "Language Ukrainian not supported, English used"
       ]
     },
     {
@@ -7553,6 +7838,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -7569,6 +7855,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -7585,6 +7872,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -7605,6 +7893,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -7621,9 +7910,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -7637,6 +7927,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -7678,6 +7969,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -7695,6 +7987,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -7723,6 +8016,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -7740,9 +8034,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language French not supported, English used"
       ]
     },
     {
@@ -7756,9 +8051,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email"
+        "Name taken from the email",
+        "Language Spanish not supported, English used"
       ]
     },
     {
@@ -7784,6 +8081,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -7829,6 +8127,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -7857,6 +8156,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -7874,6 +8174,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -7941,6 +8242,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -7970,10 +8272,12 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
-        "Empty address was left out"
+        "Empty address was left out",
+        "Language German not supported, English used"
       ]
     },
     {
@@ -8025,6 +8329,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -8054,6 +8359,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -8083,6 +8389,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -8103,6 +8410,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -8144,6 +8452,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -8190,6 +8499,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -8231,6 +8541,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -8273,6 +8584,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email",
@@ -8290,6 +8602,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -8344,6 +8657,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -8361,6 +8675,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -8389,6 +8704,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -8422,6 +8738,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty address was left out"
@@ -8450,6 +8767,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -8482,6 +8800,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty address was left out"
@@ -8498,6 +8817,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -8514,6 +8834,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -8530,9 +8851,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -8575,6 +8897,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -8591,6 +8914,7 @@
       "addresses": [
         
       ],
+      "language": "ru",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -8611,6 +8935,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty addresses were left out"
@@ -8627,6 +8952,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -8643,6 +8969,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -8671,6 +8998,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -8713,6 +9041,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -8729,9 +9058,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Phone number left out, not a real number"
+        "Phone number left out, not a real number",
+        "Language set to English by default"
       ]
     },
     {
@@ -8774,6 +9105,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -8819,6 +9151,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -8835,6 +9168,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -8863,6 +9197,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -8879,6 +9214,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -8907,6 +9243,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -8924,9 +9261,11 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
-        "Name taken from the email"
+        "Name taken from the email",
+        "Language set to English by default"
       ]
     },
     {
@@ -8940,6 +9279,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -8956,6 +9296,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -8984,6 +9325,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -9001,6 +9343,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -9017,6 +9360,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -9045,6 +9389,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -9074,6 +9419,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -9103,6 +9449,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -9120,6 +9467,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -9136,6 +9484,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -9152,6 +9501,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -9168,6 +9518,7 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -9184,9 +9535,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -9238,6 +9590,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -9306,6 +9659,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -9322,6 +9676,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -9339,6 +9694,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -9367,6 +9723,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -9426,6 +9783,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Empty address was left out"
@@ -9471,6 +9829,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -9538,6 +9897,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -9584,6 +9944,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         
@@ -9612,6 +9973,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number"
@@ -9640,6 +10002,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -9657,6 +10020,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": true,
       "extractionNotes": [
         "Name taken from the email"
@@ -9685,6 +10049,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -9714,6 +10079,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
         "Phone number left out, not a real number",
@@ -9747,7 +10113,6 @@
     "The Last Activity column was not used",
     "The Last Activity Date (UTC+0) column was not used",
     "The Source column was not used",
-    "The Language column was not used",
     "The Linked Locations column was not used",
     "Country code taken from the country used across the file"
   ]

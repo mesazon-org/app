@@ -1,2 +1,7 @@
 [
+  {
+    "op" : "add",
+    "path" : "/individualCandidates/2/extractionNotes/2",
+    "value" : "Tax number could not be fully read"
+  }
 ]

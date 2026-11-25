@@ -51,6 +51,7 @@ final class CustomerBookQueries(
         |emails,
         |phone_numbers,
         |addresses,
+        |language,
         |is_archived,
         |created_at,
         |updated_at
@@ -64,6 +65,7 @@ final class CustomerBookQueries(
         |emails,
         |phone_numbers,
         |addresses,
+        |language,
         |is_archived,
         |created_at,
         |updated_at
@@ -79,6 +81,7 @@ final class CustomerBookQueries(
         |emails,
         |phone_numbers,
         |addresses,
+        |language,
         |is_archived,
         |created_at,
         |updated_at
@@ -93,6 +96,7 @@ final class CustomerBookQueries(
         |emails,
         |phone_numbers,
         |addresses,
+        |language,
         |is_archived,
         |created_at,
         |updated_at
@@ -124,6 +128,7 @@ final class CustomerBookQueries(
         |c.emails,
         |c.phone_numbers,
         |c.addresses,
+        |c.language,
         |c.is_archived,
         |c.created_at,
         |c.updated_at,
@@ -164,6 +169,7 @@ final class CustomerBookQueries(
       fr0"${customerIndividualDetailsRow.emails}",
       fr0"${customerIndividualDetailsRow.phoneNumbers}",
       fr0"${customerIndividualDetailsRow.addresses}",
+      fr0"${customerIndividualDetailsRow.language}",
       fr0"${customerIndividualDetailsRow.isArchived}",
       fr0"${customerIndividualDetailsRow.createdAt}",
       fr0"${customerIndividualDetailsRow.updatedAt}",
@@ -179,6 +185,7 @@ final class CustomerBookQueries(
       fr0"${customerBusinessDetailsRow.emails}",
       fr0"${customerBusinessDetailsRow.phoneNumbers}",
       fr0"${customerBusinessDetailsRow.addresses}",
+      fr0"${customerBusinessDetailsRow.language}",
       fr0"${customerBusinessDetailsRow.isArchived}",
       fr0"${customerBusinessDetailsRow.createdAt}",
       fr0"${customerBusinessDetailsRow.updatedAt}",
@@ -284,6 +291,7 @@ final class CustomerBookQueries(
       emailsOptUpdate: Option[List[CustomerEmailEntryInput]] = None,
       phoneNumbersOptUpdate: Option[List[CustomerPhoneNumberEntryInput]] = None,
       addressesOptUpdate: Option[List[CustomerAddressEntry]] = None,
+      languageOptUpdate: Option[Language] = None,
   ): TranzactIO[Option[CustomerIndividualDetailsRow]] = {
     val updates = NonEmptyList.of(
       fr"updated_at = $updatedAt"
@@ -292,6 +300,7 @@ final class CustomerBookQueries(
       emailsOptUpdate.map(v => fr"emails = $v"),
       phoneNumbersOptUpdate.map(v => fr"phone_numbers = $v"),
       addressesOptUpdate.map(v => fr"addresses = $v"),
+      languageOptUpdate.map(v => fr"language = $v"),
     ).flatten
 
     tzio {
@@ -321,6 +330,7 @@ final class CustomerBookQueries(
       taxIDOptUpdate: Option[Option[CustomerTaxID]] = None,
       phoneNumbersOptUpdate: Option[List[CustomerPhoneNumberEntryInput]] = None,
       addressesOptUpdate: Option[List[CustomerAddressEntry]] = None,
+      languageOptUpdate: Option[Language] = None,
   ): TranzactIO[Option[CustomerBusinessDetailsRow]] = {
     val updates = NonEmptyList.of(
       fr"updated_at = $updatedAt"
@@ -330,6 +340,7 @@ final class CustomerBookQueries(
       emailsOptUpdate.map(v => fr"emails = $v"),
       phoneNumbersOptUpdate.map(v => fr"phone_numbers = $v"),
       addressesOptUpdate.map(v => fr"addresses = $v"),
+      languageOptUpdate.map(v => fr"language = $v"),
     ).flatten
 
     tzio {

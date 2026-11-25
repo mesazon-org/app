@@ -14,6 +14,8 @@ trait CustomerBookDomainArbitraries extends GatewayArbitraries {
 
   given arbCustomerType: Arbitrary[CustomerType] = Arbitrary(Gen.oneOf(CustomerType.values.toIndexedSeq))
 
+  given arbLanguage: Arbitrary[Language] = Arbitrary(Gen.oneOf(Language.values.toIndexedSeq))
+
   given arbCustomerAddressEntries: Arbitrary[List[CustomerAddressEntry]] = Arbitrary(
     genAddressEntriesAllowedCombination.map(_.map(CustomerAddressEntry(_)))
   )

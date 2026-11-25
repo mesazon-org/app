@@ -42,6 +42,12 @@ object tapir {
   given addressTypeSchema: Schema[AddressType] =
     Schema.derivedEnumeration[AddressType].defaultStringBased
 
+  given languageSchema: Schema[Language] =
+    Schema.derivedEnumeration[Language](
+      encode = Some(_.toString),
+      schemaType = SchemaType.SString(),
+    )
+
   given addressSchema: Schema[Address] = Schema.derived[Address]
 
   given addressEntrySchema: Schema[AddressEntry] = Schema.derived[AddressEntry]
@@ -123,6 +129,8 @@ object tapir {
     Schema.derived[CatalogueFileAiExtractPostResponse]
 
   given addressTypeCodec: JsonValueCodec[AddressType] = JsonCodecMaker.makeWithoutDiscriminator[AddressType]
+
+  given languageCodec: JsonValueCodec[Language] = JsonCodecMaker.makeWithoutDiscriminator[Language]
 
   given currencyCodec: JsonValueCodec[Currency] = JsonCodecMaker.makeWithoutDiscriminator[Currency]
 

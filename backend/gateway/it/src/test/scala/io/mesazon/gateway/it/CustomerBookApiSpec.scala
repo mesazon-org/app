@@ -95,6 +95,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
               )
             ),
             addresses = customerBookIndividualPostRequest.addresses,
+            language = customerBookIndividualPostRequest.language,
             isArchived = false,
             createdAt = customerIndividualDetailsRowsAll.head.createdAt,
             updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
@@ -162,6 +163,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
               )
             ),
             addresses = List(CustomerAddressEntry(AddressEntry(addressPartial, AddressType.ShippingAndBilling))),
+            language = customerBookIndividualPostRequest.language,
             isArchived = false,
             createdAt = customerIndividualDetailsRowsAll.head.createdAt,
             updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
@@ -223,6 +225,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
             emails = Nil,
             phoneNumbers = Nil,
             addresses = Nil,
+            language = Language.en,
             isArchived = false,
             createdAt = customerIndividualDetailsRowsAll.head.createdAt,
             updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
@@ -471,6 +474,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
             ),
             taxID = customerBookBusinessPostRequest.taxID,
             addresses = customerBookBusinessPostRequest.addresses,
+            language = customerBookBusinessPostRequest.language,
             isArchived = false,
             createdAt = customerBusinessDetailsRowsAll.head.createdAt,
             updatedAt = customerBusinessDetailsRowsAll.head.updatedAt,
@@ -570,6 +574,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
               )
             ),
             addresses = customerBookBusinessPostRequest.addresses,
+            language = customerBookBusinessPostRequest.language,
             isArchived = false,
             createdAt = customerBusinessDetailsRowsAll.head.createdAt,
             updatedAt = UpdatedAt(customerBusinessDetailsRowsAll.head.createdAt.value),
@@ -675,6 +680,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
               )
             ),
             addresses = customerBookBusinessPostRequest.addresses,
+            language = customerBookBusinessPostRequest.language,
             isArchived = false,
             createdAt = customerBusinessDetailsRowsAll.head.createdAt,
             updatedAt = UpdatedAt(customerBusinessDetailsRowsAll.head.createdAt.value),
@@ -761,6 +767,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
               phoneNumbers = Nil,
               taxID = None,
               addresses = Nil,
+              language = Language.en,
               isArchived = false,
               createdAt = customerBusinessDetailsRowsAll.head.createdAt,
               updatedAt = customerBusinessDetailsRowsAll.head.updatedAt,
@@ -989,6 +996,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 )
               ),
               addresses = customerBookIndividualPostRequest1.addresses,
+              language = customerBookIndividualPostRequest1.language,
               isArchived = false,
               createdAt = customerIndividualDetailsRow1.createdAt,
               updatedAt = customerIndividualDetailsRow1.updatedAt,
@@ -1010,6 +1018,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 )
               ),
               addresses = customerBookIndividualPostRequest2.addresses,
+              language = customerBookIndividualPostRequest2.language,
               isArchived = false,
               createdAt = customerIndividualDetailsRow2.createdAt,
               updatedAt = customerIndividualDetailsRow2.updatedAt,
@@ -1032,6 +1041,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
               ),
               taxID = customerBookBusinessPostRequest1.taxID,
               addresses = customerBookBusinessPostRequest1.addresses,
+              language = customerBookBusinessPostRequest1.language,
               isArchived = false,
               createdAt = customerBusinessDetailsRow1.createdAt,
               updatedAt = customerBusinessDetailsRow1.updatedAt,
@@ -1054,6 +1064,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
               ),
               taxID = customerBookBusinessPostRequest2.taxID,
               addresses = customerBookBusinessPostRequest2.addresses,
+              language = customerBookBusinessPostRequest2.language,
               isArchived = false,
               createdAt = customerBusinessDetailsRow2.createdAt,
               updatedAt = customerBusinessDetailsRow2.updatedAt,
@@ -1336,6 +1347,12 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
             )
 
+          languageUpdate <- Random
+            .shuffle(Language.values.toList diff List(customerIndividualDetailsRow.language))
+            .map(_.head)
+
+          _ = languageUpdate shouldNot equal(customerIndividualDetailsRow.language)
+
           _ <- postgresClient
             .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
 
@@ -1344,6 +1361,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
             emails = Some(customerBookIndividualPostRequest.emails),
             phoneNumbers = Some(customerBookIndividualPostRequest.phoneNumbers),
             addresses = Some(customerBookIndividualPostRequest.addresses),
+            language = Some(languageUpdate),
           ).transformInto[smithy.CustomerBookIndividualPutRequest]
           instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
@@ -1378,6 +1396,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 )
               ),
               addresses = customerBookIndividualPostRequest.addresses,
+              language = languageUpdate,
               updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
             )
           )
@@ -1889,6 +1908,12 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 PhoneNumberE164.assume("+447754767565"),
               )
             )
+            languageUpdate <- Random
+              .shuffle(Language.values.toList diff List(customerBusinessDetailsRow.language))
+              .map(_.head)
+
+            _ = languageUpdate shouldNot equal(customerBusinessDetailsRow.language)
+
             customerBusinessContactInsert = CustomerBusinessContactInsert(
               CustomerFullName.assume("Inserted Contact"),
               customerBusinessContactRow.role,
@@ -1901,6 +1926,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
               Some(Some(CustomerTaxID.assume("ReplacementTax"))),
               Some(List(CustomerPhoneNumberEntry(arbitrarySample[CustomerPhoneNumber], isDefault = true))),
               Some(List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling)))),
+              Some(languageUpdate),
               List(customerBusinessContactInsert),
               List(
                 CustomerBusinessContactUpdate(
@@ -1949,6 +1975,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                   )
                 ),
                 addresses = customerBookBusinessPutRequest.addresses.value,
+                language = languageUpdate,
                 updatedAt = customerBusinessDetailsRowUpdated.updatedAt,
               )
             )
@@ -3501,6 +3528,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
               )
             ),
+            language = customerIndividualDetailsRow.language.transformInto[smithy.Language],
           )
 
           customerIndividualDetailsRowsAll <- postgresClient
@@ -3889,6 +3917,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                   addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
                 )
               ),
+              language = customerBusinessDetailsRow.language.transformInto[smithy.Language],
               customerBusinessContacts = List(
                 customerBusinessContactRowEarlier,
                 customerBusinessContactRowFirst,
@@ -4011,6 +4040,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
               )
             ),
+            language = customerBusinessDetailsRow.language.transformInto[smithy.Language],
             customerBusinessContacts = Nil,
           )
 
@@ -4119,6 +4149,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
               )
             ),
+            language = customerBusinessDetailsRow.language.transformInto[smithy.Language],
             customerBusinessContacts = Nil,
           )
 

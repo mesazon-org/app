@@ -1,2 +1,13 @@
 [
+  {
+    "op" : "replace",
+    "path" : "/businessCandidates/0/addresses/0/address/city",
+    "value" : null,
+    "old" : "Ηράκλειο"
+  },
+  {
+    "op" : "add",
+    "path" : "/businessCandidates/0/addresses/0/address/extractionNotes/-",
+    "value" : "City is missing"
+  }
 ]

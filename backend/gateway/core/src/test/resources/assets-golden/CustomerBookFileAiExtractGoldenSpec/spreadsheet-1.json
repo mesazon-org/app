@@ -13,9 +13,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -29,9 +30,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     }
   ],

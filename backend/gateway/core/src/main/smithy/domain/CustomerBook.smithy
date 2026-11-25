@@ -5,6 +5,12 @@ namespace io.mesazon.gateway.smithy
 use alloy#UUID
 use alloy#nullable
 
+enum Language {
+    en
+    el
+    ru
+}
+
 structure CustomerEmailEntry {
     @required
     email: String
@@ -47,6 +53,8 @@ structure CustomerBookIndividualPostRequest {
     phoneNumbers: CustomerPhoneNumberEntries
     @default([])
     addresses: CustomerAddressEntries
+    @default("en")
+    language: Language
 }
 
 structure CustomerBookIndividualPostResponse {
@@ -59,6 +67,7 @@ structure CustomerBookIndividualPutRequest {
     emails: CustomerEmailEntries
     phoneNumbers: CustomerPhoneNumberEntries
     addresses: CustomerAddressEntries
+    language: Language
 }
 
 structure CustomerBusinessContactInsert {
@@ -97,6 +106,8 @@ structure CustomerBookBusinessPostRequest {
     phoneNumbers: CustomerPhoneNumberEntries
     @default([])
     addresses: CustomerAddressEntries
+    @default("en")
+    language: Language
     @default([])
     customerBusinessContacts: CustomerBusinessContactsInsert
 }
@@ -133,6 +144,7 @@ structure CustomerBookBusinessPutRequest {
     taxID: String
     phoneNumbers: CustomerPhoneNumberEntries
     addresses: CustomerAddressEntries
+    language: Language
     @default([])
     customerBusinessContactsInsert: CustomerBusinessContactsInsert
     @default([])
@@ -177,6 +189,8 @@ structure CustomerBookIndividualGetResponse {
     phoneNumbers: CustomerPhoneNumberEntries
     @required
     addresses: CustomerAddressEntries
+    @required
+    language: Language
 }
 
 structure CustomerBookBusinessGetResponse {
@@ -191,6 +205,8 @@ structure CustomerBookBusinessGetResponse {
     phoneNumbers: CustomerPhoneNumberEntries
     @required
     addresses: CustomerAddressEntries
+    @required
+    language: Language
     @required
     customerBusinessContacts: CustomerBusinessContacts
 }

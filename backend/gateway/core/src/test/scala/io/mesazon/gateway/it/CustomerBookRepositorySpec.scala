@@ -72,6 +72,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           insertCustomerIndividualInput.emails,
           insertCustomerIndividualInput.phoneNumbers,
           insertCustomerIndividualInput.addresses,
+          insertCustomerIndividualInput.language,
           isArchived = false,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
@@ -139,6 +140,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           insertCustomerBusinessInput.emails,
           insertCustomerBusinessInput.phoneNumbers,
           insertCustomerBusinessInput.addresses,
+          insertCustomerBusinessInput.language,
           isArchived = false,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
@@ -223,6 +225,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           insertCustomerIndividualInput.emails,
           insertCustomerIndividualInput.phoneNumbers,
           insertCustomerIndividualInput.addresses,
+          insertCustomerIndividualInput.language,
           isArchived = false,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
@@ -235,6 +238,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           insertCustomerBusinessInput.emails,
           insertCustomerBusinessInput.phoneNumbers,
           insertCustomerBusinessInput.addresses,
+          insertCustomerBusinessInput.language,
           isArchived = false,
           createdAt = CreatedAt(instantNow),
           updatedAt = UpdatedAt(instantNow),
@@ -275,8 +279,11 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
         val customerFullNameUpdate         = arbitrarySample[CustomerFullName]
         val customerEmailEntryInputsUpdate = arbitrarySample[List[CustomerEmailEntryInput]]
         val customerAddressEntriesUpdate   = arbitrarySample[CustomerAddressEntry](customerAddressEntriesCount).toList
+        val languageUpdate                 =
+          Random.shuffle(Language.values.toList diff List(customerIndividualDetailsRow.language)).zioValue.head
 
         customerAddressEntriesUpdate shouldNot equal(customerIndividualDetailsRow.addresses)
+        languageUpdate shouldNot equal(customerIndividualDetailsRow.language)
 
         (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once()
 
@@ -287,6 +294,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             fullNameOptUpdate = Some(customerFullNameUpdate),
             emailsOptUpdate = Some(customerEmailEntryInputsUpdate),
             addressesOptUpdate = Some(customerAddressEntriesUpdate),
+            languageOptUpdate = Some(languageUpdate),
           )
           .zioValue
 
@@ -295,6 +303,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             fullName = customerFullNameUpdate,
             emails = customerEmailEntryInputsUpdate,
             addresses = customerAddressEntriesUpdate,
+            language = languageUpdate,
             updatedAt = UpdatedAt(instantNow),
           )
         )
@@ -342,8 +351,11 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           .zioValue
 
         val customerBusinessNameUpdate = arbitrarySample[CustomerBusinessName]
+        val languageUpdate             =
+          Random.shuffle(Language.values.toList diff List(customerBusinessDetailsRow.language)).zioValue.head
 
         customerBusinessDetailsRow.addresses shouldNot equal(Nil)
+        languageUpdate shouldNot equal(customerBusinessDetailsRow.language)
 
         (() => timeProviderMock.instantNow).expects().returningZIO(instantNow).once()
 
@@ -353,6 +365,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             customerBusinessDetailsRow.customerID,
             businessNameOptUpdate = Some(customerBusinessNameUpdate),
             addressesOptUpdate = Some(Nil),
+            languageOptUpdate = Some(languageUpdate),
           )
           .zioValue
 
@@ -360,6 +373,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
           customerBusinessDetailsRow.copy(
             businessName = customerBusinessNameUpdate,
             addresses = Nil,
+            language = languageUpdate,
             updatedAt = UpdatedAt(instantNow),
           )
         )
@@ -590,6 +604,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             customerBusinessDetailsRow.organizationID,
             customerBusinessDetailsRow.customerID,
             taxIDOptUpdate = Some(None),
+            languageOptUpdate = None,
             updateCustomerBusinessContactInputs = List(updateCustomerBusinessContactInput),
           )
           .zioValue shouldBe Some(customerBusinessDetailsRowExpected)
@@ -654,6 +669,7 @@ class CustomerBookRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, D
             emailsOptUpdate = Some(Nil),
             phoneNumbersOptUpdate = Some(Nil),
             addressesOptUpdate = Some(Nil),
+            languageOptUpdate = None,
             updateCustomerBusinessContactInputs = List(updateCustomerBusinessContactInput),
           )
           .zioValue shouldBe Some(customerBusinessDetailsRowExpected)

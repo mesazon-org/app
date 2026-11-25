@@ -25,9 +25,10 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -41,9 +42,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     }
   ],
@@ -72,6 +74,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "customerBusinessContacts": [
         {
           "fullName": "Maria Cole",
@@ -86,7 +89,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -113,6 +116,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "customerBusinessContacts": [
         {
           "fullName": "A. Reed",
@@ -127,7 +131,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     }
   ],

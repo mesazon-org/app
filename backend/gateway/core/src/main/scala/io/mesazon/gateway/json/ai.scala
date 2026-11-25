@@ -19,6 +19,10 @@ import sttp.tapir.docs.apispec.schema.TapirSchemaToJsonSchema
 
 object ai {
 
+  private given languageSchema: Schema[Language] = tapir.languageSchema
+
+  private given languageCodec: JsonValueCodec[Language] = tapir.languageCodec
+
   given assistantResponseSchema: Schema[AssistantResponse] = Schema.derived[AssistantResponse]
 
   given assistantResponseCodec: JsonValueCodec[AssistantResponse] = JsonCodecMaker.make[AssistantResponse]

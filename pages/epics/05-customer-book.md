@@ -17,6 +17,7 @@ Customers can be added, browsed, opened, updated, and archived. Users can also e
 - **Out of scope** — Checking an image's or file's candidates against customers already stored in the book. The only duplicate check made when reading an image, PDF, CSV file, or Excel file is between candidates found within that same image or file.
 - **Not built yet** — Orders. The customer book exists so that orders can point at a customer later, but nothing places or records an order yet.
 - **Not built yet** — Search and paging. The list can be narrowed to an explicit set of customer identifiers, but it still returns all matching active customers in one go, sorted by name.
+- **Not built yet** — Using the customer's language. Every customer carries one language, English, Greek or Russian (functional rule 7), but nothing in the product uses it yet. Business contacts get no language.
 
 ### Requirements across the epic
 
@@ -30,6 +31,7 @@ Every request in this epic names the organization it applies to, and only touche
 4. Customers and business contacts are **archived**, never deleted. Archiving either one is permanent.
 5. A customer may have any number of email addresses and phone numbers. Each business contact has at most one email address and one phone number, and no address.
 6. A customer has no address, exactly one address marked as both shipping and billing, or exactly two addresses, one shipping and one billing in either order. Whenever addresses are sent, anything else is rejected: three or more, two of the same type, a single shipping-only or billing-only address, or a both-purposes address alongside another.
+7. Every customer, person or business, has exactly one language: English, Greek or Russian (see **Customer language** below). It is English unless another one is chosen. Business contacts have no language. *Before this round, customers had no language (nothing is stored live yet; user decision).*
 
 #### Non-functional
 
@@ -72,6 +74,14 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 
 **Address type** — every address is marked as shipping, billing, or both. Both (`ShippingAndBilling`) means one address serves both purposes. Functional rule 6 says which combinations are allowed.
 
+**Customer language** — A customer's language is written as its two-letter lowercase code from [ISO 639-1](https://www.iso.org/standard/74575.html) (International Organization for Standardization, the international list of language codes). Only these three are accepted, exactly as written; other capitalisation, such as `EN`, is rejected (user decision):
+
+| **Language** | **Value** |
+| --- | --- |
+| English | `en` |
+| Greek | `el` |
+| Russian | `ru` |
+
 ### 1. User Adds a Customer
 
 **Who can reach this step: an owner or admin of the organization.**
@@ -95,6 +105,9 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 | 9. User adds a customer with one address for both shipping and billing, or a shipping address and a billing address, where each address has at least one non-empty text field | - Every address is stored with its type - None is marked as a default - An empty list is accepted; the customer simply has no recorded address |
 | 10. User gives an address with some text fields missing, but at least one field has content | - Accepted - The address is stored with the content that was supplied |
 | 11. User gives an address whose text fields are all empty, with a type other than shipping, billing, or both, or any other combination of addresses | - Rejected and nothing is stored |
+| 12. User chooses the customer's language | - Stored as given: `en`, `el` or `ru` |
+| 13. User leaves the language out | - Stored as English (`en`) |
+| 14. User gives any other language value, such as `fr`, `EN` or `en-GB` | - Rejected and nothing is stored |
 
 #### Requirements
 
@@ -105,6 +118,7 @@ Unlike the earlier epics, these steps are not a single journey. They are the sta
 5. Contacts at the same business may share email addresses and phone numbers, whether they are active or archived.
 6. Adding several customers at once succeeds completely or not at all.
 7. Every address text field is optional. Missing or null values are absent. Supplied values must contain 1–255 characters with no leading or trailing whitespace; empty or whitespace-only values are rejected for that field. An address must contain at least one non-empty text field, its type is required, and together the addresses must be an allowed combination (functional rule 6).
+8. The language is optional, and must be exactly `en`, `el` or `ru` when given; other capitalisation and regional forms such as `en-GB` are rejected. Left out, it is English (`en`). This holds for one person, one business, and every customer in a mixed batch.
 
 #### Request / Response / Outcome
 
@@ -126,6 +140,7 @@ The person and business forms are distinct. A person has a name and no tax id or
 | Emails | `CustomerEmailEntry[]` | Empty by default | ❌ | Contact email addresses. See **CustomerEmailEntry** below |
 | Phone Numbers | `CustomerPhoneNumberEntry[]` | Empty by default | ❌ | Contact numbers. See **CustomerPhoneNumberEntry** below |
 | Addresses | `CustomerAddressEntry[]` | Empty by default; otherwise one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Where they are. See **CustomerAddressEntry** below |
+| Language | `Language` | `en`, `el` or `ru`; `en` by default | ❌ | The customer's language. |
 
 **Request — CustomerBookBusinessPostRequest**
 
@@ -137,6 +152,7 @@ The person and business forms are distinct. A person has a name and no tax id or
 | Tax ID | `String` | 1–255 characters, trimmed | ❌ | The company's tax reference. A person may never have one |
 | Customer Business Contacts | `CustomerBusinessContactInsert[]` | Empty by default | ❌ | People inside the business. See **CustomerBusinessContactInsert** below |
 | Addresses | `CustomerAddressEntry[]` | Empty by default; otherwise one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Where they are. See **CustomerAddressEntry** below |
+| Language | `Language` | `en`, `el` or `ru`; `en` by default | ❌ | The business's language. |
 
 The shapes used above and throughout this epic:
 
@@ -212,6 +228,7 @@ Adding one person or one business returns only the new customer's identifier. A 
 **Outcome**
 
 - The customer is stored as active, fixed as either a person or a business.
+- The customer is stored with the language given, or English when none was given.
 - For a business, any contacts given are stored along with it.
 - For a batch, every customer in it is stored together, or none is.
 - On any refusal nothing at all is stored.
@@ -221,7 +238,7 @@ Adding one person or one business returns only the new customer's identifier. A 
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - One or more fields are invalid, reported together with the entry each belongs to |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
+| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request - A language other than `en`, `el` or `ru`, including `EN` or `en-GB`; rejected before other field errors are reported |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 409 | `CONFLICT_ERROR` | - A customer of this kind already has that name |
@@ -310,6 +327,7 @@ Nothing changes. This step only reads.
 1. The app opens an individual or business through its matching details request, using the kind shown in the customer summary.
 2. Archived customers cannot be opened. Their customer and contact details remain stored.
 3. A business read includes active contacts and omits archived contacts. An individual read has no business contacts.
+4. Both reads always return the customer's language.
 
 #### Request / Response / Outcome
 
@@ -330,6 +348,7 @@ The app uses the customer's kind from the summary to choose the matching individ
 | Emails | `CustomerEmailEntry[]` | May be empty | ✅ | Every recorded email address, each marked default or not |
 | Phone Numbers | `CustomerPhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
 | Addresses | `CustomerAddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
+| Language | `Language` | `en`, `el` or `ru` | ✅ | The customer's language. |
 
 **Response — Business**
 
@@ -341,6 +360,7 @@ The app uses the customer's kind from the summary to choose the matching individ
 | Tax ID | `String` | — | ❌ | Present when recorded |
 | Phone Numbers | `CustomerPhoneNumberEntry[]` | May be empty | ✅ | Every recorded number, each marked default or not |
 | Addresses | `CustomerAddressEntry[]` | May be empty | ✅ | Every recorded address, each with its type |
+| Language | `Language` | `en`, `el` or `ru` | ✅ | The business's language. |
 | Customer Business Contacts | `CustomerBusinessContact[]` | May be empty; active contacts only | ✅ | Active business contacts; archived contacts are omitted |
 
 **CustomerBusinessContact**
@@ -390,6 +410,7 @@ Nothing changes. This step only reads.
 | 10. A contact to archive is missing, archived, or belongs to another business | - Nothing changes for that contact and the request still succeeds |
 | 11. User changes a missing or archived business | - Nothing happens, and the change is reported as successful |
 | 12. A contact ID is repeated in either list, or appears in both update and archive lists | - Rejected with a validation error before any change is stored |
+| 13. User changes a customer's language, or leaves it out | - A supplied `en`, `el` or `ru` replaces it - Left out, it stays as it was - It cannot be cleared, and any other value is rejected with nothing stored |
 
 #### Requirements
 
@@ -402,6 +423,7 @@ Nothing changes. This step only reads.
 7. New contacts are active. An update changes only the fields supplied; an archive is permanent and keeps the contact's details.
 8. A missing, archived, or foreign contact referenced for update rejects the whole business update. A missing, archived, or foreign contact named for archive is ignored, matching the catalogue's update and archive behavior.
 9. Contact IDs must be unique within each list and across the update and archive lists. Duplicate or overlapping IDs are rejected before any write.
+10. The language is an optional replacement field for both kinds, like the name: leaving it out keeps it, a supplied `en`, `el` or `ru` replaces it, and it can never be cleared.
 
 #### Request / Response / Outcome
 
@@ -415,6 +437,7 @@ There are two ways to update, one per kind, and the customer identifier is part 
 | Emails | `CustomerEmailEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
 | Phone Numbers | `CustomerPhoneNumberEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
 | Addresses | `CustomerAddressEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list; when non-empty, one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Send the complete set, not just additions |
+| Language | `Language` | `en`, `el` or `ru`; cannot be cleared | ❌ | Replacement language; leave out to keep the current one. |
 
 **Request — updating a business**
 
@@ -425,6 +448,7 @@ There are two ways to update, one per kind, and the customer identifier is part 
 | Tax ID | `String` | 1–255 characters, trimmed; explicit null clears it | ❌ | Replacement tax ID; leave out to keep the current value |
 | Phone Numbers | `CustomerPhoneNumberEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list | ❌ | Send the complete set, not just additions |
 | Addresses | `CustomerAddressEntry[]` | Nonnullable; omitted keeps; empty clears; non-empty replaces the whole list; when non-empty, one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Send the complete set, not just additions |
+| Language | `Language` | `en`, `el` or `ru`; cannot be cleared | ❌ | Replacement language; leave out to keep the current one. |
 | Customer Business Contacts Insert | `CustomerBusinessContactInsert[]` | Empty by default | ❌ | Contacts to add as active contacts |
 | Customer Business Contacts Update | `CustomerBusinessContactUpdate[]` | Empty by default | ❌ | Existing contacts to change |
 | Customer Business Contacts Archive | `CustomerBusinessContactArchive[]` | Empty by default | ❌ | Existing contacts to archive permanently |
@@ -462,7 +486,7 @@ Response is empty. A successful change answers with nothing but a success status
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - One or more fields are invalid - A contact ID is duplicated or appears in both the update and archive lists |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
+| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request - A language other than `en`, `el` or `ru`, including `EN` or `en-GB`; rejected before other field errors are reported |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 409 | `CONFLICT_ERROR` | - An active customer of this kind already has that name |
@@ -537,7 +561,7 @@ Response is empty.
 | **Http Code** | **Code** | **Description** |
 | --- | --- | --- |
 | 400 | `VALIDATION_ERROR` | - One or more contacts are invalid - A contact ID is duplicated or appears in both the update and archive lists |
-| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request |
+| 400 | `BAD_REQUEST_ERROR` | - The organization was not named on the request - A language other than `en`, `el` or `ru`, including `EN` or `en-GB`; rejected before other field errors are reported |
 | 401 | `UNAUTHORIZED_ERROR` | - The access token is missing, invalid, or has expired |
 | 403 | `FORBIDDEN_ERROR` | - Personal onboarding is not finished - The person's role does not allow changes |
 | 500 | `INTERNAL_SERVER_ERROR` | - The person does not belong to the organization - A contact named for update is missing, archived, or belongs to another business - Unexpected error |
@@ -650,7 +674,7 @@ Nothing changes and the check reserves nothing.
 
 **Status: available.** The rules below for how the AI reads an image or file, including copying text exactly as printed (scenarios 43–45 and requirement 32), and combines a spreadsheet's general notes, have so far been checked only against a stand-in for the AI service, not the real one; until they are, treat them as intended behaviour. A file without a label row loses its first customer ([gap 6](#6-a-file-without-a-label-row-skips-its-first-customer)).
 
-**Processing message limited to reading the upload.** Scenario 42 and the processing-message parts of scenarios 28–29 and requirements 4, 19, 21, 22 and 24 are shipped as instructions to the AI. Whether the real AI service follows them has not yet been checked; until a manual check confirms it, treat them as intended behaviour.
+**Processing message limited to reading the upload.** Scenario 42 and the processing-message parts of scenarios 28–29 and requirements 4, 19, 21, 22, 24 and 33 are shipped as instructions to the AI. Whether the real AI service follows them has not yet been checked; until a manual check confirms it, treat them as intended behaviour. Requirement 33's processing-message rule has been checked once, on a two-customer file: asked to make every customer Russian, the AI gave both Russian, with no note. One small check does not show it holds every time.
 
 **Who can reach this step: an owner or admin of the organization.**
 
@@ -712,6 +736,10 @@ This step helps a business move its existing customer list into the product quic
 | 43. A name, contact name, role, address detail or tax ID is clearly printed but looks misspelt | - It is returned exactly as printed, never corrected - A short note says it may be misspelled in the source, such as `Name may be misspelled in the source` - No correction is suggested - The candidate is not marked as needing attention |
 | 44. Part of a name, contact name, role, address detail or tax ID cannot be made out | - Only the characters that can be seen are returned, never a different or more likely word - A short note names the unclear detail, such as `Name partly unclear, please check` - No other reading is suggested - The candidate is not marked as needing attention |
 | 45. Text uses curly or straight quotes, capital letters, accents, abbreviations, punctuation or a particular alphabet | - All of it is kept exactly as printed - Only spaces at the start and end are removed, text printed over several lines is joined with one space, and repeated spaces inside the text become one - A word split across lines with a hyphen at the line end is joined without a space and keeps the hyphen - Separate first-name and last-name columns are joined with one space |
+| 46. The source states an entry's language as English, Greek or Russian, such as a Language column or `speaks Greek`, including a regional form such as `en-GB`, `en-US`, `en-CY`, `el-CY` or `ru-RU` | - The candidate gets that language as read, a regional form counting as its base language (`en-GB` gives `en`) - No note |
+| 47. The source does not state the language, and the candidate's own name has Greek letters and no Cyrillic, or Cyrillic letters and no Greek, such as `Γιώργος Παπαδόπουλος` or `ООО Ромашка` | - Greek (`el`) or Russian (`ru`), from the name's alphabet - The note `Language taken from the name` - Never listed as an inferred field and never marks the candidate |
+| 48. The source does not state the language, and the name is in Latin letters, mixes Greek and Cyrillic, or is absent, such as `Andreas Georgiou` or a candidate without a name | - English (`en`) - The note `Language set to English by default` - Never listed as an inferred field and never marks the candidate - Nothing else is used as a clue: not the address, email, phone code or contacts' names (user decision) |
+| 49. The source states a language other than English, Greek or Russian, such as French, `de` or `uk` | - English (`en`), without looking at the name - The note `Language <language> not supported, English used`, where `<language>` is the language's English name, such as `Language German not supported, English used` for `de` or `Language Ukrainian not supported, English used` for `uk`; when the AI cannot tell which language the value means, it writes the value as printed - Not listed as an inferred field and never marks the candidate |
 
 #### Requirements
 
@@ -751,6 +779,7 @@ This step helps a business move its existing customer list into the product quic
     - a value longer than 255 characters: `<Detail> was too long and was cut` (requirement 32; user decision);
     - a person's tax number that cannot be kept: `Tax number shown but not kept` (requirement 31; user decision);
     - an unclear link between a contact and a business: `Contact link to this business is unclear` (requirement 10; user decision);
+    - a language worked out from the name: `Language taken from the name`; a language defaulted to English: `Language set to English by default`; a stated language that is not supported: `Language <language> not supported, English used`, with the language's English name, or the value as printed when it cannot be told (requirement 33; user decision);
     - nothing found: `AI could not detect relevant customer data in this <source>.` (scenario 7);
     - a left-out line (scenario 34), an unused column (requirement 29) and the ignored-message note (requirement 24), as before.
 
@@ -775,6 +804,13 @@ This step helps a business move its existing customer list into the product quic
 30. A CSV or Excel file's first row is always treated as the label row. When it looks like a customer instead, it is used only to understand the columns, is not read as a customer or counted, and gets one general note saying it looked like data and was skipped, so the user can add that customer by hand ([gap 6](#6-a-file-without-a-label-row-skips-its-first-customer)). A PDF has no label row, so its first line is read like any other.
 31. Names are kept as written, never translated or corrected (requirement 32). An entry is a business when it shows a legal form in any language (such as Ltd, GmbH, ООО or ΕΠΕ), a company or brand name rather than a personal name, an email on its own company domain, or a contact person who is someone other than the entry itself; otherwise a personal name is a person. A tax number, a contact that only repeats the entry's own name, a heading that allows both such as "Name / Company", and the kind of source never decide it, so every AI setting makes the same choice. A person cannot carry a tax number yet, so it is left out with the note `Tax number shown but not kept`.
 32. Free-text details are copied exactly as printed, from every source: a person's or business's name, a contact's name and role, the five address text fields, and the tax ID. They are never corrected, completed, expanded, translated, re-cased, re-punctuated or re-quoted, and never replaced with a more likely word; only spaces at the start and end are removed, commas, semicolons and full stops that only separate or end the text are dropped (so `закупки.` gives `закупки`, while the full stop in an abbreviation such as `г.` stays), text printed over several lines is joined with one space, and repeated spaces inside the text become one. Punctuation that is not printed is never added, so `Evia Flowers Ltd` stays `Evia Flowers Ltd`. Address text is the one other exception: it is split into its fields, following the common convention, with Cyprus, the main market for now, in mind. Line 1 is the street with its number, as printed, such as `Makariou Avenue 25`, or a PO box such as `Τ.Θ. 12345`; an area or district name printed together with the street stays in line 1 with it, in printed order, so `Βιομηχανική Περιοχή, Οδός 3, Μονάδα Β` gives line 1 `Βιομηχανική Περιοχή, Οδός 3` and line 2 `Μονάδα Β` (user decision); line 2 holds only a building name and the units inside it, such as `Kennedy Business Centre, 2nd floor, Office 201`, even when printed on the same line as the street, and is empty when there is none; the postcode, city and country go in their own fields, so `1065 Nicosia` gives postcode `1065` and city `Nicosia`, and a city is never translated. A State, Region, Province or County column is never the city: the city stays empty and that column gets the not-used note (requirement 29; user decision). The same punctuation rule applies where the text is split into fields, so `London E8 3RT, UK.` gives city `London` and country `UK`, `Лиговский пр., 52, офис 14,` gives line 1 `Лиговский пр., 52` and line 2 `офис 14`, and `г. Казань,` gives the city `г. Казань`; everything else stays as printed. A word split across lines with a hyphen at the line end is joined without a space and keeps the hyphen, so `Extra-` and `virgin` give `Extra-virgin`. Separate first-name and last-name columns are still joined into one name with one space, each part copied exactly. A value longer than 255 characters keeps its first 255 characters exactly as printed, with a short note such as `Address was too long and was cut`, so the read never fails. A clearly printed value that looks misspelt is kept as printed, with a short note that it may be misspelled in the source. When part of a value cannot be made out, only the visible characters are returned, with a short note naming the unclear detail. Neither note suggests another reading, and neither marks the candidate as needing attention (requirement 18). Text is copied character by character: it is never changed to a known word, place or brand; accents are never added or removed; each character keeps its printed alphabet, and a look-alike letter follows the letters around it; codes are copied digit by digit, never adding a digit or dropping one that can be read. When unsure, the AI returns what it can see with the partly-unclear note, and text cut off at the edge always gets that note. *Before this round, only the copy-as-printed rule above was stated (user decision).* Emails and phone numbers keep their own rules (requirements 3, 19 and 20), and a name worked out from an email (requirement 4) is unaffected. A processing message may ask for any rewording that uses only what the source shows, such as spelling, capital letters, expanded abbreviations or translation; it is applied without a note (requirements 21 and 24).
+33. Every candidate, person or business, has exactly one language, `en`, `el` or `ru`; business contacts have none. It is decided in this order:
+    1. a language the processing message sets is used, with no note (requirement 21); one it cannot meet, such as French, is left to the rules below, with no note about the message (requirement 24);
+    2. a language the source states for the entry is used as read, with no note, and a regional form such as `en-GB`, `el-CY` or `ru-RU` counts as its base language (user decision); a stated language other than the three gives English with the note `Language <language> not supported, English used`, where `<language>` is its English name, such as `German` for `de`, or the value as printed when the AI cannot tell which language it means (user decision);
+    3. otherwise only the alphabet of the candidate's own name decides: Greek letters and no Cyrillic give Greek with the note `Language taken from the name`, Cyrillic letters and no Greek give Russian with the same note;
+    4. anything else, including Latin letters, both alphabets, or no name, gives English with the note `Language set to English by default`.
+
+    No other clue is used, such as the address, email, phone code or a contact's name (user decision). The language is never listed as an inferred, missing or duplicate field, and never marks a candidate as needing attention (user decision). If the AI returns no language, the candidate is English, without a note (user decision).
 
 #### Request / Response / Outcome
 
@@ -812,6 +848,7 @@ The details follow the same field rules as **CustomerBookIndividualPostRequest**
 | Emails | `CustomerEmailEntry[]` | Left out when empty; the first entry is the default | ❌ | Readable email addresses; one that cannot be read is left out and noted |
 | Phone Numbers | `CustomerPhoneNumberEntryCandidate[]` | Left out when empty; the first entry is the default | ❌ | Phone numbers as read. See **CustomerPhoneNumberEntryCandidate** below |
 | Addresses | `CustomerAddressEntry[]` | Left out when empty; otherwise one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Addresses as read, at most two, each with its type |
+| Language | `Language` | `en`, `el` or `ru` | ✅ | The person's language, as stated, from the name's alphabet, or English (requirement 33). |
 | Inferred Fields | `FieldInfo[]` | Left out when empty | ❌ | Details worked out rather than read. See **FieldInfo** below |
 | Missing Fields | `FieldInfo[]` | Left out when empty | ❌ | Details that are absent and must be supplied before adding |
 | Duplicate Fields | `FieldInfo[]` | Left out when empty | ❌ | Details that match another candidate of the same kind in the same upload |
@@ -849,6 +886,7 @@ The details follow the same field rules as **CustomerBookBusinessPostRequest** (
 | Tax ID | `String` | 1–255 characters, trimmed | ❌ | The company's tax reference, when readable |
 | Phone Numbers | `CustomerPhoneNumberEntryCandidate[]` | Left out when empty; the first entry is the default | ❌ | Phone numbers as read |
 | Addresses | `CustomerAddressEntry[]` | Left out when empty; otherwise one `ShippingAndBilling` entry, or one `Shipping` and one `Billing` entry | ❌ | Addresses as read, at most two, each with its type |
+| Language | `Language` | `en`, `el` or `ru` | ✅ | The business's language, as stated, from the business name's alphabet, or English (requirement 33). |
 | Customer Business Contacts | `CustomerBusinessContactCandidate[]` | Left out when empty; best-effort | ❌ | People inside the business, when the source identifies them. See **CustomerBusinessContactCandidate** below |
 | Inferred Fields | `FieldInfo[]` | Left out when empty | ❌ | Details of the business or its contacts worked out rather than read. See **FieldInfo** above |
 | Missing Fields | `FieldInfo[]` | Left out when empty | ❌ | Details of the business or its contacts that are absent and must be supplied before adding |

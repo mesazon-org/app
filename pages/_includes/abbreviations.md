@@ -14,6 +14,7 @@ Matching is case-sensitive and skips code spans, so `OTP` in backticks and the
 
 *[AI]: Artificial Intelligence — the model that reads uploads and suggests items or customers
 *[CSV]: Comma-Separated Values — a plain-text spreadsheet file
+*[ISO]: International Organization for Standardization — its ISO 639-1 list gives two-letter language codes
 *[JWT]: JSON Web Token
 *[OTP]: One-Time Passcode
 *[PDF]: Portable Document Format — a document file, typed or scanned

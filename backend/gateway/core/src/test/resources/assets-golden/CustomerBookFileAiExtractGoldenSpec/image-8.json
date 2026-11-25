@@ -29,9 +29,10 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -61,9 +62,10 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     }
   ],
@@ -96,6 +98,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "customerBusinessContacts": [
         {
           "fullName": "Ben Walsh",
@@ -110,7 +113,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -141,6 +144,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "customerBusinessContacts": [
         {
           "fullName": "Sara Ng",
@@ -155,7 +159,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -182,12 +186,14 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "customerBusinessContacts": [
         
       ],
       "businessNameInferred": true,
       "extractionNotes": [
-        "Business name taken from the email"
+        "Business name taken from the email",
+        "Language set to English by default"
       ]
     }
   ],

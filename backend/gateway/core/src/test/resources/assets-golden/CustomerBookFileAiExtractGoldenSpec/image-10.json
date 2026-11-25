@@ -17,9 +17,10 @@
       "addresses": [
         
       ],
+      "language": "ru",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language taken from the name"
       ]
     },
     {
@@ -33,9 +34,10 @@
       "addresses": [
         
       ],
+      "language": "ru",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language taken from the name"
       ]
     },
     {
@@ -53,9 +55,10 @@
       "addresses": [
         
       ],
+      "language": "ru",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language taken from the name"
       ]
     }
   ],
@@ -76,6 +79,7 @@
       "addresses": [
         
       ],
+      "language": "ru",
       "customerBusinessContacts": [
         {
           "fullName": "Игорь Беляев",
@@ -90,7 +94,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language taken from the name"
       ]
     },
     {
@@ -109,6 +113,7 @@
       "addresses": [
         
       ],
+      "language": "ru",
       "customerBusinessContacts": [
         {
           "fullName": "Анна Захарова",
@@ -123,7 +128,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language taken from the name"
       ]
     },
     {
@@ -138,6 +143,7 @@
       "addresses": [
         
       ],
+      "language": "ru",
       "customerBusinessContacts": [
         {
           "fullName": "Алексей Кузнецов",
@@ -152,7 +158,8 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        "Phone number could not be fully read"
+        "Phone number could not be fully read",
+        "Language taken from the name"
       ]
     }
   ],
