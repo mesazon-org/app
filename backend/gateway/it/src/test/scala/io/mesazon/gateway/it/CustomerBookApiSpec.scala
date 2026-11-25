@@ -1901,6 +1901,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
               Some(Some(CustomerTaxID.assume("ReplacementTax"))),
               Some(List(CustomerPhoneNumberEntry(arbitrarySample[CustomerPhoneNumber], isDefault = true))),
               Some(List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling)))),
+              None,
               List(customerBusinessContactInsert),
               List(
                 CustomerBusinessContactUpdate(

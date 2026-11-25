@@ -425,7 +425,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
       "preserve omitted business fields and default contact action lists" in {
         customerBookRequestValidator
           .validatedCustomerBookBusinessPutRequest(smithy.CustomerBookBusinessPutRequest())
-          .zioValue shouldBe CustomerBookBusinessPutRequest(None, None, None, None, None, Nil, Nil, Nil)
+          .zioValue shouldBe CustomerBookBusinessPutRequest(None, None, None, None, None, None, Nil, Nil, Nil)
       }
 
       "preserve omitted contact fields as keep operations" in {
@@ -438,6 +438,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           .validatedCustomerBookBusinessPutRequest(customerBookBusinessPutRequestSmithy)
           .zioValue shouldBe
           CustomerBookBusinessPutRequest(
+            None,
             None,
             None,
             None,
@@ -475,6 +476,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
             Some(None),
             Some(Nil),
             Some(Nil),
+            None,
             Nil,
             List(CustomerBusinessContactUpdate(customerBusinessContactID, None, Some(None), Some(None), Some(None))),
             Nil,
@@ -517,6 +519,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
           Some(
             List(CustomerAddressEntry(arbitrarySample[AddressEntry].copy(addressType = AddressType.ShippingAndBilling)))
           ),
+          None,
           List(customerBusinessContactInsert),
           List(customerBusinessContactUpdate),
           List(customerBusinessContactArchive),
@@ -537,6 +540,7 @@ class CustomerBookRequestValidatorSpec extends ZWordSpecBase, CustomerBookSmithy
         val customerBusinessContactInsert = arbitrarySample[CustomerBusinessContactInsert]
           .copy(email = Some(arbitrarySample[CustomerEmail]), phoneNumber = Some(arbitrarySample[CustomerPhoneNumber]))
         val customerBookBusinessPutRequest = CustomerBookBusinessPutRequest(
+          None,
           None,
           None,
           None,

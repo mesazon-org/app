@@ -19,6 +19,7 @@ case class CustomerBookIndividualPostRequest(
     emails: List[CustomerEmailEntry],
     phoneNumbers: List[CustomerPhoneNumberEntry],
     addresses: List[CustomerAddressEntry],
+    language: Language,
 )
 
 case class CustomerBookIndividualPutRequest(
@@ -26,6 +27,7 @@ case class CustomerBookIndividualPutRequest(
     emails: Option[List[CustomerEmailEntry]],
     phoneNumbers: Option[List[CustomerPhoneNumberEntry]],
     addresses: Option[List[CustomerAddressEntry]],
+    language: Option[Language],
 )
 
 // Business contacts
@@ -57,6 +59,7 @@ case class CustomerBookBusinessPostRequest(
     taxID: Option[CustomerTaxID],
     phoneNumbers: List[CustomerPhoneNumberEntry],
     addresses: List[CustomerAddressEntry],
+    language: Language,
     customerBusinessContacts: List[CustomerBusinessContactInsert],
 )
 
@@ -66,6 +69,7 @@ case class CustomerBookBusinessPutRequest(
     taxID: Option[Option[CustomerTaxID]],
     phoneNumbers: Option[List[CustomerPhoneNumberEntry]],
     addresses: Option[List[CustomerAddressEntry]],
+    language: Option[Language],
     customerBusinessContactsInsert: List[CustomerBusinessContactInsert],
     customerBusinessContactsUpdate: List[CustomerBusinessContactUpdate],
     customerBusinessContactsArchive: List[CustomerBusinessContactArchive],

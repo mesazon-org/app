@@ -74,6 +74,7 @@ final class CustomerBookRequestValidator(
           emailsValidated,
           phoneNumbersValidated,
           addressesValidated,
+          customerBookIndividualPostRequestSmithy.language.transformInto[Language].validNec,
         ).mapN(CustomerBookIndividualPostRequest.apply)
       )
 
@@ -97,6 +98,7 @@ final class CustomerBookRequestValidator(
           emailsValidated,
           phoneNumbersValidated,
           addressesValidated,
+          customerBookIndividualPutRequestSmithy.language.transformInto[Option[Language]].validNec,
         ).mapN(CustomerBookIndividualPutRequest.apply)
       )
 
@@ -215,6 +217,7 @@ final class CustomerBookRequestValidator(
             validateNullableField("taxID", customerBookBusinessPutRequestSmithy.taxID, CustomerTaxID.either),
             phoneNumbersValidated,
             addressesValidated,
+            customerBookBusinessPutRequestSmithy.language.transformInto[Option[Language]].validNec,
             contactsInsertValidated,
             (
               contactsUpdateValidated,
@@ -265,6 +268,7 @@ final class CustomerBookRequestValidator(
           validateOptionalField("taxID", customerBookBusinessPostRequestSmithy.taxID, CustomerTaxID.either),
           phoneNumbersValidated,
           addressesValidated,
+          customerBookBusinessPostRequestSmithy.language.transformInto[Language].validNec,
           contactsValidated,
         ).mapN(CustomerBookBusinessPostRequest.apply)
       )
