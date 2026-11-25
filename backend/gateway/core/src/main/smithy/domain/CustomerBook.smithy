@@ -189,6 +189,8 @@ structure CustomerBookIndividualGetResponse {
     phoneNumbers: CustomerPhoneNumberEntries
     @required
     addresses: CustomerAddressEntries
+    @required
+    language: Language
 }
 
 structure CustomerBookBusinessGetResponse {
@@ -203,6 +205,8 @@ structure CustomerBookBusinessGetResponse {
     phoneNumbers: CustomerPhoneNumberEntries
     @required
     addresses: CustomerAddressEntries
+    @required
+    language: Language
     @required
     customerBusinessContacts: CustomerBusinessContacts
 }

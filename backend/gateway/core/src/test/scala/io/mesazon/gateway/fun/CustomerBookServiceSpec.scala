@@ -717,6 +717,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
             )
           ),
+          language = customerIndividualDetailsRow.language.transformInto[smithy.Language],
         )
       }
 
@@ -813,6 +814,7 @@ class CustomerBookServiceSpec extends ZWordSpecBase, CustomerBookSmithyArbitrari
               addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
             )
           ),
+          language = customerBusinessDetailsRow.language.transformInto[smithy.Language],
           customerBusinessContacts = List(
             smithy.CustomerBusinessContact(
               customerBusinessContactID = customerBusinessContactRow.customerBusinessContactID.value,

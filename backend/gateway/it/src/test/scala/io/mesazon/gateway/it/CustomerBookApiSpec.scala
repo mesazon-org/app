@@ -3528,6 +3528,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
               )
             ),
+            language = customerIndividualDetailsRow.language.transformInto[smithy.Language],
           )
 
           customerIndividualDetailsRowsAll <- postgresClient
@@ -3916,6 +3917,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                   addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
                 )
               ),
+              language = customerBusinessDetailsRow.language.transformInto[smithy.Language],
               customerBusinessContacts = List(
                 customerBusinessContactRowEarlier,
                 customerBusinessContactRowFirst,
@@ -4038,6 +4040,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
               )
             ),
+            language = customerBusinessDetailsRow.language.transformInto[smithy.Language],
             customerBusinessContacts = Nil,
           )
 
@@ -4146,6 +4149,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 addressType = customerAddressEntry.value.addressType.transformInto[smithy.AddressType],
               )
             ),
+            language = customerBusinessDetailsRow.language.transformInto[smithy.Language],
             customerBusinessContacts = Nil,
           )
 
