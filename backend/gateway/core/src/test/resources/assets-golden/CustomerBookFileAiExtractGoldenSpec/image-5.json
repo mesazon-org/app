@@ -29,6 +29,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "ru",
       "customerBusinessContacts": [
         {
           "fullName": "Ирина Смирнова",
@@ -43,7 +44,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language taken from the name"
       ]
     }
   ],

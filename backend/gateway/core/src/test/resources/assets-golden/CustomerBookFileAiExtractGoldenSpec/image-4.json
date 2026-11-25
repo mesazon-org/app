@@ -29,6 +29,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "customerBusinessContacts": [
         {
           "fullName": "Emma Walsh",
@@ -47,7 +48,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     }
   ],

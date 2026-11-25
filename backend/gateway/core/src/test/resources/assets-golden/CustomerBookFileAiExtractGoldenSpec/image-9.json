@@ -29,9 +29,11 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Tax number shown but not kept"
+        "Tax number shown but not kept",
+        "Language taken from the name"
       ]
     },
     {
@@ -61,9 +63,11 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Tax number shown but not kept"
+        "Tax number shown but not kept",
+        "Language taken from the name"
       ]
     },
     {
@@ -93,10 +97,12 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
         "Email could not be fully read",
-        "Tax number shown but not kept"
+        "Tax number shown but not kept",
+        "Language taken from the name"
       ]
     }
   ],
@@ -129,6 +135,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "customerBusinessContacts": [
         {
           "fullName": "Μάριος Ιωάννου",
@@ -143,7 +150,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language taken from the name"
       ]
     },
     {
@@ -170,6 +177,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "customerBusinessContacts": [
         {
           "fullName": "Γιώργος Κτιστάκης",
@@ -184,7 +192,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language taken from the name"
       ]
     }
   ],

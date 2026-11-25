@@ -29,9 +29,10 @@
           "addressType": "Billing"
         }
       ],
+      "language": "ru",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language taken from the name"
       ]
     },
     {
@@ -49,9 +50,11 @@
       "addresses": [
         
       ],
+      "language": "ru",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Name may be misspelled in the source"
+        "Name may be misspelled in the source",
+        "Language taken from the name"
       ]
     }
   ],
@@ -84,6 +87,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "ru",
       "customerBusinessContacts": [
         {
           "fullName": "Олег Титов",
@@ -98,7 +102,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language taken from the name"
       ]
     },
     {
@@ -113,6 +117,7 @@
       "addresses": [
         
       ],
+      "language": "ru",
       "customerBusinessContacts": [
         {
           "fullName": "Светлана",
@@ -127,7 +132,8 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        "Phone number could not be fully read"
+        "Phone number could not be fully read",
+        "Language taken from the name"
       ]
     }
   ],

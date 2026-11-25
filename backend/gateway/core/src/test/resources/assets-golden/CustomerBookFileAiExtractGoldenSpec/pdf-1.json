@@ -29,9 +29,10 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -49,9 +50,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -81,9 +83,10 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -97,9 +100,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -117,9 +121,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -149,9 +154,10 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -169,9 +175,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -189,9 +196,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -205,9 +213,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -237,9 +246,10 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -257,9 +267,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -277,9 +288,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -309,9 +321,10 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     }
   ],
@@ -344,6 +357,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "customerBusinessContacts": [
         {
           "fullName": "Tomas Hale",
@@ -358,7 +372,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -377,6 +391,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "customerBusinessContacts": [
         {
           "fullName": "Ida Morrow",
@@ -391,7 +406,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -422,12 +437,13 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "customerBusinessContacts": [
         
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -446,6 +462,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "customerBusinessContacts": [
         {
           "fullName": "Dr. Sara Quill",
@@ -460,7 +477,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -479,12 +496,13 @@
       "addresses": [
         
       ],
+      "language": "en",
       "customerBusinessContacts": [
         
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -515,6 +533,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "customerBusinessContacts": [
         {
           "fullName": "Leo Brandt",
@@ -543,7 +562,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -574,6 +593,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "customerBusinessContacts": [
         {
           "fullName": "Ruth Ellery",
@@ -588,7 +608,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -607,12 +627,13 @@
       "addresses": [
         
       ],
+      "language": "en",
       "customerBusinessContacts": [
         
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -631,6 +652,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "customerBusinessContacts": [
         {
           "fullName": "Gwen Halloway",
@@ -645,7 +667,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -676,12 +698,13 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "customerBusinessContacts": [
         
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -700,12 +723,13 @@
       "addresses": [
         
       ],
+      "language": "en",
       "customerBusinessContacts": [
         
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -724,6 +748,7 @@
       "addresses": [
         
       ],
+      "language": "en",
       "customerBusinessContacts": [
         {
           "fullName": "Dan Ortiz",
@@ -738,7 +763,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     }
   ],

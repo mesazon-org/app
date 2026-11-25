@@ -85,6 +85,7 @@ This is a check that developers run by hand. Customers never see it, and it chan
 
    For Customer Book, every field of the AI's answer is compared too:
    - the people and businesses found, with their names, emails, phone numbers and country codes, addresses with their type, and a business's tax ID;
+   - each person's and business's language;
    - a business's contacts, with their name, role, email and phone;
    - the entry counts and the row numbers of empty and unreadable rows;
    - whether the AI worked out a name or a phone country code;

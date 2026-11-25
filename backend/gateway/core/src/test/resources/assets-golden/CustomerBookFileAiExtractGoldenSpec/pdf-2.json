@@ -29,9 +29,10 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -49,9 +50,10 @@
       "addresses": [
         
       ],
+      "language": "en",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -81,9 +83,11 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Country code +357 guessed, the address is in Greece"
+        "Country code +357 guessed, the address is in Greece",
+        "Language taken from the name"
       ]
     },
     {
@@ -97,9 +101,10 @@
       "addresses": [
         
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
-        
+        "Language taken from the name"
       ]
     },
     {
@@ -129,9 +134,11 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "fullNameInferred": false,
       "extractionNotes": [
-        "Country code +357 guessed, the address is in Greece"
+        "Country code +357 guessed, the address is in Greece",
+        "Language taken from the name"
       ]
     }
   ],
@@ -164,6 +171,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "customerBusinessContacts": [
         {
           "fullName": "Maria Cole",
@@ -178,7 +186,7 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        
+        "Language set to English by default"
       ]
     },
     {
@@ -205,6 +213,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "en",
       "customerBusinessContacts": [
         {
           "fullName": "A. Reed",
@@ -219,7 +228,8 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        "Phone number could not be fully read"
+        "Phone number could not be fully read",
+        "Language set to English by default"
       ]
     },
     {
@@ -250,6 +260,7 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "customerBusinessContacts": [
         {
           "fullName": "Ελένη Νικολάου",
@@ -264,7 +275,8 @@
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        "Country code taken from the address"
+        "Country code taken from the address",
+        "Language taken from the name"
       ]
     },
     {
@@ -291,12 +303,14 @@
           "addressType": "Billing"
         }
       ],
+      "language": "el",
       "customerBusinessContacts": [
         
       ],
       "businessNameInferred": false,
       "extractionNotes": [
-        "Phone number could not be fully read"
+        "Phone number could not be fully read",
+        "Language taken from the name"
       ]
     }
   ],
