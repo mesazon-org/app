@@ -13,6 +13,7 @@ Matching is case-sensitive and skips code spans, so `OTP` in backticks and the
 {% endcomment %}
 
 *[AI]: Artificial Intelligence — the model that reads uploads and suggests items or customers
+*[BCP]: Best Current Practice — an internet standards document; BCP 47 defines language tags
 *[CSV]: Comma-Separated Values — a plain-text spreadsheet file
 *[JWT]: JSON Web Token
 *[OTP]: One-Time Passcode
