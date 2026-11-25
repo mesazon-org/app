@@ -1347,6 +1347,12 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling))),
             )
 
+          languageUpdate <- Random
+            .shuffle(Language.values.toList diff List(customerIndividualDetailsRow.language))
+            .map(_.head)
+
+          _ = languageUpdate shouldNot equal(customerIndividualDetailsRow.language)
+
           _ <- postgresClient
             .executeQuery(customerBookQueries.insertCustomerIndividualDetailsRow(customerIndividualDetailsRow))
 
@@ -1355,7 +1361,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
             emails = Some(customerBookIndividualPostRequest.emails),
             phoneNumbers = Some(customerBookIndividualPostRequest.phoneNumbers),
             addresses = Some(customerBookIndividualPostRequest.addresses),
-            language = None,
+            language = Some(languageUpdate),
           ).transformInto[smithy.CustomerBookIndividualPutRequest]
           instantNow = Instant.now.truncatedTo(ChronoUnit.MILLIS)
 
@@ -1390,6 +1396,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 )
               ),
               addresses = customerBookIndividualPostRequest.addresses,
+              language = languageUpdate,
               updatedAt = customerIndividualDetailsRowsAll.head.updatedAt,
             )
           )
@@ -1901,6 +1908,12 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 PhoneNumberE164.assume("+447754767565"),
               )
             )
+            languageUpdate <- Random
+              .shuffle(Language.values.toList diff List(customerBusinessDetailsRow.language))
+              .map(_.head)
+
+            _ = languageUpdate shouldNot equal(customerBusinessDetailsRow.language)
+
             customerBusinessContactInsert = CustomerBusinessContactInsert(
               CustomerFullName.assume("Inserted Contact"),
               customerBusinessContactRow.role,
@@ -1913,7 +1926,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
               Some(Some(CustomerTaxID.assume("ReplacementTax"))),
               Some(List(CustomerPhoneNumberEntry(arbitrarySample[CustomerPhoneNumber], isDefault = true))),
               Some(List(CustomerAddressEntry(AddressEntry(arbitrarySample[Address], AddressType.ShippingAndBilling)))),
-              None,
+              Some(languageUpdate),
               List(customerBusinessContactInsert),
               List(
                 CustomerBusinessContactUpdate(
@@ -1962,6 +1975,7 @@ class CustomerBookApiSpec(dockerComposeContainer: => DockerComposeContainer)
                   )
                 ),
                 addresses = customerBookBusinessPutRequest.addresses.value,
+                language = languageUpdate,
                 updatedAt = customerBusinessDetailsRowUpdated.updatedAt,
               )
             )

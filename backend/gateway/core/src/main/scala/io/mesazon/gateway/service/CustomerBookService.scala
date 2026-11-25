@@ -78,6 +78,7 @@ object CustomerBookService {
         phoneNumbersOptUpdate =
           customerBookIndividualPutRequest.phoneNumbers.transformInto[Option[List[CustomerPhoneNumberEntryInput]]],
         addressesOptUpdate = customerBookIndividualPutRequest.addresses,
+        languageOptUpdate = customerBookIndividualPutRequest.language,
       )
     } yield ()
 
@@ -98,6 +99,7 @@ object CustomerBookService {
         phoneNumbersOptUpdate =
           customerBookBusinessPutRequest.phoneNumbers.transformInto[Option[List[CustomerPhoneNumberEntryInput]]],
         addressesOptUpdate = customerBookBusinessPutRequest.addresses,
+        languageOptUpdate = customerBookBusinessPutRequest.language,
         updateCustomerBusinessContactInputs = customerBookBusinessPutRequest.customerBusinessContactsUpdate
           .transformInto[List[UpdateCustomerBusinessContactInput]],
         customerBusinessContactInputsInsert = customerBookBusinessPutRequest.customerBusinessContactsInsert

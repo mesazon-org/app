@@ -27,6 +27,7 @@ trait CustomerBookRepository {
       emailsOptUpdate: Option[List[CustomerEmailEntryInput]] = None,
       phoneNumbersOptUpdate: Option[List[CustomerPhoneNumberEntryInput]] = None,
       addressesOptUpdate: Option[List[CustomerAddressEntry]] = None,
+      languageOptUpdate: Option[Language] = None,
   ): IO[ServiceError, Option[CustomerIndividualDetailsRow]]
 
   def insertCustomerBusiness(
@@ -42,6 +43,7 @@ trait CustomerBookRepository {
       taxIDOptUpdate: Option[Option[CustomerTaxID]] = None,
       phoneNumbersOptUpdate: Option[List[CustomerPhoneNumberEntryInput]] = None,
       addressesOptUpdate: Option[List[CustomerAddressEntry]] = None,
+      languageOptUpdate: Option[Language] = None,
       updateCustomerBusinessContactInputs: List[UpdateCustomerBusinessContactInput] = Nil,
       customerBusinessContactInputsInsert: List[CustomerBusinessContactInput] = Nil,
       customerBusinessContactIDsArchive: List[CustomerBusinessContactID] = Nil,
@@ -232,6 +234,7 @@ object CustomerBookRepository {
         emailsOptUpdate: Option[List[CustomerEmailEntryInput]],
         phoneNumbersOptUpdate: Option[List[CustomerPhoneNumberEntryInput]],
         addressesOptUpdate: Option[List[CustomerAddressEntry]],
+        languageOptUpdate: Option[Language],
     ): IO[ServiceError, Option[CustomerIndividualDetailsRow]] = for {
       instantNow                             <- timeProvider.instantNow
       customerIndividualDetailsRowUpdatedOpt <- database
@@ -244,6 +247,7 @@ object CustomerBookRepository {
             emailsOptUpdate,
             phoneNumbersOptUpdate,
             addressesOptUpdate,
+            languageOptUpdate,
           )
         )
         .mapError(
@@ -295,6 +299,7 @@ object CustomerBookRepository {
         taxIDOptUpdate: Option[Option[CustomerTaxID]],
         phoneNumbersOptUpdate: Option[List[CustomerPhoneNumberEntryInput]],
         addressesOptUpdate: Option[List[CustomerAddressEntry]],
+        languageOptUpdate: Option[Language],
         updateCustomerBusinessContactInputs: List[UpdateCustomerBusinessContactInput],
         customerBusinessContactInputsInsert: List[CustomerBusinessContactInput],
         customerBusinessContactIDsArchive: List[CustomerBusinessContactID],
@@ -318,6 +323,7 @@ object CustomerBookRepository {
             taxIDOptUpdate,
             phoneNumbersOptUpdate,
             addressesOptUpdate,
+            languageOptUpdate,
           )
           _ <- customerBusinessDetailsRowUpdatedOpt match {
             case None    => ZIO.unit
