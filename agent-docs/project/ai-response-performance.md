@@ -4,6 +4,16 @@
 
 How the hand-run AI golden check compares a live model's raw answer with a hand-corrected golden answer and prints each case's stored and current differences. A difference never fails a case.
 
+## Keeping the results docs current (binding)
+
+Any change that rewrites or hand-corrects a golden file under `assets-golden/CatalogueFileAiExtractGoldenSpec/` or `assets-golden/CustomerBookFileAiExtractGoldenSpec/`, or that writes or rewrites stored patches under `assets-diffson/` (including a run that does), first reads the AI performance docs and then updates them with the new results in the same change:
+
+- the results page `pages/epics/07-ai-response-performance/results.md` (numbers, trend, every case);
+- the status in `pages/epics/07-ai-response-performance.md`;
+- this guide's status line and the affected counts (goldens, cases, operations per stored patch).
+
+The `pages/` files are PO's; whoever makes the change updates them or hands the new results to PO in the same change. A change that leaves any of the three describing older results is unfinished.
+
 ## Scope
 
 - **Two specs:** `golden/CatalogueFileAiExtractGoldenSpec` (10 cases, below) and `golden/CustomerBookFileAiExtractGoldenSpec` (23 cases, see [Customer Book check](#customer-book-check)). Each source gets one explicit case, with no list or loop. These are the Catalogue cases (the epic fixes the list, requirement 3):

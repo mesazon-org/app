@@ -543,36 +543,45 @@ final class CatalogueQueries(
       organizationID: OrganizationID,
       frFieldPredicate: Fragment,
       frArchivePredicate: Fragment,
+      frExclusionPredicateOpt: Option[Fragment],
   ): TranzactIO[Boolean] =
     tzio {
       val q =
         fr"SELECT 1 FROM" ++ frTable ++
-          whereAnd(
-            fr"organization_id = $organizationID",
-            frFieldPredicate,
-            frArchivePredicate,
+          whereAndOpt(
+            Some(fr"organization_id = $organizationID"),
+            Some(frFieldPredicate),
+            Some(frArchivePredicate),
+            frExclusionPredicateOpt,
           )
 
       q.query[Int].option.map(_.isEmpty)
     }
 
-  def isUniqueCatalogueItemName(organizationID: OrganizationID, name: CatalogueItemName): TranzactIO[Boolean] =
+  def isUniqueCatalogueItemName(
+      organizationID: OrganizationID,
+      name: CatalogueItemName,
+      catalogueItemIDOpt: Option[CatalogueItemID],
+  ): TranzactIO[Boolean] =
     isUniqueWith(
       frCatalogueItemTable,
       organizationID,
       fr"name = $name",
       fr"is_archived = false",
+      catalogueItemIDOpt.map(catalogueItemID => fr"catalogue_item_id <> $catalogueItemID"),
     )
 
   def isUniqueCatalogueItemVariantSKU(
       organizationID: OrganizationID,
       sku: CatalogueItemVariantSku,
+      catalogueItemVariantIDOpt: Option[CatalogueItemVariantID],
   ): TranzactIO[Boolean] =
     isUniqueWith(
       frCatalogueItemVariantTable,
       organizationID,
       fr"lower(sku) = lower($sku)",
       fr"is_archived = false",
+      catalogueItemVariantIDOpt.map(catalogueItemVariantID => fr"catalogue_item_variant_id <> $catalogueItemVariantID"),
     )
 
   // Testing

@@ -187,6 +187,8 @@ final class CatalogueRequestValidator(
         (
           validateOptionalField("name", inputSmithy.name, CatalogueItemName.either),
           validateOptionalField("sku", inputSmithy.sku, CatalogueItemVariantSku.either),
+          inputSmithy.catalogueItemID.map(CatalogueItemID.apply).validNec,
+          inputSmithy.catalogueItemVariantID.map(CatalogueItemVariantID.apply).validNec,
         ).mapN(CatalogueItemUniquenessGetRequest.apply).andThen { request =>
           if (request.name.nonEmpty || request.sku.nonEmpty) request.validNec
           else

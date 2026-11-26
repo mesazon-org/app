@@ -43,6 +43,8 @@ case class CatalogueItemPutRequest(
 case class CatalogueItemUniquenessGetRequest(
     name: Option[CatalogueItemName],
     sku: Option[CatalogueItemVariantSku],
+    catalogueItemID: Option[CatalogueItemID],
+    catalogueItemVariantID: Option[CatalogueItemVariantID],
 )
 
 // AI

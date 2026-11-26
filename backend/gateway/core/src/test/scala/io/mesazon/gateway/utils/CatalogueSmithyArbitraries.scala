@@ -38,6 +38,8 @@ trait CatalogueSmithyArbitraries extends CatalogueDomainArbitraries, IronRefined
       organizationID = organizationID.value,
       name = request.name.map(_.value),
       sku = request.sku.map(_.value),
+      catalogueItemID = request.catalogueItemID.map(_.value),
+      catalogueItemVariantID = request.catalogueItemVariantID.map(_.value),
     )
   )
 }

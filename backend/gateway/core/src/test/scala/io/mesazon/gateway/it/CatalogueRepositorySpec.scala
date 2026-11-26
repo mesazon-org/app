@@ -3283,14 +3283,14 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
 
-        catalogueRepository.isUniqueCatalogueItemName(organizationID, catalogueItemName).zioValue shouldBe false
+        catalogueRepository.isUniqueCatalogueItemName(organizationID, catalogueItemName, None).zioValue shouldBe false
       }
 
       "return true if no catalogue item with the given name exists in the organization" in new TestContext {
         val organizationID    = arbitrarySample[OrganizationID]
         val catalogueItemName = arbitrarySample[CatalogueItemName]
 
-        catalogueRepository.isUniqueCatalogueItemName(organizationID, catalogueItemName).zioValue shouldBe true
+        catalogueRepository.isUniqueCatalogueItemName(organizationID, catalogueItemName, None).zioValue shouldBe true
       }
 
       "return true if the only catalogue item with the given name in the organization is archived" in new TestContext {
@@ -3305,7 +3305,101 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
 
         postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowArchived)).zioValue
 
-        catalogueRepository.isUniqueCatalogueItemName(organizationID, catalogueItemName).zioValue shouldBe true
+        catalogueRepository.isUniqueCatalogueItemName(organizationID, catalogueItemName, None).zioValue shouldBe true
+      }
+
+      "return true when the only non-archived catalogue item with the given name is the excluded item" in new TestContext {
+        val organizationID    = arbitrarySample[OrganizationID]
+        val catalogueItemName = arbitrarySample[CatalogueItemName]
+        val catalogueItemRow  = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationID,
+          name = catalogueItemName,
+          isArchived = false,
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
+
+        catalogueRepository
+          .isUniqueCatalogueItemName(organizationID, catalogueItemName, Some(catalogueItemRow.catalogueItemID))
+          .zioValue shouldBe true
+
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
+          List(catalogueItemRow)
+      }
+
+      "return false when another non-archived catalogue item has the given name and a different item is excluded" in new TestContext {
+        val organizationID    = arbitrarySample[OrganizationID]
+        val catalogueItemName = arbitrarySample[CatalogueItemName]
+        val catalogueItemRow  = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationID,
+          name = catalogueItemName,
+          isArchived = false,
+        )
+        val catalogueItemRowEdited = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationID,
+          isArchived = false,
+        )
+
+        catalogueItemRowEdited.name shouldNot equal(catalogueItemName)
+        catalogueItemRowEdited.catalogueItemID shouldNot equal(catalogueItemRow.catalogueItemID)
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowEdited)).zioValue
+
+        catalogueRepository
+          .isUniqueCatalogueItemName(organizationID, catalogueItemName, Some(catalogueItemRowEdited.catalogueItemID))
+          .zioValue shouldBe false
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting)
+          .zioValue should contain theSameElementsAs List(catalogueItemRow, catalogueItemRowEdited)
+      }
+
+      "return false when the excluded item ID is unknown, archived or belongs to another organization" in new TestContext {
+        val organizationID         = arbitrarySample[OrganizationID]
+        val organizationIDForeign  = arbitrarySample[OrganizationID]
+        val catalogueItemName      = arbitrarySample[CatalogueItemName]
+        val catalogueItemIDMissing = arbitrarySample[CatalogueItemID]
+        val catalogueItemRow       = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationID,
+          name = catalogueItemName,
+          isArchived = false,
+        )
+        val catalogueItemRowArchived = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationID,
+          isArchived = true,
+        )
+        val catalogueItemRowForeign = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationIDForeign,
+          isArchived = false,
+        )
+
+        organizationID shouldNot equal(organizationIDForeign)
+        catalogueItemIDMissing shouldNot equal(catalogueItemRow.catalogueItemID)
+        catalogueItemRowArchived.catalogueItemID shouldNot equal(catalogueItemRow.catalogueItemID)
+        catalogueItemRowForeign.catalogueItemID shouldNot equal(catalogueItemRow.catalogueItemID)
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowArchived)).zioValue
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowForeign)).zioValue
+
+        catalogueRepository
+          .isUniqueCatalogueItemName(organizationID, catalogueItemName, Some(catalogueItemIDMissing))
+          .zioValue shouldBe false
+        catalogueRepository
+          .isUniqueCatalogueItemName(organizationID, catalogueItemName, Some(catalogueItemRowArchived.catalogueItemID))
+          .zioValue shouldBe false
+        catalogueRepository
+          .isUniqueCatalogueItemName(organizationID, catalogueItemName, Some(catalogueItemRowForeign.catalogueItemID))
+          .zioValue shouldBe false
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting)
+          .zioValue should contain theSameElementsAs List(
+          catalogueItemRow,
+          catalogueItemRowArchived,
+          catalogueItemRowForeign,
+        )
       }
     }
 
@@ -3331,7 +3425,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioValue
 
         catalogueRepository
-          .isUniqueCatalogueItemVariantSKU(organizationID, catalogueItemVariantSkuCaseVariant)
+          .isUniqueCatalogueItemVariantSKU(organizationID, catalogueItemVariantSkuCaseVariant, None)
           .zioValue shouldBe false
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
@@ -3363,7 +3457,7 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioValue
 
         catalogueRepository
-          .isUniqueCatalogueItemVariantSKU(organizationID, catalogueItemVariantSku)
+          .isUniqueCatalogueItemVariantSKU(organizationID, catalogueItemVariantSku, None)
           .zioValue shouldBe true
 
         postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
@@ -3390,8 +3484,174 @@ class CatalogueRepositorySpec extends ZWordSpecBase, RepositoryArbitraries, Dock
           .zioValue
 
         catalogueRepository
-          .isUniqueCatalogueItemVariantSKU(organizationID, catalogueItemVariantSku)
+          .isUniqueCatalogueItemVariantSKU(organizationID, catalogueItemVariantSku, None)
           .zioValue shouldBe true
+      }
+
+      "return true when the only non-archived variant with the same case-insensitive SKU is the excluded variant" in new TestContext {
+        val organizationID                     = arbitrarySample[OrganizationID]
+        val catalogueItemVariantSkuStored      = CatalogueItemVariantSku("lookup-sku")
+        val catalogueItemVariantSkuCaseVariant = CatalogueItemVariantSku("LOOKUP-SKU")
+        val catalogueItemRow                   = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationID,
+          isArchived = false,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          sku = Some(catalogueItemVariantSkuStored),
+          isArchived = false,
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
+        postgresClient
+          .executeQuery(catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRow)))
+          .zioValue
+
+        catalogueRepository
+          .isUniqueCatalogueItemVariantSKU(
+            organizationID,
+            catalogueItemVariantSkuCaseVariant,
+            Some(catalogueItemVariantRow.catalogueItemVariantID),
+          )
+          .zioValue shouldBe true
+
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
+          List(catalogueItemRow)
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting).zioValue shouldBe
+          List(catalogueItemVariantRow)
+      }
+
+      "return false when a sibling variant of the same item has the SKU and the other variant is excluded" in new TestContext {
+        val organizationID                = arbitrarySample[OrganizationID]
+        val catalogueItemVariantSku       = arbitrarySample[CatalogueItemVariantSku]
+        val catalogueItemVariantSkuEdited = arbitrarySample[CatalogueItemVariantSku]
+        val catalogueItemRow              = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationID,
+          isArchived = false,
+        )
+        val catalogueItemVariantRowSibling = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          sku = Some(catalogueItemVariantSku),
+          isArchived = false,
+        )
+        val catalogueItemVariantRowEdited = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          sku = Some(catalogueItemVariantSkuEdited),
+          isArchived = false,
+        )
+
+        catalogueItemVariantSkuEdited shouldNot equal(catalogueItemVariantSku)
+        catalogueItemVariantSkuEdited.value.toLowerCase(java.util.Locale.ROOT) shouldNot equal(
+          catalogueItemVariantSku.value.toLowerCase(java.util.Locale.ROOT)
+        )
+        catalogueItemVariantRowEdited.catalogueItemVariantID shouldNot equal(
+          catalogueItemVariantRowSibling.catalogueItemVariantID
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
+        postgresClient
+          .executeQuery(
+            catalogueQueries.insertCatalogueItemVariantRows(
+              List(catalogueItemVariantRowSibling, catalogueItemVariantRowEdited)
+            )
+          )
+          .zioValue
+
+        catalogueRepository
+          .isUniqueCatalogueItemVariantSKU(
+            organizationID,
+            catalogueItemVariantSku,
+            Some(catalogueItemVariantRowEdited.catalogueItemVariantID),
+          )
+          .zioValue shouldBe false
+
+        postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting).zioValue shouldBe
+          List(catalogueItemRow)
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+          .zioValue should contain theSameElementsAs List(catalogueItemVariantRowSibling, catalogueItemVariantRowEdited)
+      }
+
+      "return false when the excluded variant ID is unknown, archived or belongs to another organization" in new TestContext {
+        val organizationID                = arbitrarySample[OrganizationID]
+        val organizationIDForeign         = arbitrarySample[OrganizationID]
+        val catalogueItemVariantSku       = arbitrarySample[CatalogueItemVariantSku]
+        val catalogueItemVariantIDMissing = arbitrarySample[CatalogueItemVariantID]
+        val catalogueItemRow              = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationID,
+          isArchived = false,
+        )
+        val catalogueItemRowForeign = arbitrarySample[CatalogueItemRow].copy(
+          organizationID = organizationIDForeign,
+          isArchived = false,
+        )
+        val catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          sku = Some(catalogueItemVariantSku),
+          isArchived = false,
+        )
+        val catalogueItemVariantRowArchived = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationID,
+          catalogueItemID = catalogueItemRow.catalogueItemID,
+          isArchived = true,
+        )
+        val catalogueItemVariantRowForeign = arbitrarySample[CatalogueItemVariantRow].copy(
+          organizationID = organizationIDForeign,
+          catalogueItemID = catalogueItemRowForeign.catalogueItemID,
+          isArchived = false,
+        )
+
+        organizationID shouldNot equal(organizationIDForeign)
+        catalogueItemVariantIDMissing shouldNot equal(catalogueItemVariantRow.catalogueItemVariantID)
+        catalogueItemVariantRowArchived.catalogueItemVariantID shouldNot equal(
+          catalogueItemVariantRow.catalogueItemVariantID
+        )
+        catalogueItemVariantRowForeign.catalogueItemVariantID shouldNot equal(
+          catalogueItemVariantRow.catalogueItemVariantID
+        )
+
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRow)).zioValue
+        postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRow(catalogueItemRowForeign)).zioValue
+        postgresClient
+          .executeQuery(
+            catalogueQueries.insertCatalogueItemVariantRows(
+              List(catalogueItemVariantRow, catalogueItemVariantRowArchived, catalogueItemVariantRowForeign)
+            )
+          )
+          .zioValue
+
+        catalogueRepository
+          .isUniqueCatalogueItemVariantSKU(organizationID, catalogueItemVariantSku, Some(catalogueItemVariantIDMissing))
+          .zioValue shouldBe false
+        catalogueRepository
+          .isUniqueCatalogueItemVariantSKU(
+            organizationID,
+            catalogueItemVariantSku,
+            Some(catalogueItemVariantRowArchived.catalogueItemVariantID),
+          )
+          .zioValue shouldBe false
+        catalogueRepository
+          .isUniqueCatalogueItemVariantSKU(
+            organizationID,
+            catalogueItemVariantSku,
+            Some(catalogueItemVariantRowForeign.catalogueItemVariantID),
+          )
+          .zioValue shouldBe false
+
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting)
+          .zioValue should contain theSameElementsAs List(catalogueItemRow, catalogueItemRowForeign)
+        postgresClient
+          .executeQuery(catalogueQueries.getAllCatalogueItemVariantRowsTesting)
+          .zioValue should contain theSameElementsAs List(
+          catalogueItemVariantRow,
+          catalogueItemVariantRowArchived,
+          catalogueItemVariantRowForeign,
+        )
       }
     }
   }
