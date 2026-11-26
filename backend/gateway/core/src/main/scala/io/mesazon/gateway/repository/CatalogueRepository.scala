@@ -64,11 +64,13 @@ trait CatalogueRepository {
   def isUniqueCatalogueItemName(
       organizationID: OrganizationID,
       name: CatalogueItemName,
+      catalogueItemIDOpt: Option[CatalogueItemID],
   ): IO[ServiceError, Boolean]
 
   def isUniqueCatalogueItemVariantSKU(
       organizationID: OrganizationID,
       sku: CatalogueItemVariantSku,
+      catalogueItemVariantIDOpt: Option[CatalogueItemVariantID],
   ): IO[ServiceError, Boolean]
 }
 
@@ -413,12 +415,13 @@ object CatalogueRepository {
     override def isUniqueCatalogueItemName(
         organizationID: OrganizationID,
         name: CatalogueItemName,
+        catalogueItemIDOpt: Option[CatalogueItemID],
     ): IO[ServiceError, Boolean] =
       database
-        .transactionOrWiden(catalogueQueries.isUniqueCatalogueItemName(organizationID, name))
+        .transactionOrWiden(catalogueQueries.isUniqueCatalogueItemName(organizationID, name, catalogueItemIDOpt))
         .mapError(e =>
           ServiceError.InternalServerError.RepositoryError(
-            s"Failed to check name uniqueness for organizationID: [$organizationID], name: [$name]",
+            s"Failed to check name uniqueness for organizationID: [$organizationID], name: [$name], catalogueItemIDOpt: [$catalogueItemIDOpt]",
             e,
           )
         )
@@ -426,12 +429,15 @@ object CatalogueRepository {
     override def isUniqueCatalogueItemVariantSKU(
         organizationID: OrganizationID,
         sku: CatalogueItemVariantSku,
+        catalogueItemVariantIDOpt: Option[CatalogueItemVariantID],
     ): IO[ServiceError, Boolean] =
       database
-        .transactionOrWiden(catalogueQueries.isUniqueCatalogueItemVariantSKU(organizationID, sku))
+        .transactionOrWiden(
+          catalogueQueries.isUniqueCatalogueItemVariantSKU(organizationID, sku, catalogueItemVariantIDOpt)
+        )
         .mapError(e =>
           ServiceError.InternalServerError.RepositoryError(
-            s"Failed to check SKU uniqueness for organizationID: [$organizationID], sku: [$sku]",
+            s"Failed to check SKU uniqueness for organizationID: [$organizationID], sku: [$sku], catalogueItemVariantIDOpt: [$catalogueItemVariantIDOpt]",
             e,
           )
         )

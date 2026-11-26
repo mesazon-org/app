@@ -195,12 +195,14 @@ object CatalogueService {
           catalogueRepository.isUniqueCatalogueItemName(
             OrganizationID(organizationID),
             catalogueItemName,
+            catalogueItemUniquenessGetRequest.catalogueItemID,
           )
         )
         isSkuUniqueOpt <- ZIO.foreach(catalogueItemUniquenessGetRequest.sku)(catalogueItemVariantSku =>
           catalogueRepository.isUniqueCatalogueItemVariantSKU(
             OrganizationID(organizationID),
             catalogueItemVariantSku,
+            catalogueItemUniquenessGetRequest.catalogueItemVariantID,
           )
         )
       } yield smithy.CatalogueItemUniquenessGetResponse(isNameUniqueOpt, isSkuUniqueOpt)
