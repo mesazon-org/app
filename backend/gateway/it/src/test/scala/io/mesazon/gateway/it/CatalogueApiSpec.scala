@@ -2572,6 +2572,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
           catalogueItemUniquenessGetResponse <- gatewayClient.catalogueItemUniquenessGet[smithy.InternalServerError](
             Some(catalogueItemName.value),
             Some(catalogueItemVariantSku.value),
+            None,
+            None,
             Some(organizationUserRow.organizationID),
             Some(accessJwt.accessToken),
           )
@@ -2630,6 +2632,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
               .catalogueItemUniquenessGet[smithy.InternalServerError](
                 Some(catalogueItemName.value),
                 Some(catalogueItemVariantSku.value),
+                None,
+                None,
                 Some(organizationUserRow.organizationID),
                 Some(accessJwt.accessToken),
               )
@@ -2683,6 +2687,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
 
           catalogueItemUniquenessGetResponse <- gatewayClient.catalogueItemUniquenessGet[smithy.InternalServerError](
             Some(catalogueItemName.value),
+            None,
+            None,
             None,
             Some(organizationUserRow.organizationID),
             Some(accessJwt.accessToken),
@@ -2738,6 +2744,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
           catalogueItemUniquenessGetResponse <- gatewayClient.catalogueItemUniquenessGet[smithy.InternalServerError](
             None,
             Some(catalogueItemVariantSku.value),
+            None,
+            None,
             Some(organizationUserRow.organizationID),
             Some(accessJwt.accessToken),
           )
@@ -2794,6 +2802,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
           catalogueItemUniquenessGetResponse <- gatewayClient.catalogueItemUniquenessGet[smithy.InternalServerError](
             Some(catalogueItemName.value),
             Some(catalogueItemVariantSku.value),
+            None,
+            None,
             Some(organizationUserRow.organizationID),
             Some(accessJwt.accessToken),
           )
@@ -2814,63 +2824,66 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
         } yield ()
       }
 
-      "successfully return values reserved by another organization as unique" in withContext { context =>
-        import context.*
+      "successfully ignore another organization's item name and variant SKU when checking uniqueness" in withContext {
+        context =>
+          import context.*
 
-        for {
-          onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
-          userDetailsRow = arbitrarySample[UserDetailsRow]
-            .copy(onboardStage = onboardStage)
-          organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
-          organizationUserRow = arbitrarySample[OrganizationUserRow]
-            .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
-          organizationIDForeign   = arbitrarySample[OrganizationID]
-          catalogueItemName       = arbitrarySample[CatalogueItemName]
-          catalogueItemVariantSku = arbitrarySample[CatalogueItemVariantSku]
-          catalogueItemRowForeign = arbitrarySample[CatalogueItemRow].copy(
-            organizationID = organizationIDForeign,
-            name = catalogueItemName,
-            isArchived = false,
-          )
-          catalogueItemVariantRowForeign = arbitrarySample[CatalogueItemVariantRow].copy(
-            organizationID = organizationIDForeign,
-            catalogueItemID = catalogueItemRowForeign.catalogueItemID,
-            sku = Some(catalogueItemVariantSku),
-            isArchived = false,
-          )
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+            organizationIDForeign   = arbitrarySample[OrganizationID]
+            catalogueItemName       = arbitrarySample[CatalogueItemName]
+            catalogueItemVariantSku = arbitrarySample[CatalogueItemVariantSku]
+            catalogueItemRowForeign = arbitrarySample[CatalogueItemRow].copy(
+              organizationID = organizationIDForeign,
+              name = catalogueItemName,
+              isArchived = false,
+            )
+            catalogueItemVariantRowForeign = arbitrarySample[CatalogueItemVariantRow].copy(
+              organizationID = organizationIDForeign,
+              catalogueItemID = catalogueItemRowForeign.catalogueItemID,
+              sku = Some(catalogueItemVariantSku),
+              isArchived = false,
+            )
 
-          _ = organizationIDForeign shouldNot equal(organizationUserRow.organizationID)
+            _ = organizationIDForeign shouldNot equal(organizationUserRow.organizationID)
 
-          _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
-          _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
-          _ <- postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRows(List(catalogueItemRowForeign)))
-          _ <- postgresClient.executeQuery(
-            catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRowForeign))
-          )
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+            _ <- postgresClient.executeQuery(catalogueQueries.insertCatalogueItemRows(List(catalogueItemRowForeign)))
+            _ <- postgresClient.executeQuery(
+              catalogueQueries.insertCatalogueItemVariantRows(List(catalogueItemVariantRowForeign))
+            )
 
-          accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
-          catalogueItemUniquenessGetResponse <- gatewayClient.catalogueItemUniquenessGet[smithy.InternalServerError](
-            Some(catalogueItemName.value),
-            Some(catalogueItemVariantSku.value),
-            Some(organizationUserRow.organizationID),
-            Some(accessJwt.accessToken),
-          )
+            catalogueItemUniquenessGetResponse <- gatewayClient.catalogueItemUniquenessGet[smithy.InternalServerError](
+              Some(catalogueItemName.value),
+              Some(catalogueItemVariantSku.value),
+              None,
+              None,
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
 
-          _ = catalogueItemUniquenessGetResponse.code shouldBe StatusCode.Ok
-          _ = catalogueItemUniquenessGetResponse.body.value shouldBe smithy.CatalogueItemUniquenessGetResponse(
-            isNameUnique = Some(true),
-            isSkuUnique = Some(true),
-          )
+            _ = catalogueItemUniquenessGetResponse.code shouldBe StatusCode.Ok
+            _ = catalogueItemUniquenessGetResponse.body.value shouldBe smithy.CatalogueItemUniquenessGetResponse(
+              isNameUnique = Some(true),
+              isSkuUnique = Some(true),
+            )
 
-          catalogueItemRowsAll        <- postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting)
-          catalogueItemVariantRowsAll <- postgresClient.executeQuery(
-            catalogueQueries.getAllCatalogueItemVariantRowsTesting
-          )
+            catalogueItemRowsAll        <- postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting)
+            catalogueItemVariantRowsAll <- postgresClient.executeQuery(
+              catalogueQueries.getAllCatalogueItemVariantRowsTesting
+            )
 
-          _ = catalogueItemRowsAll shouldBe List(catalogueItemRowForeign)
-          _ = catalogueItemVariantRowsAll shouldBe List(catalogueItemVariantRowForeign)
-        } yield ()
+            _ = catalogueItemRowsAll shouldBe List(catalogueItemRowForeign)
+            _ = catalogueItemVariantRowsAll shouldBe List(catalogueItemVariantRowForeign)
+          } yield ()
       }
 
       "successfully report a SKU reserved under a different letter case as not unique" in withContext { context =>
@@ -2908,6 +2921,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
           catalogueItemUniquenessGetResponse <- gatewayClient.catalogueItemUniquenessGet[smithy.InternalServerError](
             None,
             Some(catalogueItemVariantSkuQuery.value),
+            None,
+            None,
             Some(organizationUserRow.organizationID),
             Some(accessJwt.accessToken),
           )
@@ -2963,6 +2978,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
           catalogueItemUniquenessGetResponse <- gatewayClient.catalogueItemUniquenessGet[smithy.InternalServerError](
             Some(catalogueItemNameQuery.value),
             None,
+            None,
+            None,
             Some(organizationUserRow.organizationID),
             Some(accessJwt.accessToken),
           )
@@ -2983,6 +3000,85 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
         } yield ()
       }
 
+      "successfully report a name and SKU used by another item and variant as not unique when the edited item and variant are excluded" in withContext {
+        context =>
+          import context.*
+
+          for {
+            onboardStage <- Random.shuffle(OnboardStage.completedStages).map(_.head)
+            userDetailsRow = arbitrarySample[UserDetailsRow]
+              .copy(onboardStage = onboardStage)
+            organizationUserRole <- Random.shuffle(OrganizationUserRole.userRoles).map(_.head)
+            organizationUserRow = arbitrarySample[OrganizationUserRow]
+              .copy(userID = userDetailsRow.userID, userRole = organizationUserRole)
+            catalogueItemName             = CatalogueItemName.assume("name-taken")
+            catalogueItemNameEdited       = CatalogueItemName.assume("name-edited")
+            catalogueItemVariantSku       = CatalogueItemVariantSku.assume("sku-taken")
+            catalogueItemVariantSkuEdited = CatalogueItemVariantSku.assume("sku-edited")
+            catalogueItemRow              = arbitrarySample[CatalogueItemRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              name = catalogueItemName,
+              isArchived = false,
+            )
+            catalogueItemVariantRow = arbitrarySample[CatalogueItemVariantRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              catalogueItemID = catalogueItemRow.catalogueItemID,
+              sku = Some(catalogueItemVariantSku),
+              isArchived = false,
+            )
+            catalogueItemRowEdited = arbitrarySample[CatalogueItemRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              name = catalogueItemNameEdited,
+              isArchived = false,
+            )
+            catalogueItemVariantRowEdited = arbitrarySample[CatalogueItemVariantRow].copy(
+              organizationID = organizationUserRow.organizationID,
+              catalogueItemID = catalogueItemRowEdited.catalogueItemID,
+              sku = Some(catalogueItemVariantSkuEdited),
+              isArchived = false,
+            )
+
+            _ <- postgresClient.executeQuery(userDetailsQueries.insertUserDetails(userDetailsRow))
+            _ <- postgresClient.executeQuery(organizationUserQueries.insert(organizationUserRow))
+            _ <- postgresClient.executeQuery(
+              catalogueQueries.insertCatalogueItemRows(List(catalogueItemRow, catalogueItemRowEdited))
+            )
+            _ <- postgresClient.executeQuery(
+              catalogueQueries.insertCatalogueItemVariantRows(
+                List(catalogueItemVariantRow, catalogueItemVariantRowEdited)
+              )
+            )
+
+            accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
+
+            catalogueItemUniquenessGetResponse <- gatewayClient.catalogueItemUniquenessGet[smithy.InternalServerError](
+              Some(catalogueItemName.value),
+              Some(catalogueItemVariantSku.value),
+              Some(catalogueItemRowEdited.catalogueItemID),
+              Some(catalogueItemVariantRowEdited.catalogueItemVariantID),
+              Some(organizationUserRow.organizationID),
+              Some(accessJwt.accessToken),
+            )
+
+            _ = catalogueItemUniquenessGetResponse.code shouldBe StatusCode.Ok
+            _ = catalogueItemUniquenessGetResponse.body.value shouldBe smithy.CatalogueItemUniquenessGetResponse(
+              isNameUnique = Some(false),
+              isSkuUnique = Some(false),
+            )
+
+            catalogueItemRowsAll        <- postgresClient.executeQuery(catalogueQueries.getAllCatalogueItemRowsTesting)
+            catalogueItemVariantRowsAll <- postgresClient.executeQuery(
+              catalogueQueries.getAllCatalogueItemVariantRowsTesting
+            )
+
+            _ = catalogueItemRowsAll should contain theSameElementsAs List(catalogueItemRow, catalogueItemRowEdited)
+            _ = catalogueItemVariantRowsAll should contain theSameElementsAs List(
+              catalogueItemVariantRow,
+              catalogueItemVariantRowEdited,
+            )
+          } yield ()
+      }
+
       "fail with a ValidationError when neither a name nor SKU is supplied" in withContext { context =>
         import context.*
 
@@ -3000,6 +3096,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
           accessJwt <- jwtService.generateAccessToken(userDetailsRow.userID)
 
           catalogueItemUniquenessGetResponse <- gatewayClient.catalogueItemUniquenessGet[smithy.ValidationError](
+            None,
+            None,
             None,
             None,
             Some(organizationUserRow.organizationID),
@@ -3043,6 +3141,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
           catalogueItemUniquenessGetResponse <- gatewayClient.catalogueItemUniquenessGet[smithy.ValidationError](
             Some(catalogueItemNameInvalid),
             Some(catalogueItemVariantSkuInvalid),
+            None,
+            None,
             Some(organizationUserRow.organizationID),
             Some(accessJwt.accessToken),
           )
@@ -3147,6 +3247,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 Some(catalogueItemName.value),
                 None,
                 None,
+                None,
+                None,
                 Some(accessJwt.accessToken),
               ),
             )
@@ -3238,6 +3340,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
               ),
               gatewayClient.catalogueItemUniquenessGet[smithy.Unauthorized](
                 Some(catalogueItemName.value),
+                None,
+                None,
                 None,
                 Some(organizationID),
                 None,
@@ -3331,6 +3435,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
               ),
               gatewayClient.catalogueItemUniquenessGet[smithy.Unauthorized](
                 Some(catalogueItemName.value),
+                None,
+                None,
                 None,
                 Some(organizationID),
                 Some(AccessToken("invalidtoken")),
@@ -3438,6 +3544,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 ),
                 gatewayClient.catalogueItemUniquenessGet[smithy.Forbidden](
                   Some(catalogueItemName.value),
+                  None,
+                  None,
                   None,
                   Some(organizationUserRow.organizationID),
                   Some(accessJwt.accessToken),
@@ -3626,6 +3734,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 gatewayClient.catalogueItemUniquenessGet[smithy.InternalServerError](
                   Some(catalogueItemName.value),
                   None,
+                  None,
+                  None,
                   Some(organizationID),
                   Some(accessJwt.accessToken),
                 ),
@@ -3727,6 +3837,8 @@ class CatalogueApiSpec(dockerComposeContainer: => DockerComposeContainer)
                 ),
                 gatewayClient.catalogueItemUniquenessGet[smithy.InternalServerError](
                   Some(catalogueItemName.value),
+                  None,
+                  None,
                   None,
                   Some(organizationID),
                   Some(accessJwt.accessToken),

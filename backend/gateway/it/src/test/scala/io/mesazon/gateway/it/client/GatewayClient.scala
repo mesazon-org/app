@@ -802,14 +802,23 @@ case class GatewayClient(config: GatewayClientConfig, sttpBackend: Backend[Task]
   def catalogueItemUniquenessGet[E: JsonValueCodec](
       nameOpt: Option[String],
       skuOpt: Option[String],
+      catalogueItemIDOpt: Option[CatalogueItemID],
+      catalogueItemVariantIDOpt: Option[CatalogueItemVariantID],
       organizationIDOpt: Option[OrganizationID],
       accessTokenOpt: Option[AccessToken],
   ): Task[Response[Either[E, smithy.CatalogueItemUniquenessGetResponse]]] = {
     val catalogueItemUniquenessUriWithName = nameOpt.fold(
       externalUri.addPath("catalogue", "item", "uniqueness")
     )(name => externalUri.addPath("catalogue", "item", "uniqueness").addParam("name", name))
-    val catalogueItemUniquenessUri =
+    val catalogueItemUniquenessUriWithSku =
       skuOpt.fold(catalogueItemUniquenessUriWithName)(sku => catalogueItemUniquenessUriWithName.addParam("sku", sku))
+    val catalogueItemUniquenessUriWithItemID = catalogueItemIDOpt.fold(catalogueItemUniquenessUriWithSku)(
+      catalogueItemID => catalogueItemUniquenessUriWithSku.addParam("catalogueItemID", catalogueItemID.value.toString)
+    )
+    val catalogueItemUniquenessUri =
+      catalogueItemVariantIDOpt.fold(catalogueItemUniquenessUriWithItemID)(catalogueItemVariantID =>
+        catalogueItemUniquenessUriWithItemID.addParam("catalogueItemVariantID", catalogueItemVariantID.value.toString)
+      )
 
     basicRequest
       .get(catalogueItemUniquenessUri)
